@@ -82,31 +82,31 @@ func open(stats: RunStats, players: Array[Player], stage_title: String, stage_co
 	column.add_child(_summary_row(stats, stage_count))
 	column.add_child(_divider())
 
-	var tabs := HBoxContainer.new()
-	tabs.alignment = BoxContainer.ALIGNMENT_CENTER
-	tabs.add_theme_constant_override("separation", 4)
-	column.add_child(tabs)
-	for page: int in PAGES.size():
-		var tab := Button.new()
-		tab.text = PAGES[page]
-		tab.custom_minimum_size.x = 80
-		tab.pressed.connect(_show_page.bind(page))
-		tabs.add_child(tab)
-		_page_buttons.append(tab)
 	_cards = HBoxContainer.new()
 	_cards.alignment = BoxContainer.ALIGNMENT_CENTER
 	_cards.add_theme_constant_override("separation", 6)
 	column.add_child(_cards)
-	_build_cards()
 
+	# Footer: page tabs, then the host's return button.
+	var footer := HBoxContainer.new()
+	footer.alignment = BoxContainer.ALIGNMENT_CENTER
+	footer.add_theme_constant_override("separation", 4)
+	column.add_child(footer)
+	for page: int in PAGES.size():
+		var tab := Button.new()
+		tab.text = PAGES[page]
+		tab.custom_minimum_size = Vector2(70, 20)
+		tab.pressed.connect(_show_page.bind(page))
+		footer.add_child(tab)
+		_page_buttons.append(tab)
+	_build_cards()
 	var return_button: Button = null
 	if can_return:
 		return_button = Button.new()
 		return_button.text = "Return to character select"
-		return_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		return_button.custom_minimum_size = Vector2(200, 20)
+		return_button.custom_minimum_size = Vector2(190, 20)
 		return_button.pressed.connect(func() -> void: return_requested.emit())
-		column.add_child(return_button)
+		footer.add_child(return_button)
 	var hint_label := _label(hint, 9, LABEL_COLOR, true)
 	column.add_child(hint_label)
 	show()
@@ -219,63 +219,99 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 	var card: PanelContainer = frame[0]
 	var lines: VBoxContainer = frame[1]
 
-	# Numbers, with a star for the best player in each (co-op).
+	# Numbers, with a star for the best player in each (co-op). Wide cards (1-2
+	# players) fit two numbers per row; the score (as kept in Records) comes last.
 	var grid := GridContainer.new()
-	grid.columns = 3
+	grid.columns = 6 if player_count <= 2 else 3
 	grid.add_theme_constant_override("h_separation", 3)
 	grid.add_theme_constant_override("v_separation", 1)
 	lines.add_child(grid)
 	for stat: int in RunStats.Stat.size():
-		var name_label := _label(RunStats.STAT_LABELS[stat], 9, LABEL_COLOR, false)
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(name_label)
-		var star := SpriteIcon.new("star" if stats.best(stat as RunStats.Stat) == player.peer_id else "", Vector2(9, 9))
-		star.max_scale = 1
-		grid.add_child(star)
-		var value_label := _label("0", 9, VALUE_COLOR, false)
-		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		grid.add_child(value_label)
-		_count_up(value_label, stats.get_stat(player.peer_id, stat as RunStats.Stat), false)
-
-	# Score (as kept in Records), with this PC's placing.
-	var score_row := HBoxContainer.new()
-	score_row.add_theme_constant_override("separation", 3)
-	var score_name := _label("Score", 9, AWARD_COLOR, false)
-	score_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	score_row.add_child(score_name)
+		var is_best := stats.best(stat as RunStats.Stat) == player.peer_id
+		_grid_number(grid, RunStats.STAT_LABELS[stat], stats.get_stat(player.peer_id, stat as RunStats.Stat), is_best,
+			LABEL_COLOR, VALUE_COLOR)
+	_grid_number(grid, "Score", _score(stats, player.peer_id), _best_score(stats) == player.peer_id, AWARD_COLOR, AWARD_COLOR)
 	if player.is_local() and local_record_rank == 0:
-		score_row.add_child(_label("NEW BEST!", 9, VICTORY_COLOR, false))
+		lines.add_child(_label("NEW BEST %s RUN!" % player.stats.display_name.to_upper(), 9, VICTORY_COLOR, true))
 	elif player.is_local() and local_record_rank > 0:
-		score_row.add_child(_label("#%d best" % (local_record_rank + 1), 9, LABEL_COLOR, false))
-	var score_label := _label("0", 9, AWARD_COLOR, false)
-	score_row.add_child(score_label)
-	_count_up(score_label, _score(stats, player.peer_id), false)
-	lines.add_child(score_row)
+		lines.add_child(_label("#%d of your %s runs" % [local_record_rank + 1, player.stats.display_name], 9, LABEL_COLOR, true))
 
-	# Build: weapon icons, upgrades, relics.
+	# Build: auto weapons, upgrades and relics as icons (hover for names).
 	lines.add_child(_divider())
-	lines.add_child(_weapons_row(player))
-	lines.add_child(_icon_row("Upgrades:", _upgrade_icons(player), width))
-	lines.add_child(_icon_row("Relics:", _relic_icons(player), width))
+	lines.add_child(_build_row(player, width))
 
-	for award: String in stats.awards_for(player.peer_id):
-		lines.add_child(_label("* " + award + " *", 9, AWARD_COLOR, true))
+	var awards := stats.awards_for(player.peer_id)
+	if not awards.is_empty():
+		var award_label := _label("* " + " * ".join(awards) + " *", 9, AWARD_COLOR, true)
+		award_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		award_label.custom_minimum_size.x = width - 12
+		lines.add_child(award_label)
 	return card
 
 
-## "Weapons" followed by each weapon's icon and level pips (or "none").
-func _weapons_row(player: Player) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	row.add_child(_label("Weapons:", 9, VALUE_COLOR, false))
-	if player.weapon_levels.is_empty():
-		row.add_child(_label("none", 9, VALUE_COLOR, false))
-	else:
-		var icons := WeaponIcons.new()
-		icons.icon_scale = 2.0
-		icons.set_weapons(player.weapon_levels)
-		row.add_child(icons)
-	return row
+## One "name  star  value" entry in the numbers grid (the value counts up).
+func _grid_number(grid: GridContainer, title: String, value: int, is_best: bool, name_color: Color, value_color: Color) -> void:
+	var name_label := _label(title, 9, name_color, false)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(name_label)
+	var star := SpriteIcon.new("star" if is_best else "", Vector2(9, 9))
+	star.max_scale = 1
+	grid.add_child(star)
+	var value_label := _label("0", 9, value_color, false)
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value_label.custom_minimum_size.x = 26
+	grid.add_child(value_label)
+	_count_up(value_label, value, false)
+
+
+## The player with the clearly highest score (co-op), or -1.
+func _best_score(stats: RunStats) -> int:
+	if stats.by_peer.size() < 2:
+		return -1
+	var best_id := -1
+	var best := -1
+	var tied := false
+	for peer_id: int in stats.by_peer:
+		var score := _score(stats, peer_id)
+		if score > best:
+			best = score
+			best_id = peer_id
+			tied = false
+		elif score == best:
+			tied = true
+	return -1 if tied else best_id
+
+
+## "Build:" then one wrapping row of icons: auto weapons (with level pips),
+## upgrades ("x2" when taken twice) and relics.
+func _build_row(player: Player, width: int) -> VBoxContainer:
+	var icons := _upgrade_icons(player)
+	icons.append_array(_relic_icons(player))
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 1)
+	var empty := icons.is_empty() and player.weapon_levels.is_empty()
+	box.add_child(_label("Build:" + (" nothing yet" if empty else ""), 9, VALUE_COLOR, false))
+	var flow := HFlowContainer.new()
+	flow.custom_minimum_size.x = width - 12
+	flow.add_theme_constant_override("h_separation", 3)
+	flow.add_theme_constant_override("v_separation", 1)
+	box.add_child(flow)
+	if not player.weapon_levels.is_empty():
+		var weapons := WeaponIcons.new()
+		weapons.set_weapons(player.weapon_levels)
+		flow.add_child(weapons)
+	for entry: Array in icons:
+		var item := HBoxContainer.new()
+		item.add_theme_constant_override("separation", 0)
+		item.tooltip_text = entry[1]
+		item.mouse_filter = Control.MOUSE_FILTER_PASS
+		var icon := SpriteIcon.new(entry[0], Vector2(11, 11))
+		icon.max_scale = 1
+		item.add_child(icon)
+		if entry[2] > 1:
+			item.add_child(_label("x%d" % entry[2], 9, LABEL_COLOR, false))
+		flow.add_child(item)
+	return box
 
 
 func _score(stats: RunStats, peer_id: int) -> int:
@@ -301,31 +337,6 @@ func _relic_icons(player: Player) -> Array[Array]:
 		var relic := Relics.get_relic(id)
 		result.append([relic.icon, relic.title, 1])
 	return result
-
-
-## "Upgrades:" then a wrapping row of icons, each with "x2" when taken more than
-## once. Hovering an icon shows its name.
-func _icon_row(title: String, icons: Array[Array], width: int) -> VBoxContainer:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 1)
-	box.add_child(_label(title + (" none" if icons.is_empty() else ""), 9, VALUE_COLOR, false))
-	var flow := HFlowContainer.new()
-	flow.custom_minimum_size.x = width - 12
-	flow.add_theme_constant_override("h_separation", 3)
-	flow.add_theme_constant_override("v_separation", 1)
-	box.add_child(flow)
-	for entry: Array in icons:
-		var item := HBoxContainer.new()
-		item.add_theme_constant_override("separation", 0)
-		item.tooltip_text = entry[1]
-		item.mouse_filter = Control.MOUSE_FILTER_PASS
-		var icon := SpriteIcon.new(entry[0], Vector2(11, 11))
-		icon.max_scale = 1
-		item.add_child(icon)
-		if entry[2] > 1:
-			item.add_child(_label("x%d" % entry[2], 9, LABEL_COLOR, false))
-		flow.add_child(item)
-	return box
 
 
 ## Weapons page: each damage source with its share of this player's damage,

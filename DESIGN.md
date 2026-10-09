@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-09 (v0.14.0)
+> Last updated: 2026-10-09 (v0.15.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -59,7 +59,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ### Player
 - **Health:** a few hearts (depends on the character), with a hitbox much smaller than the sprite. Enemy contact costs 1 heart, then ~1s of invulnerability (flashing).
-- **Downed:** at 0 hearts the player is downed (can't act). Placeholder until ghosts arrive in M4.
+- **Downed:** at 0 hearts the player is downed and lies in a revive circle until a teammate revives them (see Co-op rules).
 - **Movement:** free 8-direction / analog movement.
 - **Aiming:** manual 360° aim with the mouse or right stick.
 - **Defense:**
@@ -77,7 +77,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ### In-run
 - **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades. Each card shows its level as pips (owned / this pick / left to max) and the player's real stat before -> after taking it.
-  - **Pacing (v0.14.0):** level n costs 16 + 14·(n−1) XP, times the team-size factor (+60% per extra player, same as spawns), so a team levels about as often as a solo player. Target: roughly one level-up every 20s in stage 1 (~14 in stage 1, ~7–8 in each later stage). Before, a 2-player team got ~30 in stage 1.
+  - **Pacing (v0.15.0):** level n costs 10 + 9·(n−1) XP, times +40% per extra player (spawns grow 60%, so bigger teams level slightly faster). History: v0.13 cost 5 + 5·(n−1) with no team factor (a 2-player team got ~30 level-ups in stage 1: too many pauses); v0.14.0 cost 16 + 14·(n−1) × the spawn factor, which left the team too weak to beat stage 1. Measured with the autopilot (solo, it can't dodge or collect everything): level 13 by the boss and the horde under control, vs level 7 and an overrun arena in v0.14. Sharpened Bolts went +3 → +4 damage and Quick Hands 12% → 15%.
   - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
 - **Weapon pickups:** new auto weapons found during stages.
 - **Passive items / relics:** stat boosts and synergies.
@@ -85,6 +85,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ### Meta
 - **None.** Each run stands alone, with no unlocks or permanent upgrades.
+- **Records (v0.15.0):** each PC keeps its own best runs (top 10 per hero, `user://records.cfg`) with a score: 10 per kill + 1 per 10 damage + 3000 per boss + 5000 for a victory, times the difficulty (enemy/boss health and enemy count; bonus hearts, starting levels, extra XP and all weapons lower it). Shown on the title menu's Records page and as "Score" on the run summary. Bragging rights only, no unlocks.
 
 ## 5. Co-op rules
 
@@ -95,7 +96,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | XP | **Shared** team XP bar; each player picks their **own** upgrade |
 | Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted. Play resumes after a **3-second "3, 2, 1" countdown** (also after the shop) |
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
-| Death | Player becomes a **ghost until the next stage** and then respawns. Ghosts can move and collect gems/coins but can't shoot or be hurt. Run ends if all players are dead |
+| Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 hearts you lie in a circle (30 px) and can't move, shoot or use your ability. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max hearts (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Fire / Ability cycles, ending on your own body). Teammates see a pulsing arrow with a "+" and a "Red is down!" line. Run ends if everyone is down at once |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
 
 ## 6. Art & audio
@@ -104,6 +105,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Art style:** Pixel art. Sprites are text grids with a shared palette (`src/art/pixel_art.gd`).
 - Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
 - Audio: everything is synthesized in code from text (no audio files). Sound effects use a small synth with filters, layering and echo; music is five looping chiptune-style tracks written as text scores (menu, Crypt, Marsh, Cathedral, boss). Final audio direction TBD after playtesting.
+- **Metal soundtrack (v0.15.0, owner request):** four more tracks with distorted power-chord riffs (palm-muted chugs and ringing chords), double kick, crashes and an overdriven lead: Crypt (E minor gallop), Marsh (slow Phrygian doom), Cathedral (neoclassical thrash), boss (tremolo riffs over a blast beat). The host picks in Custom Game: Classic / Metal / Metal boss fights / Shuffle (alternates per stage). The menu stays classic.
 
 ## 7. Milestones
 
@@ -141,10 +143,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
   - Enemy and boss HP +50% per stage.
   - Beating the stage 3 boss = **Victory**.
 - **Between stages:** a **shop break**. The run keeps your team level, upgrades, relics, weapons and coins.
-- **Ghosts:** a downed player becomes a ghost until the next stage.
-  - Ghosts float around freely. They can't shoot, use abilities or be hurt.
-  - Ghosts **can still collect XP gems and coins** for the team.
-  - Everyone respawns with full hearts and a ready ability at the start of the next stage. The run ends if all players are down.
+- ~~**Ghosts:** a downed player becomes a ghost until the next stage (floats around, collects gems and coins).~~ Replaced in v0.15.0 by revives (see Co-op rules). Everyone still respawns with full hearts and a ready ability at the start of the next stage.
 - **Coins:** enemies sometimes drop coins (v0.12.0: 4% basic, 20% tougher enemies), plus a boss bounty for everyone (25, +15 per stage). First come, first served: coins go to whoever picks them up.
 - **Shop:**
   - Each player sees their own 4 relic offers with prices and buys with their own coins.
@@ -229,7 +228,21 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 12. *(Reported after)* Slowdown for 10-20 s after a boss spawns with 2 players: boss bullets (7 s lifetime, aimed at each player) were each drawn as two `draw_circle` shapes, hundreds of draw calls rebuilt every physics tick. Now one baked texture per bullet/gem glow, off-screen ones skipped: client physics step with ~110 bullets 4.7 ms -> 1.1 ms, draw calls ~650 -> ~150. Enemy grid also cheaper (~15%).
 13. *(Requested after)* In-game updater: the title screen checks GitHub's latest release; if newer, **Update now** downloads the zip, swaps `GameTest.exe` (renames the running one to `.old`) and restarts. Falls back to opening the release page.
 
-### Where things stand (2026-10-09, v0.14.1, released on GitHub)
+### Playtest 3 changes (v0.15.0)
+Owner and friend played more v0.14 runs. Requested and done:
+1. **Difficulty:** v0.14's level-up pacing made stage 1 unbeatable. Levels are cheaper again and two upgrades are stronger (see Progression, Pacing).
+2. **Revives instead of ghosts** (see Co-op rules, Death), and the downed player's screen follows a living teammate.
+3. **In-game cursor** (Settings): Crosshair / Ring / Dot / System arrow, 4 sizes, 7 colors, dark outline, scaled to the window (`GameCursor`, a hardware cursor). Menus keep the normal arrow.
+4. **Run summary:** a star for the best player in each stat (lowest for Hearts lost and Downed; none on ties or solo); weapons, upgrades and relics as pixel icons (hover for names; the same icons are on level-up and shop cards and in the Compendium); a **Weapons** page with damage, share, DPS (over the time the weapon was owned) and kills for the main gun, ability and each auto weapon (the host tags all damage with a `DamageSource`).
+5. **Records** page and per-player Score (see Meta).
+6. **Soundtrack** option with four metal tracks (see Art & audio).
+
+Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s, 30 px circle, half hearts, slow drain, no bleed-out timer), the spectate delay and controls, the Mourner's Bell relic (40 coins, co-op only), the cursor default (cyan crosshair, medium), the score formula, and the metal track arrangements. Test aid: `--test-down=<s>` knocks out the first client's player so revives can be checked without dying; the autopilot now walks to downed teammates.
+
+### Where things stand (2026-10-09, v0.15.0, built, not released yet)
+- **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
+
+### Before that (v0.14.1, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
 - v0.13.0 added: level-up card previews (level + stat before -> after), the end-of-run summary screen (`RunStats` + `RunSummaryPanel`), the Necromancer (Bone Effigy) and the Witch's Hex Snare.
 - **Co-op playtest (owner + one friend, v0.13.0, 2026-10-09):** "awesome, a great start". Their list became v0.14.0 (Playtest 2 changes above), plus the Compendium, Playtest Checklist, lobby Difficulty / Custom Game pages and the boss-spawn performance fix.
@@ -239,7 +252,7 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 - **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
 
 ### Next (proposed, in rough priority)
-1. Co-op playtest of v0.14.1: level-up pacing (half as many; is it now too hard by stage 2–3?), boss-spawn performance, Difficulty / Custom Game, and the first one-click update when the next version ships. Then tune numbers.
+1. Co-op playtest of v0.15.0: is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, metal music, the run summary pages, and the first one-click update. Then tune numbers.
 2. Working title (replace "GameTest" in the title, window, and build file names).
 3. Content depth: more upgrades/relics/weapons with synergies, more enemy variety per stage, boss attack variety.
 4. Meta/feel: hero portraits, records/stats screen, more animation.
@@ -256,4 +269,5 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 ## 9. Ideas for Later
 
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
+- **Support hero:** a character whose ability or passive heals teammates or revives them faster (`CharacterStats.revive_speed` is already in place; owner idea, v0.15.0).
 - **Join codes / no port forwarding at all:** a small relay or matchmaking server (short codes like `KQ7F`), or Steam invites via Steamworks ($100 app fee). Revisit if port forwarding becomes a hurdle or near release.

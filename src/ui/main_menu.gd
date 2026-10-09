@@ -44,9 +44,7 @@ func _ready() -> void:
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)
-	_settings_button.pressed.connect(func() -> void:
-		_panel.hide()
-		_settings.open())
+	_settings_button.pressed.connect(open_settings)
 	_settings.closed.connect(func() -> void:
 		_panel.show()
 		_settings_button.grab_focus())
@@ -122,6 +120,11 @@ func show_menu(message: String = "") -> void:
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()
+
+
+func open_settings() -> void:
+	_panel.hide()
+	_settings.open()
 
 
 ## Shows the menu with buttons disabled while something is in progress.

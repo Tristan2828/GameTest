@@ -222,6 +222,7 @@ func _physics_process(delta: float) -> void:
 			PerfLog.stop(&"weapons", t)
 			t = PerfLog.start()
 			_apply_contact_damage()
+			_test_knock_out()
 			_tick_revives(delta)
 			PerfLog.stop(&"contact", t)
 		else:
@@ -310,7 +311,11 @@ func _play_phase_jingle() -> void:
 			Sfx.play(&"defeat", -2.0)
 	if _is_run_finished() and not LaunchOptions.screenshot_dir.is_empty():
 		await get_tree().create_timer(1.7).timeout  # After the summary's count-up.
-		Main.save_screenshot(get_tree(), "run_end.png")
+		await Main.save_screenshot(get_tree(), "run_end.png")
+		_hud.run_summary._show_page(1)
+		await get_tree().create_timer(0.3).timeout
+		await Main.save_screenshot(get_tree(), "run_end_weapons.png")
+		_hud.run_summary._show_page(0)
 
 
 ## A beep on each "3, 2, 1" and a higher one when play resumes.
@@ -337,6 +342,7 @@ func _process(delta: float) -> void:
 	_update_music()
 	_update_spectate(delta)
 	GameCursor.set_in_game(not _is_between_stages())
+	_revive_screenshots()
 	var t := PerfLog.start()
 	_update_hud()
 	PerfLog.stop(&"hud", t)
@@ -563,6 +569,19 @@ func _apply_contact_damage() -> void:
 			player.take_hit(enemy.type.contact_damage)
 
 
+## Host, --test-down: knock out the first client's player once (revive testing).
+func _test_knock_out() -> void:
+	if LaunchOptions.test_down_at < 0.0 or _elapsed < LaunchOptions.test_down_at:
+		return
+	for player: Player in _player_nodes():
+		if not player.is_local() and not player.is_downed():
+			LaunchOptions.test_down_at = -1.0
+			player.health.hearts = 0
+			player.times_downed += 1
+			print("Player %d knocked out (--test-down)" % player.peer_id)
+			return
+
+
 ## Host: teammates standing in a downed player's circle fill it; full = back up.
 func _tick_revives(delta: float) -> void:
 	var players := _player_nodes()
@@ -611,9 +630,29 @@ func _update_spectate(delta: float) -> void:
 	local.spectate_target = choices[posmod(_spectate_index, choices.size())]
 
 
+var _downed_screenshot_taken: bool = false
+var _reviving_screenshot_taken: bool = false
+
+
+## --screenshot-dir: one picture while watching a teammate, one while reviving.
+func _revive_screenshots() -> void:
+	var local := _local_player()
+	if LaunchOptions.screenshot_dir.is_empty() or local == null:
+		return
+	if not _downed_screenshot_taken and _is_spectating() and _downed_seconds > Revive.SPECTATE_DELAY + 1.0:
+		_downed_screenshot_taken = true
+		Main.save_screenshot(get_tree(), "downed_spectating.png")
+	if not _reviving_screenshot_taken and not local.is_downed():
+		for player: Player in _player_nodes():
+			if player.is_downed() and player.revive_progress > 0.4:
+				_reviving_screenshot_taken = true
+				Main.save_screenshot(get_tree(), "reviving.png")
+
+
 func _is_spectating() -> bool:
 	var local := _local_player()
-	return local != null and local.is_downed() and _downed_seconds >= Revive.SPECTATE_DELAY 		and not _alive_teammates(local).is_empty()
+	return local != null and local.is_downed() and _downed_seconds >= Revive.SPECTATE_DELAY \
+		and not _alive_teammates(local).is_empty()
 
 
 func _update_phase() -> void:

@@ -76,8 +76,9 @@ func _build_cursor_rows() -> void:
 		box.move_child(row, _back.get_index())
 		_cursor_buttons.append(button)
 	_cursor_preview = TextureRect.new()
-	_cursor_preview.custom_minimum_size = Vector2(0, 22)
-	_cursor_preview.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	_cursor_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_cursor_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_cursor_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_cursor_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	box.add_child(_cursor_preview)
 	box.move_child(_cursor_preview, _back.get_index())
@@ -95,9 +96,12 @@ func _refresh_cursor_rows() -> void:
 		var choices: Array[String] = button.get_meta(&"choices")
 		var key: String = button.get_meta(&"key")
 		button.text = "<  %s  >" % choices[clampi(int(Settings.get(key)), 0, choices.size() - 1)]
-	# Preview at game scale (the real cursor is scaled to the window).
-	var size_scale := 1 if Settings.cursor_size <= 1 else Settings.cursor_size
-	_cursor_preview.texture = null if Settings.cursor_style <= 0 else 		ImageTexture.create_from_image(GameCursor.build_image(Settings.cursor_style, Settings.cursor_color, size_scale))
+	# Preview at the same size as the real cursor (which is scaled to the window).
+	var image := GameCursor.build_image(maxi(Settings.cursor_style, 1), Settings.cursor_color, 1)
+	var side := roundf(image.get_width() * GameCursor.SIZE_FACTORS[Settings.cursor_size])
+	_cursor_preview.custom_minimum_size = Vector2(side, side)
+	_cursor_preview.texture = ImageTexture.create_from_image(image)
+	_cursor_preview.modulate.a = 0.0 if Settings.cursor_style <= 0 else 1.0
 
 
 func open() -> void:

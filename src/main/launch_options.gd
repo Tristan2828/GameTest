@@ -22,6 +22,8 @@ extends RefCounted
 ##   --perf-log                      print step timings, fps and object counts every second
 ##   --update-now                    (exported game) install a newer release as soon as one is found
 ##   --invincible                    players can't be hit (performance / visual testing)
+##   --test-down=<seconds>           host: knock out the first client's player at this stage time
+##                                   (tests revives and spectating; autopilot teammates come to help)
 ##   --run-config=<k=v,k=v>          host's Difficulty / Custom Game settings (RunConfig names),
 ##                                   e.g. --run-config=single_stage=true,stage=2,enemy_health=1.5
 
@@ -46,6 +48,7 @@ static var character: int = -1
 static var run_config: Dictionary = {}
 static var invincible: bool = false
 static var update_now: bool = false
+static var test_down_at: float = -1.0
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -85,6 +88,8 @@ static func parse(args: PackedStringArray) -> void:
 			update_now = true
 		elif arg == "--invincible":
 			invincible = true
+		elif arg.begins_with("--test-down="):
+			test_down_at = arg.trim_prefix("--test-down=").to_float()
 		elif arg.begins_with("--run-config="):
 			for pair: String in arg.trim_prefix("--run-config=").split(",", false):
 				var parts := pair.split("=")

@@ -56,7 +56,7 @@ func sample(player: Player, delta: float) -> PlayerInput:
 
 
 ## Test mode (`--autopilot`): kite away from the nearest enemy while shooting it,
-## drift in a circle, and use the ability regularly.
+## drift in a circle, use the ability regularly, and go revive downed teammates.
 func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 	_autopilot_time += delta
 	var input := PlayerInput.new()
@@ -77,6 +77,11 @@ func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 		var to_enemy := nearest.global_position - player.global_position
 		input.aim = to_enemy.angle()
 		input.fire = true
+		var downed := _downed_teammate(player)
+		if downed != null and not player.is_downed():
+			var to_downed := downed.global_position - player.global_position
+			input.move = to_downed.normalized() if to_downed.length() > Revive.RADIUS * 0.4 else Vector2.ZERO
+			return input
 		# Weapon altars are worth pushing through a crowd for.
 		var weapons := player.get_tree().get_first_node_in_group("altars") as WeaponSystem
 		if weapons != null and to_enemy.length() > 50.0:
@@ -94,3 +99,15 @@ func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 		if gem.is_finite() and gem.distance_to(player.global_position) < 300.0:
 			input.move = (gem - player.global_position).normalized()
 	return input
+
+
+## Autopilot: the nearest downed teammate, or null.
+func _downed_teammate(player: Player) -> Player:
+	var best: Player = null
+	for node: Node in player.get_parent().get_children():
+		var other := node as Player
+		if other == null or other == player or not other.is_downed():
+			continue
+		if best == null or other.global_position.distance_to(player.global_position) < best.global_position.distance_to(player.global_position):
+			best = other
+	return best

@@ -1,7 +1,7 @@
-# Playtest Review (v0.14.0)
+# Playtest Review (v0.15.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (223 unit tests, plus online host+client runs).
+Automated tests prove it *works* (258 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -25,6 +25,7 @@ $g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
 & $g -- --solo --give-weapons                      # Start with all 3 auto weapons at level 2
 & $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
 & $g -- --solo --run-config=single_stage=true,stage=3,bonus_levels=5   # Custom game without the lobby pages
+& $g -- --solo --run-config=soundtrack=1           # Metal soundtrack (2 = metal boss fights only, 3 = shuffle)
 ```
 
 Flags combine. `--start-at` and `--start-stage` skip upgrades, so jumped-to fights are **harder** than in a real run.
@@ -49,15 +50,31 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
-### 3.0a Changes from the first co-op playtest (v0.14.0, check these first)
-- [ ] Level-up pacing: about half as many level-ups (a 2-player team: ~14 in stage 1 instead of ~30). Does the flow feel better? Is the difficulty still right with fewer upgrades?
+### 3.0b Changes from your second co-op list (v0.15.0, check these first)
+- [ ] Difficulty: level-ups are cheaper again (between v0.13 and v0.14) and Sharpened Bolts (+4) / Quick Hands (15%) are stronger. Can you beat stage 1 now? Too easy?
+  - *Tune: `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; upgrade `.tres` files.*
+- [ ] Co-op revives: at 0 hearts you're downed in a circle; a teammate standing in it brings you back in 4 s with half your hearts. Is 4 s right? Is the circle easy to find and stand in?
+  - *Tune: `RADIUS`, `SECONDS`, `HEART_SHARE`, `DRAIN_PER_SECOND` in `src/player/revive.gd`.*
+- [ ] While you're down, your screen follows a teammate after a moment (Fire / Ability switches who). Better than watching your body? Did the arrow back to your own body help?
+- [ ] Teammates' arrows pulse with a green "+" when they're down, and "Red is down!" / "Reviving Red... 40%" shows near the bottom. Noticeable in a fight?
+- [ ] Mourner's Bell relic (co-op only): revive twice as fast. Worth buying?
+- [ ] Settings: in-game cursor (Crosshair / Ring / Dot / System arrow, 4 sizes, 7 colors). Can you find your cursor now? Best default?
+- [ ] Run summary: a star next to the best player's number in each stat (fewest for Hearts lost / Downed). Clear?
+- [ ] Run summary: icons for weapons, upgrades and relics under "Build" (hover for names). Can you tell the icons apart?
+- [ ] Run summary: Weapons page (button at the bottom): damage, share, DPS and kills per weapon. Numbers believable? Anything else you want there?
+- [ ] Upgrade and relic icons on the level-up and shop cards. Do they help?
+- [ ] Records (title menu): your best runs per hero on this PC, with a score. Shows after a real run? Does the score feel fair (kills, damage, bosses, victory, difficulty)?
+- [ ] Custom Game: Soundtrack (Classic / Metal / Metal boss fights / Shuffle). Do the metal tracks fit? Which stage track is best or worst?
+
+### 3.0a Changes from the first co-op playtest (v0.14.0)
+- [ ] Level-up pacing: about half as many level-ups (a 2-player team: ~14 in stage 1 instead of ~30). Does the flow feel better? Is the difficulty still right with fewer upgrades? *(Too hard: retuned in v0.15.0, see 3.0b.)*
   - *Tune: `BASE_XP` / `XP_PER_LEVEL` in `src/progression/team_progress.gd`.*
 - [ ] After you pick, your card stays lit (gold border, others dimmed) with "You chose X. Waiting for ...". Clear?
 - [ ] Level pips on each card (filled = levels you have, blinking gold = this pick, hollow = left to max). Readable?
 - [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop. Long enough? Too long?
   - *Tune: `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`.*
 - [ ] Weapon icons with level pips under the hearts (HUD), on the run-end cards, and floating over altars. Can you tell the three apart?
-- [ ] Arrows at the screen edge point to off-screen teammates, in their color (faded for ghosts). Helpful? Distracting?
+- [ ] Arrows at the screen edge point to off-screen teammates, in their color (pulsing with a "+" when they're down). Helpful? Distracting?
 - [ ] Lobby: portraits show **your** color (a friend in Red sees red heroes), and small color squares show who picked which hero.
 - [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
 - [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
@@ -161,8 +178,8 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Clear radius big enough to save you? Damage noticeable? 14 s cooldown fair?
   - *Tune: `blast_*` and `ability_cooldown` in `src/player/characters/gravekeeper.tres`.*
 
-### 3.10 Ghosts and co-op (session D)
-- [ ] Being a ghost: fun enough to stay engaged until the next stage? Too long a wait?
+### 3.10 Co-op (session D)
+- [ ] Being downed: do revives happen often enough, or do you still end up waiting for the next stage?
 - [ ] Shared XP + individual picks: does it feel good together?
 - [ ] Coins first-come-first-served: fair, or does one player hog them?
 - [ ] Any desync weirdness (rubber-banding, enemies jumping, bullets that hit you but didn't look like it)?
@@ -195,7 +212,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Stage flow:** 4:00 horde then boss; horde at 40% during the boss; stage clear = boss dead.
 - **Run:** 3 stages, each harder; Victory after stage 3; the host returns everyone to character select (button, or R / Select).
 - **Boss HP** scales with players (+75% each); regular enemies don't (more of them instead).
-- **Ghosts** collect gems/coins; respawn next stage.
+- **Downed players** can be revived by a teammate (4 s in the circle, half hearts back); otherwise they get up at the next stage.
 - **Coins** go to whoever picks them up; the boss bounty is paid to everyone.
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.

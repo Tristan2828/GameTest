@@ -73,6 +73,14 @@ func _screenshot_info_pages() -> void:
 	await get_tree().create_timer(0.2).timeout
 	await save_screenshot(get_tree(), "checklist.png")
 	_menu.checklist.close()
+	_menu.records.open()
+	await get_tree().create_timer(0.2).timeout
+	await save_screenshot(get_tree(), "records.png")
+	_menu.records.close()
+	_menu.open_settings()
+	await get_tree().create_timer(0.2).timeout
+	await save_screenshot(get_tree(), "settings.png")
+	_menu.show_menu()
 
 
 func _apply_character_flag() -> void:
