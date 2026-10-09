@@ -2,13 +2,16 @@ class_name TeamProgress
 extends RefCounted
 ## The shared team XP bar and level. Owned by the host; clients get copies.
 ##
-## Pacing (v0.14.0, after the first co-op playtest had a level-up every ~8s):
-## each level costs 14 more XP than the last, and the cost grows with the team
-## size at the same rate as enemy spawns (+60% per extra player), so a team
-## levels up about as often as a solo player does.
+## Pacing: v0.12 had a level-up every ~8s in co-op (too many pauses); v0.14.0
+## made levels so expensive that the team was too weak to clear stage 1.
+## v0.15.0 sits in between: each level costs 9 more XP than the last, and the
+## cost grows by 40% per extra player (spawns grow 60%), so a bigger team still
+## levels a little faster than a solo player.
 
-const BASE_XP: int = 16
-const XP_PER_LEVEL: int = 14
+const BASE_XP: int = 10
+const XP_PER_LEVEL: int = 9
+## Extra XP cost per player beyond the first.
+const TEAM_COST_PER_EXTRA_PLAYER: float = 0.4
 
 var level: int = 1
 ## XP collected toward the next level.
@@ -21,7 +24,7 @@ var xp_rate: float = 1.0
 
 static func xp_to_next(for_level: int, players: int = 1, rate: float = 1.0) -> int:
 	var base := BASE_XP + (for_level - 1) * XP_PER_LEVEL
-	var team := 1.0 + SpawnDirector.EXTRA_PLAYER_MULTIPLIER * (maxi(players, 1) - 1)
+	var team := 1.0 + TEAM_COST_PER_EXTRA_PLAYER * (maxi(players, 1) - 1)
 	return maxi(roundi(base * team / maxf(rate, 0.01)), 1)
 
 

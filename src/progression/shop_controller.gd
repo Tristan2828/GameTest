@@ -50,7 +50,7 @@ func host_start(players: Array[Player], ready_peers: Array[int]) -> void:
 	var offered: Dictionary[int, Array] = {}
 	for player: Player in players:
 		if player.peer_id == multiplayer.get_unique_id() or ready_peers.has(player.peer_id):
-			offered[player.peer_id] = Relics.roll_offers(_rng, player.relic_ids)
+			offered[player.peer_id] = Relics.roll_offers(_rng, player.relic_ids, not multiplayer.get_peers().is_empty())
 	_session.start(offered)
 	_refresh_host_status()
 	for peer_id: int in offered:
@@ -94,7 +94,7 @@ func _host_reroll(peer_id: int) -> void:
 		return
 	player.coins -= _session.reroll_price(peer_id)
 	_session.rerolls[peer_id] = _session.rerolls.get(peer_id, 0) + 1
-	_session.offers[peer_id] = Relics.roll_offers(_rng, player.relic_ids)
+	_session.offers[peer_id] = Relics.roll_offers(_rng, player.relic_ids, not multiplayer.get_peers().is_empty())
 	_send_offers(peer_id)
 
 

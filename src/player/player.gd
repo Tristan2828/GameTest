@@ -16,6 +16,8 @@ signal shot_requested(shooter: Player, input_seq: int)
 signal hurt(victim: Player)
 ## Host: this player used their ability (the movement part already happened).
 signal ability_used(user: Player)
+## Every peer: this player got back up (revived by a teammate, or a new stage).
+signal revived(player: Player)
 
 const SLOT_COLORS: Array[Color] = [
 	Color(0.36, 0.78, 0.95),
@@ -40,6 +42,10 @@ const WALK_STEPS_PER_SECOND: float = 7.6
 ## Remote players further than this from their new snapshot position jump there
 ## (blinks, respawns) instead of sliding.
 const REMOTE_SNAP_DISTANCE: float = 48.0
+## The revive circle fills in this color.
+const REVIVE_COLOR: Color = Color(0.55, 0.95, 0.5)
+## How quickly the camera glides to a spectated teammate (higher = faster).
+const SPECTATE_PAN_SPEED: float = 6.0
 
 @export var stats: CharacterStats
 
@@ -67,6 +73,10 @@ var kills_toward_heal: int = 0
 var times_downed: int = 0
 ## Host: hearts lost to hits this run.
 var hearts_lost: int = 0
+## Downed: how full the revive circle is, 0..1 (host-owned, synced in snapshots).
+var revive_progress: float = 0.0
+## Local player only: while downed, the camera shows this teammate (null = yourself).
+var spectate_target: Player = null
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -156,9 +166,19 @@ func take_hit(amount: int) -> bool:
 	return landed
 
 
+## Host: a teammate filled the revive circle. Back up with some hearts and a
+## moment of safety, right where they fell.
+func revive() -> void:
+	health.hearts = Revive.hearts_after(health.max_hearts)
+	health.invulnerable_left = Revive.INVULNERABILITY
+	revive_progress = 0.0
+	print("Player %d revived" % peer_id)
+
+
 ## Host: back to full strength at a new spot (start of a stage).
 func respawn(at: Vector2) -> void:
 	health.reset(stats.max_hearts)
+	revive_progress = 0.0
 	state.position = at
 	state.dash_time_left = 0.0
 	state.ability_cooldown_left = 0.0
@@ -275,6 +295,8 @@ func _process(delta: float) -> void:
 	if _last_seen_hearts >= 0 and health.hearts < _last_seen_hearts:
 		hurt.emit(self)
 		add_shake(5.0)
+	elif _last_seen_hearts == 0 and health.hearts > 0:
+		revived.emit(self)
 	var dashing := is_dashing()
 	if dashing and not _was_dashing and is_local():
 		Sfx.play(&"dash", -6.0)
@@ -283,6 +305,12 @@ func _process(delta: float) -> void:
 	if _shake > 0.0:
 		_shake = maxf(_shake - delta * 20.0, 0.0)
 		_camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake)).round()
+	if is_local():
+		# Downed: the camera glides over to the teammate we're watching (and back).
+		var pan := Vector2.ZERO
+		if is_instance_valid(spectate_target) and spectate_target != self:
+			pan = spectate_target.position - position
+		_camera.position = _camera.position.lerp(pan, 1.0 - exp(-SPECTATE_PAN_SPEED * delta))
 	if multiplayer.is_server():
 		position = state.position
 	elif is_local():
@@ -310,8 +338,7 @@ func _draw() -> void:
 	var color: Color = SLOT_COLORS[slot % SLOT_COLORS.size()]
 	_draw_heart_pips()
 	if health.is_downed():
-		var bob := sin(Time.get_ticks_msec() / 250.0)
-		PixelArt.draw(self, "ghost", Vector2(0, -2 + bob), Color.WHITE, false, false, 1.0, Color(color.lightened(0.6), 0.55))
+		_draw_downed(color)
 		return
 	_draw_weapons()
 	var aim_direction := Vector2.from_angle(state.aim)
@@ -326,6 +353,25 @@ func _draw() -> void:
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
+
+
+## Lying on the ground inside the revive circle, with a bobbing "+" asking for help.
+func _draw_downed(color: Color) -> void:
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 180.0)
+	draw_circle(Vector2.ZERO, Revive.RADIUS, Color(color, 0.05 + 0.04 * pulse))
+	var dashes := 20
+	for i: int in range(0, dashes, 2):
+		draw_arc(Vector2.ZERO, Revive.RADIUS, TAU * i / dashes, TAU * (i + 1) / dashes, 4, Color(color, 0.45 + 0.35 * pulse), 1.0)
+	if revive_progress > 0.0:
+		draw_arc(Vector2.ZERO, Revive.RADIUS, -PI / 2.0, -PI / 2.0 + TAU * revive_progress, 48, REVIVE_COLOR, 2.0)
+	draw_set_transform(Vector2(0, 1), PI / 2.0)
+	PixelArt.draw(self, stats.sprite, Vector2.ZERO, color, false, false, 1.0, Color(0.7, 0.65, 0.75))
+	draw_set_transform(Vector2.ZERO)
+	var top := Vector2(0, -15 - roundf(pulse * 2.0))
+	draw_rect(Rect2(top + Vector2(-2, -4), Vector2(5, 9)), HITBOX_OUTLINE_COLOR)
+	draw_rect(Rect2(top + Vector2(-4, -2), Vector2(9, 5)), HITBOX_OUTLINE_COLOR)
+	draw_rect(Rect2(top + Vector2(-1, -3), Vector2(3, 7)), REVIVE_COLOR)
+	draw_rect(Rect2(top + Vector2(-3, -1), Vector2(7, 3)), REVIVE_COLOR)
 
 
 func _draw_heart_pips() -> void:
@@ -378,9 +424,11 @@ func _simulate_queued_inputs(delta: float) -> void:
 func _simulate(input: PlayerInput, delta: float) -> void:
 	last_processed_seq = input.seq
 	if health.is_downed():
-		# Ghosts float around but can't shoot or use their ability.
+		# Downed players lie still until revived: no moving, shooting or ability.
+		input.move = Vector2.ZERO
 		input.fire = false
 		state.last_ability_count = input.ability_count
+		state.dash_time_left = 0.0
 	var result := PlayerMotor.step(state, input, stats, bounds, delta)
 	if result & PlayerMotor.FIRED:
 		shot_requested.emit(self, input.seq)

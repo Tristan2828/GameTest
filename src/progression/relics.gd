@@ -17,7 +17,7 @@ const ALL: Array[Relic] = [
 	preload("res://src/progression/relics/hunters_eye.tres"),
 	preload("res://src/progression/relics/vampire_fang.tres"),
 	preload("res://src/progression/relics/holy_water.tres"),
-
+	preload("res://src/progression/relics/mourners_bell.tres"),
 ]
 
 
@@ -29,11 +29,12 @@ static func is_valid_id(id: int) -> bool:
 	return id >= 0 and id < ALL.size()
 
 
-## Up to OFFERS_PER_SHOP relics the player doesn't own yet.
-static func roll_offers(rng: RandomNumberGenerator, owned: Array[int]) -> Array[int]:
+## Up to OFFERS_PER_SHOP relics the player doesn't own yet (co-op-only relics
+## only when `co_op`).
+static func roll_offers(rng: RandomNumberGenerator, owned: Array[int], co_op: bool = true) -> Array[int]:
 	var pool: Array[int] = []
 	for id: int in ALL.size():
-		if not owned.has(id):
+		if not owned.has(id) and (co_op or not ALL[id].co_op_only):
 			pool.append(id)
 	var result: Array[int] = []
 	while not pool.is_empty() and result.size() < OFFERS_PER_SHOP:

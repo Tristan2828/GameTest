@@ -59,6 +59,9 @@ enum Ability { DASH, GRAVE_BLAST, BLINK, HEX_SNARE, BONE_EFFIGY }
 @export var hit_invulnerability: float = 1.0
 ## Heal 1 heart every this many kills (0 = never; from relics).
 @export var heal_every_kills: int = 0
+## How fast this player revives downed teammates (1 = normal, 2 = twice as fast).
+## Raised by relics; a future support character could start higher.
+@export var revive_speed: float = 1.0
 
 @export_group("Body")
 ## Size used for drawing and keeping the player inside the arena.

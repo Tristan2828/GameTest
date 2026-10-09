@@ -81,6 +81,8 @@ static func apply_effect(upgrade: Upgrade, stats: CharacterStats, health: Player
 			stats.bullet_speed *= 1.0 + upgrade.amount
 		Upgrade.Stat.KILL_HEAL:
 			stats.heal_every_kills = int(upgrade.amount)
+		Upgrade.Stat.REVIVE_SPEED:
+			stats.revive_speed *= 1.0 + upgrade.amount
 
 
 ## How many times this player already took this upgrade.
@@ -134,4 +136,6 @@ static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -
 			return "Bolt speed %d -> %d" % [roundi(stats.bullet_speed), roundi(after_stats.bullet_speed)]
 		Upgrade.Stat.KILL_HEAL:
 			return "Heal every %d kills" % after_stats.heal_every_kills
+		Upgrade.Stat.REVIVE_SPEED:
+			return "Revive speed %d%% -> %d%%" % [roundi(stats.revive_speed * 100.0), roundi(after_stats.revive_speed * 100.0)]
 	return ""

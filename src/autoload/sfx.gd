@@ -100,6 +100,12 @@ func _build_sounds() -> void:
 		Synth.voice(W.NOISE, 2400.0, 1800.0, 0.04, 0.22, 0.001, 2.0, 0.6),
 		Synth.voice(W.NOISE, 1900.0, 1400.0, 0.05, 0.18, 0.001, 2.0, 0.6),
 		Synth.voice(W.SQUARE, 220.0, 140.0, 0.12, 0.16, 0.002, 2.0, 0.4)]))
+	# A teammate went down: a heavy falling groan with a bell-like ring.
+	_add(&"downed", Synth.echo(Synth.mix([
+		Synth.voice(W.SAW, 220.0, 70.0, 0.7, 0.22, 0.004, 1.3, 0.3, 6.0, 0.03),
+		Synth.voice(W.SINE, 660.0, 640.0, 0.9, 0.12, 0.003, 1.8)]), 0.16, 0.3, 2))
+	# Back on your feet: a rising, warm chime.
+	_add(&"revive", Synth.echo(_arpeggio([67, 71, 74, 79, 83], 0.06, 0.24, W.TRIANGLE, 0.8), 0.08, 0.35, 3))
 	_add(&"enemy_shot", Synth.voice(W.SQUARE, 330.0, 240.0, 0.08, 0.12, 0.002, 2.0, 0.4))
 	_add(&"ui", Synth.voice(W.SINE, 900.0, 900.0, 0.03, 0.2, 0.001, 2.0))
 	# "3, 2, 1" before play resumes, then a brighter "go".

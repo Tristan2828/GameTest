@@ -89,6 +89,30 @@ func set_info(text: String) -> void:
 	_info_label.text = text
 
 
+var _notice: Label = null
+
+
+## A line low in the middle of the screen (downed / reviving). "" hides it.
+func set_notice(text: String) -> void:
+	if _notice == null:
+		_notice = Label.new()
+		_notice.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_notice.offset_left = -300.0
+		_notice.offset_right = 300.0
+		_notice.offset_top = -96.0
+		_notice.offset_bottom = -70.0
+		_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_notice.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		_notice.add_theme_font_size_override("font_size", 9)
+		_notice.add_theme_color_override("font_color", Color(0.75, 1.0, 0.7))
+		_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_notice)
+		move_child(_notice, _banner.get_index())
+	_notice.text = text
+	_notice.visible = not text.is_empty()
+
+
 func show_banner(title: String, subtitle: String) -> void:
 	_banner_title.text = title
 	_banner_subtitle.text = subtitle

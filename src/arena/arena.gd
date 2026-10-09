@@ -88,6 +88,10 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _run_stats: RunStats = RunStats.new()
 ## Host: Bone Effigies standing in the arena.
 var _effigies: Array[Effigy] = []
+## Local: seconds our player has been downed (the camera moves to a teammate after a moment).
+var _downed_seconds: float = 0.0
+## Local: which teammate we're watching while downed (fire / ability switches).
+var _spectate_index: int = 0
 
 
 ## Host: one Bone Effigy (a decoy that bursts when its time runs out).
@@ -212,6 +216,7 @@ func _physics_process(delta: float) -> void:
 			PerfLog.stop(&"weapons", t)
 			t = PerfLog.start()
 			_apply_contact_damage()
+			_tick_revives(delta)
 			PerfLog.stop(&"contact", t)
 		else:
 			t = PerfLog.start()
@@ -324,6 +329,7 @@ func _process(delta: float) -> void:
 	_boss_banner_left = maxf(_boss_banner_left - delta, 0.0)
 	_play_phase_jingle()
 	_update_music()
+	_update_spectate(delta)
 	var t := PerfLog.start()
 	_update_hud()
 	PerfLog.stop(&"hud", t)
@@ -356,6 +362,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
 	if event.is_action_pressed("restart"):
 		_request_restart()
+	if (event.is_action_pressed("fire") or event.is_action_pressed("ability")) and _is_spectating():
+		_spectate_index += 1
 
 
 ## Host, once the run is over: everyone goes back to character select (once).
@@ -466,6 +474,7 @@ func _spawn_player(data: Variant) -> Node:
 	player.shot_requested.connect(_on_player_shot_requested)
 	player.ability_used.connect(_on_player_ability_used)
 	player.hurt.connect(_on_player_hurt)
+	player.revived.connect(_on_player_revived)
 	return player
 
 
@@ -545,6 +554,59 @@ func _apply_contact_damage() -> void:
 		var enemy := _enemies.find_hit(player.state.position, player.stats.hitbox_radius)
 		if enemy != null:
 			player.take_hit(enemy.type.contact_damage)
+
+
+## Host: teammates standing in a downed player's circle fill it; full = back up.
+func _tick_revives(delta: float) -> void:
+	var players := _player_nodes()
+	for downed: Player in players:
+		if not downed.is_downed():
+			continue
+		var helper_speed := 0.0
+		var helpers: Array[int] = []
+		for helper: Player in players:
+			if not helper.is_downed() and Revive.in_range(downed.state.position, helper.state.position):
+				helper_speed += helper.stats.revive_speed
+				helpers.append(helper.peer_id)
+		downed.revive_progress = Revive.step(downed.revive_progress, helper_speed, delta)
+		if downed.revive_progress >= 1.0:
+			downed.revive()
+			for peer_id: int in helpers:
+				_run_stats.add(peer_id, RunStats.Stat.REVIVES, 1)
+
+
+## Everyone: alive players other than `local`, in a stable order.
+func _alive_teammates(local: Player) -> Array[Player]:
+	var result: Array[Player] = []
+	for player: Player in _player_nodes():
+		if player != local and not player.is_downed():
+			result.append(player)
+	return result
+
+
+## Local: while we're downed, the camera follows a living teammate (after a
+## short moment on our own body). The last choice in the cycle is ourselves.
+func _update_spectate(delta: float) -> void:
+	var local := _local_player()
+	if local == null:
+		return
+	if not local.is_downed() or _is_between_stages():
+		_downed_seconds = 0.0
+		_spectate_index = 0
+		local.spectate_target = null
+		return
+	_downed_seconds += delta
+	var choices := _alive_teammates(local)
+	if choices.is_empty() or _downed_seconds < Revive.SPECTATE_DELAY:
+		local.spectate_target = null
+		return
+	choices.append(local)
+	local.spectate_target = choices[posmod(_spectate_index, choices.size())]
+
+
+func _is_spectating() -> bool:
+	var local := _local_player()
+	return local != null and local.is_downed() and _downed_seconds >= Revive.SPECTATE_DELAY 		and not _alive_teammates(local).is_empty()
 
 
 func _update_phase() -> void:
@@ -977,10 +1039,13 @@ func _clear_ability_markers() -> void:
 		marker.queue_free()
 
 
-## True if `at` is close enough to this machine's player to be worth hearing.
+## True if `at` is close enough to what this machine's screen shows to be worth hearing.
 func _near_local_player(at: Vector2, distance: float = 340.0) -> bool:
 	var local := _local_player()
-	return local != null and local.world_position().distance_to(at) <= distance
+	if local == null:
+		return false
+	var listener := local.view_center() if local.spectate_target != null else local.world_position()
+	return listener.distance_to(at) <= distance
 
 
 func _on_enemy_vanished(at: Vector2, type_id: int, facing_left: bool) -> void:
@@ -1004,6 +1069,18 @@ func _on_player_hurt(victim: Player) -> void:
 	if victim.is_local():
 		_hud.flash_hurt()
 		Sfx.play(&"hurt", -3.0)
+	if victim.is_downed() and _player_nodes().size() > 1:
+		_effects.burst(victim.position, Player.SLOT_COLORS[victim.slot % Player.SLOT_COLORS.size()], 18, 90.0, 0.6, 1.5)
+		Sfx.play(&"downed", -4.0)
+
+
+## Everyone: a downed player got back up (also fires when a new stage respawns them).
+func _on_player_revived(player: Player) -> void:
+	if _phase != Phase.PLAYING:
+		return
+	_effects.burst(player.position, Player.REVIVE_COLOR, 20, 80.0, 0.6, 1.5)
+	if player.is_local() or _near_local_player(player.position):
+		Sfx.play(&"revive", -3.0)
 
 
 func _shake_local(strength: float) -> void:
@@ -1128,10 +1205,33 @@ func _update_hud() -> void:
 		_:
 			if _boss_banner_left > 0.0 and boss != null:
 				_hud.show_banner("%s rises!" % boss.type.display_name, "Destroy it to clear the stage.")
-			elif local != null and local.is_downed():
-				_hud.show_banner("You're a ghost", "Collect XP and coins for your team. You respawn next stage.")
 			else:
 				_hud.hide_banner()
+	_hud.set_notice(_revive_notice(local))
+
+
+## The line near the bottom of the screen about downed teammates ("" = none).
+func _revive_notice(local: Player) -> String:
+	if local == null or _phase != Phase.PLAYING or _player_nodes().size() < 2:
+		return ""
+	if local.is_downed():
+		var text := "You're down! A teammate can revive you by standing in your circle."
+		if _is_spectating():
+			var watching := local.spectate_target
+			var who := "yourself" if watching == null or watching == local else watching.display_name()
+			text += "
+Watching %s.   Fire / Ability: switch view" % who
+		return text
+	var names := PackedStringArray()
+	for player: Player in _player_nodes():
+		if not player.is_downed():
+			continue
+		if Revive.in_range(player.world_position(), local.world_position()):
+			return "Reviving %s... %d%%" % [player.display_name(), roundi(player.revive_progress * 100.0)]
+		names.append(player.display_name())
+	if names.is_empty():
+		return ""
+	return "%s %s down! Stand in the circle to revive." % [" and ".join(names), "is" if names.size() == 1 else "are"]
 
 
 func _update_minimap(local: Player, boss: Enemy) -> void:
@@ -1144,7 +1244,8 @@ func _update_minimap(local: Player, boss: Enemy) -> void:
 	for player: Player in _player_nodes():
 		var color := Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()]
 		markers.append([player.world_position(), color, player.is_local()])
-		if not player.is_local():
+		if not player.is_local() or player.spectate_target != null:
+			# While we watch a teammate, an arrow also points back to our own body.
 			teammates.append([player.world_position(), color, player.is_downed()])
 	var view := Rect2()
 	if local != null:
@@ -1189,6 +1290,7 @@ func _send_snapshots() -> void:
 		var max_hearts := PackedByteArray()
 		var flags := PackedByteArray()
 		var coins := PackedInt32Array()
+		var revive := PackedByteArray()
 		for player: Player in _player_nodes():
 			ids.append(player.peer_id)
 			positions.append(player.state.position)
@@ -1198,6 +1300,7 @@ func _send_snapshots() -> void:
 			max_hearts.append(player.health.max_hearts)
 			flags.append((1 if player.state.is_dashing() else 0) | (2 if player.health.is_invulnerable() else 0))
 			coins.append(player.coins)
+			revive.append(roundi(clampf(player.revive_progress, 0.0, 1.0) * 255.0))
 		# Whichever pause is running (level-up or shop) reports who we're waiting for.
 		var in_shop := _phase == Phase.SHOP
 		var waiting := PackedInt32Array(_shop.waiting_ids if in_shop else _level_up.waiting_ids)
@@ -1205,7 +1308,7 @@ func _send_snapshots() -> void:
 		if _phase == Phase.COUNTDOWN:
 			countdown = _resume_left
 		for peer_id: int in peers:
-			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins,
+			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins, revive,
 				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
@@ -1229,13 +1332,15 @@ func _notify_ready() -> void:
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
 		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
-		coins: PackedInt32Array, elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
+		coins: PackedInt32Array, revive: PackedByteArray, elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
 		pause_waiting: PackedInt32Array, pause_countdown: float) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
 			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
 			player.coins = coins[i]
+			if i < revive.size():
+				player.revive_progress = revive[i] / 255.0
 	_sync_clock(elapsed)
 	if stage != _stage:
 		_stage = stage

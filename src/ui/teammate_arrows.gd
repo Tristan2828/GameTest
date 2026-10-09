@@ -1,7 +1,8 @@
 class_name TeammateArrows
 extends Control
 ## Arrows at the screen edge pointing at teammates who are off screen, in their
-## player color. Ghosts get a faded arrow. Fills the whole HUD; the arena pushes
+## player color. Downed teammates' arrows pulse with a "+" (go revive them).
+## Fills the whole HUD; the arena pushes
 ## in the local view and the teammates' positions every frame.
 
 ## Distance from the screen edge to the arrow tip.
@@ -9,11 +10,11 @@ const EDGE_MARGIN: float = 10.0
 ## Teammates this close to the edge (inside it) count as visible: no arrow.
 const VISIBLE_INSET: float = 4.0
 const OUTLINE_COLOR: Color = Color(0.05, 0.03, 0.08, 0.9)
-const GHOST_ALPHA: float = 0.45
+const REVIVE_COLOR: Color = Color(0.55, 0.95, 0.5)
 
 ## The local player's view of the world (empty = draw nothing).
 var _view: Rect2 = Rect2()
-## [world position, color, is_ghost] per teammate.
+## [world position, color, is_downed] per teammate.
 var _teammates: Array[Array] = []
 
 
@@ -52,10 +53,15 @@ func _draw() -> void:
 		if tip == Vector2.INF:
 			continue
 		var color: Color = teammate[1]
-		if teammate[2]:
-			color.a = GHOST_ALPHA
 		var direction := (world - _view.get_center()).normalized()
+		var downed: bool = teammate[2]
+		if downed:
+			color = color.lerp(Color.WHITE, 0.4 + 0.4 * sin(Time.get_ticks_msec() / 150.0))
 		_draw_arrow(tip.round(), direction, color)
+		if downed:
+			var dot := (tip - direction * 13.0).round()
+			draw_rect(Rect2(dot + Vector2(-1, -3), Vector2(3, 7)), REVIVE_COLOR)
+			draw_rect(Rect2(dot + Vector2(-3, -1), Vector2(7, 3)), REVIVE_COLOR)
 
 
 ## A small arrowhead with a dark outline, plus a dot behind it.

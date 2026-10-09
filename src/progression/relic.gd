@@ -8,3 +8,5 @@ extends Resource
 @export var price: int = 20
 ## Stat effects, applied in order (they can include drawbacks).
 @export var effects: Array[Upgrade] = []
+## Only offered in co-op games (e.g. revive relics are useless solo).
+@export var co_op_only: bool = false

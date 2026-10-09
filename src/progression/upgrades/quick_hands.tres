@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Quick Hands"
-description = "Fire 12% faster"
+description = "Fire 15% faster"
 stat = 1
-amount = 0.12
+amount = 0.15
 max_stacks = 5

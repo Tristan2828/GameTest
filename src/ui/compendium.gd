@@ -104,8 +104,8 @@ func _show_pickups() -> void:
 		"Beating a boss also pays everyone a bounty.")
 	_entry("icon_orbiting_skulls", "Weapon altars", "Appear twice per stage and show the weapon they hold. First player to touch one takes it.",
 		"See the Weapons tab.")
-	_entry("ghost", "Ghosts", "At 0 hearts you become a ghost until the next stage: you can't shoot or be hurt, but you can still collect XP and coins.",
-		"Everyone respawns at the start of the next stage. The run ends when everyone is a ghost.")
+	_entry("wanderer", "Downed and revives", "At 0 hearts you're downed: you lie in a circle and can't move or shoot. A teammate standing in the circle revives you in %ds (faster with more helpers), with half your hearts back." % roundi(Revive.SECONDS),
+		"While down, your screen follows a teammate (Fire / Ability switches). Everyone gets up at the next stage. The run ends when everyone is down.")
 
 
 ## Regular enemies (or bosses), with where they appear.

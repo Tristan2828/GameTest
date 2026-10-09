@@ -105,7 +105,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	var player := _local_player()
 	_clear_current_stage()
 	assert_eq(_arena._phase, Arena.Phase.STAGE_CLEAR)
-	# (In solo, going down would end the run; here we just check ghosts respawn.)
+	# (In solo, going down would end the run; here we just check downed players respawn.)
 	player.health.take_hit(99, 0.0)
 	assert_true(player.is_downed())
 	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
@@ -113,7 +113,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	await wait_physics_frames(2)
 	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before the next stage")
 	assert_eq(_arena._stage, 2)
-	assert_false(player.is_downed(), "ghosts come back")
+	assert_false(player.is_downed(), "downed players get back up")
 	assert_eq(player.health.hearts, player.health.max_hearts)
 	assert_eq(player.state.ability_cooldown_left, 0.0, "ability ready again")
 	assert_almost_eq(_arena._elapsed, 0.0, 0.5)
@@ -141,7 +141,7 @@ func test_later_stages_have_tougher_enemies() -> void:
 	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), roundi(base * 2.0))
 
 
-func test_ghost_can_move_but_not_shoot_or_use_abilities() -> void:
+func test_downed_player_cant_move_shoot_or_use_abilities() -> void:
 	var player := _local_player()
 	player.health.take_hit(99, 0.0)
 	watch_signals(player)
@@ -152,13 +152,13 @@ func test_ghost_can_move_but_not_shoot_or_use_abilities() -> void:
 		input.fire = true
 		input.ability_count = 1
 		player._simulate(input, 1.0 / 60.0)
-	assert_gt(player.state.position.x, start.x)
+	assert_eq(player.state.position, start, "lies still until revived")
 	assert_signal_not_emitted(player, "shot_requested")
 	assert_signal_not_emitted(player, "ability_used")
 	assert_false(player.can_be_hit())
 
 
-func test_ghosts_still_collect_gems() -> void:
+func test_downed_players_still_pull_in_nearby_gems() -> void:
 	var player := _local_player()
 	player.health.take_hit(99, 0.0)
 	_arena._gems.spawn_host(player.state.position + Vector2(10, 0), 3)
