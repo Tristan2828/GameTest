@@ -18,6 +18,11 @@ extends Resource
 ## Show an HP bar once damaged (for tanky enemies).
 @export var show_hp_bar: bool = false
 
+## Bosses get the big HUD health bar and end the stage when they die.
+@export var is_boss: bool = false
+## Extra max HP per player beyond the first (0.75 = +75%). Regular enemies use 0.
+@export var hp_per_extra_player: float = 0.0
+
 @export_group("Ranged")
 ## Bullet pattern this enemy fires (ShotPatterns.Id), or -1 for melee only.
 @export var shot_pattern: int = -1

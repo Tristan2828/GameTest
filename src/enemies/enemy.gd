@@ -9,12 +9,15 @@ const CLIENT_SMOOTHING: float = 12.0
 const HP_BACK_COLOR: Color = Color(0.15, 0.05, 0.08)
 const HP_FILL_COLOR: Color = Color(0.85, 0.2, 0.28)
 const EYE_COLOR: Color = Color(1.0, 0.85, 0.4)
+const BOSS_HORN_COLOR: Color = Color(0.35, 0.3, 0.28)
+const BOSS_MOUTH_COLOR: Color = Color(0.2, 0.08, 0.1)
 
 var pool_index: int = -1
 var type_id: int = 0
 var type: EnemyType = EnemyTypes.get_type(0)
 var active: bool = false
 var hp: int = 1
+var max_hp: int = 1
 ## Clients only know HP as a fraction (0..1), for HP bars.
 var hp_ratio: float = 1.0
 var wobble_phase: float = 0.0
@@ -33,12 +36,14 @@ func _ready() -> void:
 	visible = active
 
 
-func activate(enemy_type_id: int, at: Vector2) -> void:
+## `hit_points` > 0 overrides the type's max HP (bosses scale with players).
+func activate(enemy_type_id: int, at: Vector2, hit_points: int = 0) -> void:
 	type_id = enemy_type_id
 	type = EnemyTypes.get_type(enemy_type_id)
 	active = true
 	visible = true
-	hp = type.max_hp
+	max_hp = hit_points if hit_points > 0 else type.max_hp
+	hp = max_hp
 	hp_ratio = 1.0
 	position = at
 	target_position = at
@@ -60,7 +65,7 @@ func apply_damage(amount: int) -> bool:
 	if not active or hp <= 0:
 		return false
 	hp = maxi(hp - amount, 0)
-	hp_ratio = float(hp) / float(type.max_hp)
+	hp_ratio = float(hp) / float(max_hp)
 	hit_since_snapshot = true
 	flash()
 	return hp == 0
@@ -83,11 +88,23 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var body := Color.WHITE if _flash_left > 0.0 else type.color
+	if type.is_boss:
+		_draw_boss_crown()
 	draw_circle(Vector2.ZERO, type.radius, body)
 	draw_circle(Vector2(-type.radius * 0.35, -type.radius * 0.2), maxf(type.radius * 0.18, 1.0), EYE_COLOR)
 	draw_circle(Vector2(type.radius * 0.35, -type.radius * 0.2), maxf(type.radius * 0.18, 1.0), EYE_COLOR)
+	if type.is_boss:
+		draw_rect(Rect2(-type.radius * 0.4, type.radius * 0.25, type.radius * 0.8, 3.0), BOSS_MOUTH_COLOR)
 	if type.show_hp_bar and hp_ratio < 1.0:
 		var bar := Rect2(-type.radius, -type.radius - 5.0, type.radius * 2.0, 2.0)
 		draw_rect(bar, HP_BACK_COLOR)
 		bar.size.x *= hp_ratio
 		draw_rect(bar, HP_FILL_COLOR)
+
+
+func _draw_boss_crown() -> void:
+	var r := type.radius
+	for side: float in [-1.0, 1.0]:
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(side * r * 0.45, -r * 0.7), Vector2(side * r * 1.15, -r * 1.45), Vector2(side * r * 0.85, -r * 0.35)]),
+			BOSS_HORN_COLOR)

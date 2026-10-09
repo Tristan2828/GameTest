@@ -5,6 +5,9 @@ extends CanvasLayer
 @onready var _hearts: HeartsDisplay = %Hearts
 @onready var _xp_bar: XpBar = %XpBar
 @onready var _level_label: Label = %LevelLabel
+@onready var _boss_box: Control = %BossBox
+@onready var _boss_name: Label = %BossName
+@onready var _boss_bar: XpBar = %BossBar
 @onready var _timer_label: Label = %TimerLabel
 @onready var _status_label: Label = %StatusLabel
 @onready var _info_label: Label = %InfoLabel
@@ -26,6 +29,18 @@ func set_progress(level: int, ratio: float) -> void:
 func set_time_left(seconds: float) -> void:
 	var whole := ceili(maxf(seconds, 0.0))
 	_timer_label.text = "%d:%02d" % [whole / 60, whole % 60]
+
+
+## Big text instead of the countdown (e.g. "BOSS").
+func set_timer_text(text: String) -> void:
+	_timer_label.text = text
+
+
+## Boss health bar under the timer. Pass an empty name to hide it.
+func set_boss(boss_name: String, hp_ratio: float) -> void:
+	_boss_box.visible = not boss_name.is_empty()
+	_boss_name.text = boss_name
+	_boss_bar.set_ratio(hp_ratio)
 
 
 ## Top-right: role, ping, player count.

@@ -13,7 +13,7 @@ const ENEMY_SCENE: PackedScene = preload("res://src/enemies/enemy.tscn")
 const POOL_SIZE: int = 300
 const GRID_CELL_SIZE: float = 24.0
 ## Larger than any enemy radius; used to find touching neighbours.
-const MAX_ENEMY_RADIUS: float = 12.0
+const MAX_ENEMY_RADIUS: float = 24.0
 ## How hard overlapping enemies push each other apart.
 const SEPARATION_STRENGTH: float = 40.0
 ## Each enemy in a snapshot: u16 index, u8 type, u8 flags, s16 x, s16 y, u8 hp.
@@ -42,12 +42,20 @@ func _ready() -> void:
 
 
 ## Host: returns the spawned enemy, or null if the pool is full.
-func spawn(type_id: int, at: Vector2) -> Enemy:
+func spawn(type_id: int, at: Vector2, hit_points: int = 0) -> Enemy:
 	if _free_indices.is_empty():
 		return null
 	var enemy := _pool[_free_indices.pop_back()]
-	enemy.activate(type_id, at)
+	enemy.activate(type_id, at, hit_points)
 	return enemy
+
+
+## The active boss, or null.
+func find_boss() -> Enemy:
+	for enemy: Enemy in _pool:
+		if enemy.active and enemy.type.is_boss:
+			return enemy
+	return null
 
 
 func active_count() -> int:

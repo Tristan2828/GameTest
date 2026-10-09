@@ -1,6 +1,7 @@
 class_name Arena
 extends Node2D
-## One stage of a run: players, the enemy horde, and bullets.
+## One stage of a run: players, the enemy horde, bullets, and the boss.
+## A stage is WAVE_DURATION of horde, then the boss arrives; killing it clears the stage.
 ##
 ## Every physics tick (while the run is being played) runs in a fixed order:
 ## players -> spawning -> enemies -> contact damage -> bullets -> hits -> gems -> phase check.
@@ -13,7 +14,12 @@ enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP }
 
 const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
-const STAGE_DURATION: float = 300.0
+## Horde waves last this long, then the boss arrives.
+const WAVE_DURATION: float = 240.0
+## Horde spawn rate while the boss is alive (and no pack surges).
+const BOSS_FIGHT_SPAWN_RATE: float = 0.4
+const BOSS_SPAWN_DISTANCE: float = 220.0
+const BOSS_BANNER_SECONDS: float = 3.0
 ## 60 physics ticks per second / 2 = 30 player snapshots per second.
 const PLAYER_SNAPSHOT_INTERVAL_TICKS: int = 2
 ## Enemies are smoothed on clients anyway, so 15 per second is plenty.
@@ -40,7 +46,15 @@ const AUTOPILOT_RESTART_DELAY: float = 2.0
 
 var _phase: Phase = Phase.PLAYING
 var _elapsed: float = 0.0
-var _stage_duration: float = STAGE_DURATION
+var _wave_duration: float = WAVE_DURATION
+var _boss_brain: BossBrain = BossBrain.new()
+## Host: the boss has been spawned this stage.
+var _boss_spawned: bool = false
+## Host: the boss died this tick (the stage ends at the phase check).
+var _boss_defeated: bool = false
+## Everyone: we've seen the boss (for the intro banner and "BOSS" timer).
+var _boss_seen: bool = false
+var _boss_banner_left: float = 0.0
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
@@ -81,7 +95,7 @@ func _ready() -> void:
 	_level_up.bind_panel(_hud.level_up_panel)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	if LaunchOptions.stage_seconds > 0.0:
-		_stage_duration = LaunchOptions.stage_seconds
+		_wave_duration = LaunchOptions.stage_seconds
 	if multiplayer.is_server():
 		_elapsed = LaunchOptions.start_at_seconds
 		Net.invite.changed.connect(_on_invite_changed)
@@ -107,6 +121,7 @@ func _physics_process(delta: float) -> void:
 		if is_host:
 			_spawn_enemies(delta)
 			_enemies.tick_host(delta, _alive_player_positions())
+			_tick_boss(delta)
 			_apply_contact_damage()
 		else:
 			_enemies.rebuild_grid()
@@ -137,6 +152,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_copied_feedback_left = maxf(_copied_feedback_left - delta, 0.0)
+	_boss_banner_left = maxf(_boss_banner_left - delta, 0.0)
 	_update_hud()
 
 
@@ -174,6 +190,9 @@ func debug_report() -> String:
 		lines.append("[report]   kills by peer: %s" % [_kills_by_peer])
 		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
 	lines.append("[report]   enemy bullets alive: %d" % _enemy_bullets.count())
+	var boss := _enemies.find_boss()
+	if boss != null:
+		lines.append("[report]   boss: %s hp %.0f%% phase %d" % [boss.type.display_name, boss.hp_ratio * 100.0, _boss_brain.phase])
 	lines.append("[report]   bullets alive: %d   physics time: %.2f ms/tick" % [_projectiles.count(), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
 	return "\n".join(lines)
 
@@ -243,11 +262,12 @@ func _spawn_enemies(delta: float) -> void:
 	var alive_players := _alive_player_positions()
 	if alive_players.is_empty():
 		return
-	for type_id: int in _director.tick(delta, _elapsed, alive_players.size(), _enemies.active_count()):
+	var rate := BOSS_FIGHT_SPAWN_RATE if _boss_spawned else 1.0
+	for type_id: int in _director.tick(delta, _elapsed, alive_players.size(), _enemies.active_count(), rate):
 		var point := _offscreen_spawn_point(alive_players)
 		if point.is_finite():
 			_enemies.spawn(type_id, point)
-	if _director.pack_due(_elapsed, _enemies.active_count()):
+	if not _boss_spawned and _director.pack_due(_elapsed, _enemies.active_count()):
 		var center := _offscreen_spawn_point(alive_players)
 		if center.is_finite():
 			for i: int in SpawnDirector.PACK_SIZE:
@@ -288,8 +308,10 @@ func _update_phase() -> void:
 	var players := _player_nodes()
 	if not players.is_empty() and _alive_player_positions().is_empty():
 		_end_stage(Phase.RUN_OVER)
-	elif _elapsed >= _stage_duration:
+	elif _boss_defeated:
 		_end_stage(Phase.STAGE_CLEAR)
+	elif _elapsed >= _wave_duration and not _boss_spawned:
+		_spawn_boss()
 
 
 func _end_stage(phase: Phase) -> void:
@@ -302,8 +324,44 @@ func _end_stage(phase: Phase) -> void:
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
 
+func _spawn_boss() -> void:
+	_boss_spawned = true
+	var alive := _alive_player_positions()
+	var center := Vector2.ZERO
+	for point: Vector2 in alive:
+		center += point / alive.size()
+	var inner := BOUNDS.grow(-40.0)
+	var at := (center + Vector2.from_angle(_rng.randf() * TAU) * BOSS_SPAWN_DISTANCE).clamp(inner.position, inner.end)
+	var boss_type := EnemyTypes.get_type(EnemyTypes.Id.BONE_WARDEN)
+	var players := maxi(_player_nodes().size(), 1)
+	var hit_points := roundi(boss_type.max_hp * (1.0 + boss_type.hp_per_extra_player * (players - 1)))
+	_enemies.spawn(EnemyTypes.Id.BONE_WARDEN, at, hit_points)
+	print("Boss spawned with %d HP at %.1fs" % [hit_points, _elapsed])
+
+
+## Host: run the boss's attack schedule.
+func _tick_boss(delta: float) -> void:
+	var boss := _enemies.find_boss()
+	if boss == null:
+		return
+	match _boss_brain.tick(delta, boss.hp_ratio):
+		BossBrain.Attack.RING:
+			_fire_enemy_pattern(ShotPatterns.Id.RING_24, boss.position, 0.0)
+		BossBrain.Attack.SPIRAL:
+			_fire_enemy_pattern(ShotPatterns.Id.SPIRAL, boss.position, 0.0)
+		BossBrain.Attack.DOUBLE_SPIRAL:
+			_fire_enemy_pattern(ShotPatterns.Id.DOUBLE_SPIRAL, boss.position, 0.0)
+		BossBrain.Attack.FANS:
+			for target: Vector2 in _alive_player_positions():
+				_fire_enemy_pattern(ShotPatterns.Id.AIMED_FAN_7, boss.position, (target - boss.position).angle())
+
+
 func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
 	_kills_by_peer[killer_peer_id] = _kills_by_peer.get(killer_peer_id, 0) + 1
+	if enemy.type.is_boss:
+		# Don't end the stage mid-hit-check; the phase check does it this tick.
+		_boss_defeated = true
+		return
 	if not _gems.spawn_host(enemy.position, enemy.type.xp_value):
 		# Too many gems on the ground: grant the XP directly instead.
 		_on_gem_collected(enemy.type.xp_value, killer_peer_id)
@@ -413,7 +471,15 @@ func _update_hud() -> void:
 	var local := _local_player()
 	if local != null:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
-	_hud.set_time_left(_stage_duration - _elapsed)
+	var boss := _enemies.find_boss()
+	if boss != null and not _boss_seen:
+		_boss_seen = true
+		_boss_banner_left = BOSS_BANNER_SECONDS
+	if _boss_seen:
+		_hud.set_timer_text("BOSS")
+	else:
+		_hud.set_time_left(_wave_duration - _elapsed)
+	_hud.set_boss(boss.type.display_name if boss != null else "", boss.hp_ratio if boss != null else 0.0)
 	_hud.set_progress(_team.level, _team.progress_ratio())
 
 	var status := "Solo"
@@ -442,7 +508,9 @@ func _update_hud() -> void:
 		Phase.RUN_OVER:
 			_hud.show_banner("Run over", restart_hint)
 		_:
-			if local != null and local.is_downed():
+			if _boss_banner_left > 0.0 and boss != null:
+				_hud.show_banner("%s rises!" % boss.type.display_name, "Destroy it to clear the stage.")
+			elif local != null and local.is_downed():
 				_hud.show_banner("You're down", "Your friends fight on. (Ghosts come in a later milestone.)")
 			else:
 				_hud.hide_banner()

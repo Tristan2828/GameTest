@@ -38,9 +38,10 @@ static func spawns_per_second(elapsed: float, player_count: int) -> float:
 
 
 ## Enemy type ids to spawn individually this tick.
-func tick(delta: float, elapsed: float, player_count: int, alive: int) -> Array[int]:
+## `rate_multiplier` scales the spawn rate (e.g. lower during the boss fight).
+func tick(delta: float, elapsed: float, player_count: int, alive: int, rate_multiplier: float = 1.0) -> Array[int]:
 	var result: Array[int] = []
-	_budget += spawns_per_second(elapsed, player_count) * delta
+	_budget += spawns_per_second(elapsed, player_count) * rate_multiplier * delta
 	while _budget >= 1.0:
 		_budget -= 1.0
 		if alive + result.size() < MAX_ALIVE:

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyType" format=3]
+
+[ext_resource type="Script" path="res://src/enemies/enemy_type.gd" id="1_type"]
+
+[resource]
+script = ExtResource("1_type")
+display_name = "The Bone Warden"
+max_hp = 6000
+move_speed = 22.0
+radius = 22.0
+contact_damage = 1
+xp_value = 50
+color = Color(0.82, 0.78, 0.66, 1)
+wobble = 0.0
+show_hp_bar = false
+is_boss = true
+hp_per_extra_player = 0.75
+shot_pattern = -1
+preferred_distance = 110.0
