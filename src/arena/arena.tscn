@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://src/arena/arena_floor.gd" id="7_floor"]
 [ext_resource type="Script" path="res://src/progression/shop_controller.gd" id="8_shop"]
 [ext_resource type="Script" path="res://src/combat/weapon_system.gd" id="9_weapons"]
+[ext_resource type="Script" path="res://src/combat/effects_layer.gd" id="10_effects"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -48,6 +49,9 @@ glow_radius = 4.0
 core_radius = 2.0
 glow_color = Color(0.95, 0.2, 0.75, 0.5)
 core_color = Color(1, 0.9, 0.98, 1)
+
+[node name="Effects" type="Node2D" parent="."]
+script = ExtResource("10_effects")
 
 [node name="LevelUp" type="Node" parent="."]
 script = ExtResource("6_levelup")

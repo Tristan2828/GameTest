@@ -51,8 +51,10 @@ const SPAWN_DISTANCE_MIN: float = 380.0
 const SPAWN_DISTANCE_MAX: float = 440.0
 const MIN_SPAWN_DISTANCE_FROM_ANY_PLAYER: float = 340.0
 const PACK_RADIUS: float = 28.0
-const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Q / RB bomb   Esc leave"
+const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Q / RB bomb   Esc / Start menu"
 const COPIED_FEEDBACK_SECONDS: float = 4.0
+const SPARK_COLOR: Color = Color(1.0, 0.9, 0.6)
+const HURT_COLOR: Color = Color(1.0, 0.25, 0.3)
 ## In --autopilot test mode, the host restarts by itself this long after a stage ends.
 const AUTOPILOT_RESTART_DELAY: float = 2.0
 
@@ -103,6 +105,7 @@ var _pattern_times: PackedFloat32Array = PackedFloat32Array()
 @onready var _level_up: LevelUpController = $LevelUp
 @onready var _hud: Hud = $Hud
 @onready var _floor: ArenaFloor = $Floor
+@onready var _effects: EffectsLayer = $Effects
 
 
 func _ready() -> void:
@@ -120,6 +123,9 @@ func _ready() -> void:
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
 	_shop.relic_bought.connect(_on_relic_bought)
 	_weapons.bounds = BOUNDS
+	_enemies.enemy_vanished.connect(_on_enemy_vanished)
+	_projectiles.hit_at.connect(func(at: Vector2) -> void:
+		_effects.burst(at, SPARK_COLOR, 3, 60.0, 0.15, 1.0))
 	_weapons.weapon_gained.connect(_on_weapon_gained)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	if LaunchOptions.stage_seconds > 0.0:
@@ -299,6 +305,7 @@ func _spawn_player(data: Variant) -> Node:
 	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character)
 	player.shot_requested.connect(_on_player_shot_requested)
 	player.bomb_requested.connect(_on_player_bomb_requested)
+	player.hurt.connect(_on_player_hurt)
 	return player
 
 
@@ -620,8 +627,29 @@ func _on_player_bomb_requested(bomber: Player) -> void:
 		_receive_bomb.rpc_id(peer_id, at)
 
 
+func _on_enemy_vanished(at: Vector2, color: Color, radius: float) -> void:
+	var is_boss := radius >= 18.0
+	_effects.burst(at, color, 24 if is_boss else 6, 120.0 if is_boss else 50.0, 0.9 if is_boss else 0.35,
+		3.0 if is_boss else 1.5)
+	if is_boss:
+		_shake_local(10.0)
+
+
+func _on_player_hurt(victim: Player) -> void:
+	_effects.burst(victim.position, HURT_COLOR, 10, 70.0, 0.4)
+	if victim.is_local():
+		_hud.flash_hurt()
+
+
+func _shake_local(strength: float) -> void:
+	var local := _local_player()
+	if local != null:
+		local.add_shake(strength)
+
+
 ## Everyone: clear enemy bullets and show the blast.
 func _detonate_bomb(at: Vector2) -> void:
+	_shake_local(6.0)
 	_enemy_bullets.clear_near(at, BOMB_CLEAR_RADIUS)
 	var blast := BombBlast.new()
 	blast.radius = BOMB_CLEAR_RADIUS
@@ -696,7 +724,7 @@ func _update_hud() -> void:
 		info = _invite_hud_text() + "\n" + info
 	_hud.set_info(info)
 
-	var restart_hint := "Press R / Start to return to the lobby" if multiplayer.is_server() else "Waiting for the host..."
+	var restart_hint := "Press R / Select to return to the lobby" if multiplayer.is_server() else "Waiting for the host..."
 	var name_of := func(peer_id: int) -> String:
 		var player := _player_by_id(peer_id)
 		return player.display_name() if player != null else "someone"

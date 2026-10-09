@@ -10,6 +10,7 @@ const LOBBY_SCENE: PackedScene = preload("res://src/lobby/lobby.tscn")
 
 @onready var _level: Node = $Level
 @onready var _menu: MainMenu = $MainMenu
+@onready var _pause_menu: PauseMenu = $PauseMenu
 
 
 func _ready() -> void:
@@ -19,13 +20,16 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	_pause_menu.leave_requested.connect(_leave_game.bind("You left the game."))
 	_menu.show_menu()
 	_apply_launch_options()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and not _menu.visible:
-		_leave_game("You left the game.")
+	if event.is_action_pressed("pause") and not _menu.visible and not _pause_menu.visible \
+			and _level.get_child_count() > 0:
+		_pause_menu.open()
+		get_viewport().set_input_as_handled()
 
 
 func _apply_launch_options() -> void:
@@ -133,6 +137,7 @@ func _clear_level() -> void:
 
 
 func _leave_game(message: String) -> void:
+	_pause_menu.close()
 	Net.leave_game()
 	for child: Node in _level.get_children():
 		_level.remove_child(child)

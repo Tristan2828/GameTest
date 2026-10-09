@@ -35,7 +35,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 
 ## Project layout
 Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
-- `src/autoload/`: global singletons. `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
+- `src/autoload/`: global singletons. `Settings` (volume, fullscreen, screen shake; saved to user://settings.cfg), `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
 - `src/main/`: root scene `main.tscn` (menu plus `Level` slot plus `LevelSpawner`) and `LaunchOptions`.
 - `src/lobby/`: `Lobby` scene (character select + ready-up, host-owned state broadcast on change; spawned by `LevelSpawner` like the arena) with pure `LobbyState` rules and `CharacterPortrait`. `RunSetup` (in `src/main/`) carries choices and join order into the arena.
 - `src/ui/`: main menu, `Hud` scene (hearts, timer, banners), and HUD widgets.
@@ -58,4 +58,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - RPC gotcha: an **empty** `PackedByteArray` sent as an RPC's only argument arrives as "no arguments" and the call fails. Always send a count or another argument alongside packed data.
 - Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).
 - `-s some_script.gd` runs do NOT get autoloads (`Net`, `GameInput`), so game scenes can't run that way. To check visuals, launch the real game with `--screenshot-dir`.
+- Gamepad must work in every menu. Esc / Start opens the pause menu (`pause` action); R / Select (`restart`) returns to the lobby after a run.
+- Visual effects (`EffectsLayer` particles, screen shake, hurt flash) are spawned locally on every peer from events they already see (`enemy_vanished`, `hit_at`, `hurt`); never send effects over the network.
+- Packed arrays are values: putting them in an Array and calling `resize()` in a loop only resizes copies. Resize each one directly.
 - Gamepad must work in every menu. Godot's default `ui_accept` has no gamepad button, so `GameInput` adds A to it. `tests/unit/test_input_bindings.gd` guards this; extend it when adding new UI.

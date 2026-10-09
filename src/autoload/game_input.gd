@@ -19,7 +19,8 @@ func _enter_tree() -> void:
 	# controllers could move between buttons but not press them.
 	_add_action("ui_accept", [_joy(JOY_BUTTON_A)])
 	_add_action("copy_invite", [_key(KEY_F1)])
-	_add_action("restart", [_key(KEY_R), _joy(JOY_BUTTON_START)])
+	_add_action("restart", [_key(KEY_R), _joy(JOY_BUTTON_BACK)])
+	_add_action("pause", [_key(KEY_ESCAPE), _joy(JOY_BUTTON_START)])
 	_add_action("fire",[_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
 	_add_action("dash", [
 		_key(KEY_SPACE),

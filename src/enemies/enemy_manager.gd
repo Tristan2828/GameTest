@@ -6,6 +6,8 @@ extends Node2D
 ## All peers: keep a SpatialGrid of enemy positions for fast hit checks.
 
 signal enemy_killed(enemy: Enemy, killer_peer_id: int)
+## Every peer: an enemy just disappeared here (for death effects).
+signal enemy_vanished(at: Vector2, color: Color, radius: float)
 ## Host: a ranged enemy fired. The arena turns this into bullets + a network event.
 signal pattern_fired(pattern: int, origin: Vector2, aim: float)
 
@@ -199,7 +201,9 @@ func _receive_snapshot(count: int, data: PackedByteArray) -> void:
 			enemy.queue_redraw()
 	for index: int in POOL_SIZE:
 		if not seen[index] and _pool[index].active:
-			_pool[index].deactivate()
+			var gone := _pool[index]
+			enemy_vanished.emit(gone.position, gone.type.color, gone.type.radius)
+			gone.deactivate()
 
 
 func _desired_velocity(enemy: Enemy, to_target: Vector2, delta: float) -> Vector2:
@@ -229,6 +233,7 @@ func _try_fire(enemy: Enemy, to_target: Vector2, delta: float) -> void:
 
 
 func _release(enemy: Enemy) -> void:
+	enemy_vanished.emit(enemy.position, enemy.type.color, enemy.type.radius)
 	enemy.deactivate()
 	_free_indices.append(enemy.pool_index)
 

@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://src/main/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://src/ui/main_menu.tscn" id="2_menu"]
+[ext_resource type="PackedScene" path="res://src/ui/pause_menu.tscn" id="3_pause"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
@@ -14,3 +15,5 @@ spawn_path = NodePath("../Level")
 spawn_limit = 1
 
 [node name="MainMenu" parent="." instance=ExtResource("2_menu")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("3_pause")]

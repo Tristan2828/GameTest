@@ -12,6 +12,8 @@ extends Node2D
 ## physics loop, so the order of updates is always the same.
 
 signal shot_requested(shooter: Player, input_seq: int)
+## Every peer: this player just lost hearts (for effects).
+signal hurt(victim: Player)
 ## Host: this player used a bomb (already paid for).
 signal bomb_requested(bomber: Player)
 
@@ -78,6 +80,8 @@ var _predictor: ClientPredictor = ClientPredictor.new()
 ## Drawn offset from the simulated position; shrinks to zero so corrections look smooth.
 var _visual_offset: Vector2 = Vector2.ZERO
 var _remote_target: Vector2 = Vector2.ZERO
+var _last_seen_hearts: int = -1
+var _shake: float = 0.0
 var _remote_dashing: bool = false
 
 @onready var _camera: Camera2D = $Camera2D
@@ -248,7 +252,20 @@ func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack
 		_remote_dashing = dashing
 
 
+## Local player only: shake the camera (strength in pixels, fades quickly).
+func add_shake(strength: float) -> void:
+	if is_local() and Settings.screen_shake:
+		_shake = maxf(_shake, strength)
+
+
 func _process(delta: float) -> void:
+	if _last_seen_hearts >= 0 and health.hearts < _last_seen_hearts:
+		hurt.emit(self)
+		add_shake(5.0)
+	_last_seen_hearts = health.hearts
+	if _shake > 0.0:
+		_shake = maxf(_shake - delta * 20.0, 0.0)
+		_camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake)).round()
 	if multiplayer.is_server():
 		position = state.position
 	elif is_local():

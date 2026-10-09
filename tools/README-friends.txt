@@ -19,8 +19,8 @@ Controls (keyboard + mouse, or a gamepad):
   Fire   left mouse / right trigger (pushing the right stick also fires)
   Dash   Space or right mouse / left trigger
   Bomb   Q or middle mouse / right bumper (2 per stage; clears enemy bullets)
-  Leave  Esc
-  Host only, after a stage ends: R / Start to play again
+  Menu   Esc / Start (Leave Game is in there)
+  Host only, after a run ends: R / Select to return to the lobby
 
 Can't connect? Check that the version in the bottom-right of the menu matches
 your host's, then let them know. They may need to open a port on their router.

@@ -3,6 +3,7 @@ extends CanvasLayer
 ## In-game overlay. The arena pushes values in; the HUD only displays them.
 
 @onready var _hearts: HeartsDisplay = %Hearts
+@onready var _hurt_flash: ColorRect = %HurtFlash
 @onready var _xp_bar: XpBar = %XpBar
 @onready var _level_label: Label = %LevelLabel
 @onready var _boss_box: Control = %BossBox
@@ -18,6 +19,11 @@ extends CanvasLayer
 @onready var shop_panel: ShopPanel = %ShopPanel
 @onready var _coins_label: Label = %CoinsLabel
 @onready var _weapons_label: Label = %WeaponsLabel
+
+
+func flash_hurt() -> void:
+	_hurt_flash.color.a = 0.28
+	create_tween().tween_property(_hurt_flash, "color:a", 0.0, 0.35)
 
 
 func set_hearts(current: int, maximum: int) -> void:

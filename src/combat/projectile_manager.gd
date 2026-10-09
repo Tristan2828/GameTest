@@ -16,6 +16,9 @@ extends Node2D
 
 const CAPACITY: int = 4096
 
+## A bullet hit something here (for sparks). Emitted on every peer.
+signal hit_at(at: Vector2)
+
 @export var hit_radius: float = 2.0
 @export var glow_radius: float = 3.0
 @export var core_radius: float = 1.5
@@ -106,6 +109,7 @@ func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 		if enemy == null or enemy.pool_index == _last_hit[i]:
 			i += 1
 			continue
+		hit_at.emit(position_of(i))
 		if apply_damage:
 			enemies.damage(enemy, _damages[i], _owners[i])
 		if _pierce[i] > 0:
