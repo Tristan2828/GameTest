@@ -1,4 +1,4 @@
-# Playtest Review (v0.9.0)
+# Playtest Review (v0.10.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (159 unit tests, plus online host+client runs).
@@ -141,6 +141,8 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] **New:** Esc / Start opens the pause menu (it used to instantly leave!). Solo actually pauses.
 - [ ] **New:** Settings (volume, fullscreen, screen shake). Do they work and stick after restarting?
 - [ ] **New:** End-of-run stats table. Interesting?
+- [ ] **New:** menu style (dark panels, gold focus ring for gamepad, crisp pixel text, crypt backdrop on the title screen). Readable? Fits the game?
+- [ ] **Changed:** the aim line on your character is gone (sprites face your aim instead). Do you miss knowing exactly where you aim?
 - [ ] HUD readable at your screen size? Anything you look for and can't find?
 - [ ] Is the controls hint at the bottom still useful, or clutter?
 

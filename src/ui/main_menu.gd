@@ -16,9 +16,13 @@ signal join_requested(address: String, port: int)
 @onready var _settings_button: Button = %SettingsButton
 @onready var _settings: SettingsPanel = %Settings
 @onready var _panel: Control = $Center/Panel
+@onready var _backdrop: TextureRect = %Backdrop
 
 
 func _ready() -> void:
+	# The Crypt's floor, dimmed, as a backdrop (same baker as the arena).
+	var floor_image := FloorBaker.bake(Stages.get_stage(1), Vector2i(640, 360), 2024)
+	_backdrop.texture = ImageTexture.create_from_image(floor_image)
 	_port_edit.text = str(Net.DEFAULT_PORT)
 	_version_label.text = "v%s" % ProjectSettings.get_setting("application/config/version", "dev")
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())

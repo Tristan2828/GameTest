@@ -187,6 +187,11 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
 - Floors: each stage's ground is baked into one image from a seed (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet), with pixel-art props, shadows and candle light.
 - Sound: richer synthesized effects, plus music: calm menu/between-stages track, one per stage, and a boss theme, crossfading as the game changes phase. Music volume in Settings.
 
+### UI pass (v0.10.0, by Claude)
+- One theme for all menus: dark purple panels, square pixel borders, gold focus ring (gamepad), crisp non-antialiased text.
+- Title screen: large gold title, tagline, dimmed Crypt floor backdrop.
+- Removed the aim line drawn on players (owner request); sprites face the aim direction.
+
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
 - M3 (above): First arena stage + first boss with bullet patterns.
