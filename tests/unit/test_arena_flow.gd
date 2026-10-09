@@ -97,3 +97,75 @@ func test_bomb_clears_bullets_damages_enemies_and_protects() -> void:
 	assert_eq(_arena._enemy_bullets.count(), 1, "far bullet survives")
 	assert_eq(ghoul.hp, ghoul.max_hp - Arena.BOMB_DAMAGE)
 	assert_true(player.health.is_invulnerable())
+
+
+func _clear_current_stage() -> void:
+	_arena._spawn_boss()
+	var boss := _arena._enemies.find_boss()
+	_arena._enemies.damage(boss, boss.hp, 1)
+	_arena._update_phase()
+
+
+func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
+	var player := _local_player()
+	_clear_current_stage()
+	assert_eq(_arena._phase, Arena.Phase.STAGE_CLEAR)
+	# (In solo, going down would end the run; here we just check ghosts respawn.)
+	player.health.take_hit(99, 0.0)
+	assert_true(player.is_downed())
+	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
+	assert_eq(_arena._phase, Arena.Phase.PLAYING)
+	assert_eq(_arena._stage, 2)
+	assert_false(player.is_downed(), "ghosts come back")
+	assert_eq(player.health.hearts, player.health.max_hearts)
+	assert_eq(player.bombs_left, player.stats.bombs_per_stage)
+	assert_almost_eq(_arena._elapsed, 0.0, 0.5)
+
+
+func test_run_progress_carries_over_between_stages() -> void:
+	_arena._team.add_xp(3)
+	_local_player().apply_upgrade(0)
+	_clear_current_stage()
+	_arena._begin_next_stage()
+	assert_eq(_arena._team.xp, 3)
+	assert_eq(_local_player().upgrade_ids, [0])
+
+
+func test_beating_the_last_boss_is_victory() -> void:
+	_arena._stage = Arena.STAGE_COUNT
+	_clear_current_stage()
+	assert_eq(_arena._phase, Arena.Phase.VICTORY)
+
+
+func test_later_stages_have_tougher_enemies() -> void:
+	var base := EnemyTypes.get_type(EnemyTypes.Id.SHAMBLER).max_hp
+	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), base)
+	_arena._stage = 3
+	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), roundi(base * 2.0))
+
+
+func test_ghost_can_move_but_not_shoot_or_bomb() -> void:
+	var player := _local_player()
+	player.health.take_hit(99, 0.0)
+	watch_signals(player)
+	var start := player.state.position
+	for i: int in 30:
+		var input := PlayerInput.new()
+		input.move = Vector2.RIGHT
+		input.fire = true
+		input.bomb_count = 1
+		player._simulate(input, 1.0 / 60.0)
+	assert_gt(player.state.position.x, start.x)
+	assert_signal_not_emitted(player, "shot_requested")
+	assert_signal_not_emitted(player, "bomb_requested")
+	assert_false(player.can_be_hit())
+
+
+func test_ghosts_still_collect_gems() -> void:
+	var player := _local_player()
+	player.health.take_hit(99, 0.0)
+	_arena._gems.spawn_host(player.state.position + Vector2(10, 0), 3)
+	for i: int in 30:
+		_arena._tick_gems(1.0 / 60.0, true)
+	assert_eq(_arena._gems.count(), 0)
+	assert_eq(_arena._team.xp, 3)

@@ -32,7 +32,7 @@ const REMOTE_SMOOTHING: float = 18.0
 const CORRECTION_SMOOTHING: float = 10.0
 const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
 const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
-const TOMBSTONE_COLOR: Color = Color(0.35, 0.33, 0.4)
+const GHOST_EYE_COLOR: Color = Color(0.1, 0.08, 0.15, 0.8)
 
 @export var stats: CharacterStats
 
@@ -115,6 +115,17 @@ func apply_upgrade(upgrade_id: int) -> void:
 	queue_redraw()
 
 
+## Host: back to full strength at a new spot (start of a stage).
+func respawn(at: Vector2) -> void:
+	health.reset(stats.max_hearts)
+	bombs_left = stats.bombs_per_stage
+	state.position = at
+	state.dash_time_left = 0.0
+	state.dash_cooldown_left = 0.0
+	state.fire_cooldown_left = 0.0
+	position = at
+
+
 func is_downed() -> bool:
 	return health.is_downed()
 
@@ -139,8 +150,6 @@ func muzzle_position() -> Vector2:
 func tick(delta: float) -> void:
 	if multiplayer.is_server():
 		health.tick(delta)
-	if health.is_downed():
-		return
 	if multiplayer.is_server():
 		if is_local():
 			_simulate(_read_local_input(), delta)
@@ -160,10 +169,6 @@ func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack
 	health.hearts = hearts
 	# Only used for the flashing effect on clients.
 	health.invulnerable_left = 1.0 if invulnerable else 0.0
-	if is_local() and health.is_downed():
-		state.position = server_position
-		_visual_offset = Vector2.ZERO
-		return
 	if is_local():
 		var error := _predictor.reconcile(ack_seq, server_position)
 		if error == Vector2.ZERO:
@@ -197,7 +202,7 @@ func _draw() -> void:
 	var color: Color = SLOT_COLORS[slot % SLOT_COLORS.size()]
 	_draw_heart_pips()
 	if health.is_downed():
-		_draw_tombstone(color)
+		_draw_ghost(color)
 		return
 	# Blink while invulnerable after a hit.
 	if health.is_invulnerable() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
@@ -220,11 +225,15 @@ func _draw_heart_pips() -> void:
 			HEART_COLOR if filled else HEART_EMPTY_COLOR)
 
 
-func _draw_tombstone(color: Color) -> void:
-	draw_rect(Rect2(-5, -7, 10, 12), TOMBSTONE_COLOR)
-	draw_circle(Vector2(0, -7), 5.0, TOMBSTONE_COLOR)
-	draw_rect(Rect2(-1, -9, 2, 8), color)
-	draw_rect(Rect2(-3, -6, 6, 2), color)
+func _draw_ghost(color: Color) -> void:
+	var body := Color(color.lightened(0.5), 0.45)
+	var bob := sin(Time.get_ticks_msec() / 250.0)
+	draw_circle(Vector2(0, -2 + bob), stats.body_radius, body)
+	draw_rect(Rect2(-stats.body_radius, -2 + bob, stats.body_radius * 2.0, 5), body)
+	for i: int in 3:
+		draw_circle(Vector2(-4 + i * 4, 3 + bob), 2.0, body)
+	draw_rect(Rect2(-3, -4 + bob, 2, 2), GHOST_EYE_COLOR)
+	draw_rect(Rect2(1, -4 + bob, 2, 2), GHOST_EYE_COLOR)
 
 
 func _shows_remote_state() -> bool:
@@ -250,9 +259,12 @@ func _simulate_queued_inputs(delta: float) -> void:
 
 func _simulate(input: PlayerInput, delta: float) -> void:
 	last_processed_seq = input.seq
+	if health.is_downed():
+		# Ghosts float around but can't shoot or bomb.
+		input.fire = false
 	if multiplayer.is_server() and input.bomb_count != _last_bomb_count:
 		_last_bomb_count = input.bomb_count
-		if bombs_left > 0:
+		if bombs_left > 0 and not health.is_downed():
 			bombs_left -= 1
 			bomb_requested.emit(self)
 	if PlayerMotor.step(state, input, stats, bounds, delta):

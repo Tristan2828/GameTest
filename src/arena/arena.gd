@@ -10,10 +10,18 @@ extends Node2D
 
 signal restart_requested
 
-enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP }
+## Values are sent over the network: only add new phases at the end.
+enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP, SHOP, VICTORY }
 
 const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
+## A run is this many stages; beating the last boss is Victory.
+const STAGE_COUNT: int = 3
+## Each stage after the first: +35% spawn rate and +50% enemy HP (cumulative, linear).
+const STAGE_SPAWN_RATE_GROWTH: float = 0.35
+const STAGE_HP_GROWTH: float = 0.5
+## Seconds the "Stage cleared" banner shows before the next stage begins.
+const STAGE_CLEAR_DELAY: float = 4.0
 ## Horde waves last this long, then the boss arrives.
 const WAVE_DURATION: float = 240.0
 ## Horde spawn rate while the boss is alive (and no pack surges).
@@ -46,6 +54,9 @@ const COPIED_FEEDBACK_SECONDS: float = 4.0
 const AUTOPILOT_RESTART_DELAY: float = 2.0
 
 var _phase: Phase = Phase.PLAYING
+## Current stage, 1..STAGE_COUNT (host-owned, synced in snapshots).
+var _stage: int = 1
+var _stage_clear_left: float = 0.0
 var _elapsed: float = 0.0
 var _wave_duration: float = WAVE_DURATION
 var _boss_brain: BossBrain = BossBrain.new()
@@ -141,7 +152,13 @@ func _physics_process(delta: float) -> void:
 				_start_level_up()
 			else:
 				_phase = Phase.PLAYING
+	elif _phase == Phase.STAGE_CLEAR:
+		if is_host:
+			_stage_clear_left -= delta
+			if _stage_clear_left <= 0.0:
+				_begin_next_stage()
 	elif is_host and LaunchOptions.autopilot:
+		# Only RUN_OVER / VICTORY reach here: the run is finished.
 		_time_since_stage_end += delta
 		if _time_since_stage_end >= AUTOPILOT_RESTART_DELAY:
 			_time_since_stage_end = -INF
@@ -160,7 +177,7 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("copy_invite") and Net.invite.copy_to_clipboard():
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
-	if event.is_action_pressed("restart") and multiplayer.is_server() and _is_stage_over():
+	if event.is_action_pressed("restart") and multiplayer.is_server() and _is_run_finished():
 		restart_requested.emit()
 
 
@@ -168,7 +185,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func debug_report() -> String:
 	var lines := PackedStringArray()
 	var role := "host" if multiplayer.is_server() else "client"
-	lines.append("[report] peer %d (%s)  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, Phase.keys()[_phase], _elapsed])
+	lines.append("[report] peer %d (%s)  stage %d  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, _stage, Phase.keys()[_phase], _elapsed])
 	for player: Player in _player_nodes():
 		var line := "[report]   player %d slot %d at %s  hearts %d/%d  bombs %d  upgrades %s" % [
 			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts, player.bombs_left, player.upgrade_ids]
@@ -256,16 +273,23 @@ func _spawn_enemies(delta: float) -> void:
 	if alive_players.is_empty():
 		return
 	var rate := BOSS_FIGHT_SPAWN_RATE if _boss_spawned else 1.0
+	rate *= 1.0 + STAGE_SPAWN_RATE_GROWTH * (_stage - 1)
 	for type_id: int in _director.tick(delta, _elapsed, alive_players.size(), _enemies.active_count(), rate):
 		var point := _offscreen_spawn_point(alive_players)
 		if point.is_finite():
-			_enemies.spawn(type_id, point)
+			_enemies.spawn(type_id, point, _scaled_hp(type_id))
 	if not _boss_spawned and _director.pack_due(_elapsed, _enemies.active_count()):
 		var center := _offscreen_spawn_point(alive_players)
 		if center.is_finite():
 			for i: int in SpawnDirector.PACK_SIZE:
 				var offset := Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(0.0, PACK_RADIUS)
-				_enemies.spawn(EnemyTypes.Id.SHAMBLER, (center + offset).clamp(BOUNDS.position, BOUNDS.end))
+				_enemies.spawn(EnemyTypes.Id.SHAMBLER, (center + offset).clamp(BOUNDS.position, BOUNDS.end),
+					_scaled_hp(EnemyTypes.Id.SHAMBLER))
+
+
+## Enemy max HP for the current stage.
+func _scaled_hp(type_id: int) -> int:
+	return roundi(EnemyTypes.get_type(type_id).max_hp * (1.0 + STAGE_HP_GROWTH * (_stage - 1)))
 
 
 ## A point just off-screen from a random player, inside the arena and not too
@@ -308,13 +332,31 @@ func _update_phase() -> void:
 
 
 func _end_stage(phase: Phase) -> void:
+	if phase == Phase.STAGE_CLEAR and _stage >= STAGE_COUNT:
+		phase = Phase.VICTORY
 	_phase = phase
+	_stage_clear_left = STAGE_CLEAR_DELAY
 	_level_up.host_reset()
 	_enemies.clear_all()
 	_projectiles.clear()
 	_enemy_bullets.clear()
 	_gems.clear()
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
+
+
+## Host: the next stage starts. The run (level, upgrades, relics, coins) carries
+## over; everyone respawns with full hearts and bombs, ghosts included.
+func _begin_next_stage() -> void:
+	_stage += 1
+	_elapsed = 0.0
+	_boss_spawned = false
+	_boss_defeated = false
+	_boss_brain = BossBrain.new()
+	_director = SpawnDirector.new(randi())
+	for player: Player in _player_nodes():
+		player.respawn(BOUNDS.get_center() + SPAWN_OFFSETS[player.slot])
+	_phase = Phase.PLAYING
+	print("Stage %d begins" % _stage)
 
 
 func _spawn_boss() -> void:
@@ -327,7 +369,9 @@ func _spawn_boss() -> void:
 	var at := (center + Vector2.from_angle(_rng.randf() * TAU) * BOSS_SPAWN_DISTANCE).clamp(inner.position, inner.end)
 	var boss_type := EnemyTypes.get_type(EnemyTypes.Id.BONE_WARDEN)
 	var players := maxi(_player_nodes().size(), 1)
-	var hit_points := roundi(boss_type.max_hp * (1.0 + boss_type.hp_per_extra_player * (players - 1)))
+	var hit_points := roundi(_scaled_hp(EnemyTypes.Id.BONE_WARDEN) * (1.0 + boss_type.hp_per_extra_player * (players - 1)))
+	if LaunchOptions.weak_bosses:
+		hit_points = maxi(roundi(hit_points * 0.02), 1)
 	_enemies.spawn(EnemyTypes.Id.BONE_WARDEN, at, hit_points)
 	print("Boss spawned with %d HP at %.1fs" % [hit_points, _elapsed])
 
@@ -379,8 +423,14 @@ func _on_upgrade_announced(peer_id: int, upgrade_id: int) -> void:
 		player.apply_upgrade(upgrade_id)
 
 
-func _is_stage_over() -> bool:
-	return _phase == Phase.STAGE_CLEAR or _phase == Phase.RUN_OVER
+## The whole run has ended (the host can restart).
+func _is_run_finished() -> bool:
+	return _phase == Phase.RUN_OVER or _phase == Phase.VICTORY
+
+
+## No combat is happening: between stages or after the run.
+func _is_between_stages() -> bool:
+	return _phase == Phase.STAGE_CLEAR or _phase == Phase.SHOP or _is_run_finished()
 
 
 func _ready_peer_list() -> Array[int]:
@@ -392,10 +442,10 @@ func _ready_peer_list() -> Array[int]:
 func _tick_gems(delta: float, is_host: bool) -> void:
 	var positions: Dictionary[int, Vector2] = {}
 	var radii: Dictionary[int, float] = {}
+	# Ghosts collect too.
 	for player: Player in _player_nodes():
-		if not player.is_downed():
-			positions[player.peer_id] = player.world_position()
-			radii[player.peer_id] = player.stats.pickup_radius
+		positions[player.peer_id] = player.world_position()
+		radii[player.peer_id] = player.stats.pickup_radius
 	_gems.tick(delta, positions, radii, is_host)
 
 
@@ -485,6 +535,9 @@ func _update_hud() -> void:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
 		_hud.set_bombs(local.bombs_left)
 	var boss := _enemies.find_boss()
+	if boss == null and _elapsed < _wave_duration:
+		# New stage: the next boss gets its own intro banner.
+		_boss_seen = false
 	if boss != null and not _boss_seen:
 		_boss_seen = true
 		_boss_banner_left = BOSS_BANNER_SECONDS
@@ -498,7 +551,7 @@ func _update_hud() -> void:
 	var status := "Solo"
 	if Net.is_online():
 		status = "Host" if multiplayer.is_server() else "Client  ping %d ms" % Net.ping_ms()
-	_hud.set_status("%s   players %d" % [status, _player_nodes().size()])
+	_hud.set_status("Stage %d/%d   %s   players %d" % [_stage, STAGE_COUNT, status, _player_nodes().size()])
 
 	var info := CONTROLS_HINT
 	if Net.is_online() and multiplayer.is_server():
@@ -517,14 +570,16 @@ func _update_hud() -> void:
 			else:
 				_hud.show_banner("Level up!", "Others are choosing.   " + _level_up.status_text(name_of))
 		Phase.STAGE_CLEAR:
-			_hud.show_banner("Stage clear!", restart_hint)
+			_hud.show_banner("Stage %d cleared!" % _stage, "Stage %d of %d is next. Everyone respawns." % [_stage + 1, STAGE_COUNT])
+		Phase.VICTORY:
+			_hud.show_banner("Victory!", "The crypt is cleansed.   " + restart_hint)
 		Phase.RUN_OVER:
 			_hud.show_banner("Run over", restart_hint)
 		_:
 			if _boss_banner_left > 0.0 and boss != null:
 				_hud.show_banner("%s rises!" % boss.type.display_name, "Destroy it to clear the stage.")
 			elif local != null and local.is_downed():
-				_hud.show_banner("You're down", "Your friends fight on. (Ghosts come in a later milestone.)")
+				_hud.show_banner("You're a ghost", "Collect XP and coins for your team. You respawn next stage.")
 			else:
 				_hud.hide_banner()
 
@@ -574,7 +629,7 @@ func _send_snapshots() -> void:
 		var waiting := PackedInt32Array(_level_up.waiting_ids)
 		for peer_id: int in peers:
 			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, bombs,
-				_elapsed, _phase, _team.level, _team.xp, waiting, _level_up.countdown_left)
+				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, _level_up.countdown_left)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
 
@@ -592,7 +647,7 @@ func _notify_ready() -> void:
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
 		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray, bombs: PackedByteArray,
-		elapsed: float, phase: int, team_level: int, team_xp: int,
+		elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
 		level_up_waiting: PackedInt32Array, level_up_countdown: float) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
@@ -600,6 +655,7 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
 			player.bombs_left = bombs[i]
 	_sync_clock(elapsed)
+	_stage = stage
 	_team.level = team_level
 	_team.xp = team_xp
 	_level_up.apply_status(level_up_waiting, level_up_countdown)
@@ -607,7 +663,7 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 		if _phase == Phase.LEVEL_UP:
 			_level_up.close_local()
 		_phase = phase as Phase
-		if _is_stage_over():
+		if _is_between_stages():
 			_projectiles.clear()
 			_enemy_bullets.clear()
 			_gems.clear()
