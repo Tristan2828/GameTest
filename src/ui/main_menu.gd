@@ -12,10 +12,12 @@ signal join_requested(address: String, port: int)
 @onready var _address_edit: LineEdit = %AddressEdit
 @onready var _port_edit: LineEdit = %PortEdit
 @onready var _status_label: Label = %StatusLabel
+@onready var _version_label: Label = %VersionLabel
 
 
 func _ready() -> void:
 	_port_edit.text = str(Net.DEFAULT_PORT)
+	_version_label.text = "v%s" % ProjectSettings.get_setting("application/config/version", "dev")
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)
