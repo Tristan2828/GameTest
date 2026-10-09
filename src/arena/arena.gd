@@ -215,6 +215,16 @@ var _jingle_phase: Phase = Phase.PLAYING
 var _run_stats_text: String = ""
 
 
+## Calm music between stages, the boss theme during boss fights, otherwise the stage's own.
+func _update_music() -> void:
+	if _is_between_stages():
+		Music.play(&"menu")
+	elif _enemies.find_boss() != null:
+		Music.play(&"boss")
+	else:
+		Music.play(Stages.get_stage(_stage).music)
+
+
 func _play_phase_jingle() -> void:
 	if _phase == _jingle_phase:
 		return
@@ -235,6 +245,7 @@ func _process(delta: float) -> void:
 	_copied_feedback_left = maxf(_copied_feedback_left - delta, 0.0)
 	_boss_banner_left = maxf(_boss_banner_left - delta, 0.0)
 	_play_phase_jingle()
+	_update_music()
 	_update_hud()
 
 
@@ -264,7 +275,7 @@ func debug_report() -> String:
 		lines.append("[report]   damage by peer: %s" % [_enemies.damage_by_peer])
 		lines.append("[report]   kills by peer: %s" % [_kills_by_peer])
 		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
-	lines.append("[report]   enemy bullets alive: %d   altars: %d" % [_enemy_bullets.count(), _weapons.altar_count()])
+	lines.append("[report]   enemy bullets alive: %d   altars: %d   music: %s" % [_enemy_bullets.count(), _weapons.altar_count(), Music.now_playing()])
 	var boss := _enemies.find_boss()
 	if boss != null:
 		lines.append("[report]   boss: %s hp %.0f%% phase %d" % [boss.type.display_name, boss.hp_ratio * 100.0, _boss_brain.phase])

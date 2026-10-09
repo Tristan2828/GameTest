@@ -22,6 +22,12 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_pause_menu.leave_requested.connect(_leave_game.bind("You left the game."))
 	_menu.show_menu()
+	Music.play(&"menu")
+	# Every button anywhere clicks softly when pressed (menus, cards, shop).
+	get_tree().node_added.connect(func(node: Node) -> void:
+		var button := node as BaseButton
+		if button != null:
+			button.pressed.connect(func() -> void: Sfx.play(&"ui", -8.0)))
 	_apply_launch_options()
 
 
@@ -112,6 +118,7 @@ func _on_server_disconnected() -> void:
 
 ## Host: show the lobby (start of a session, and after every run).
 func _load_lobby() -> void:
+	Music.play(&"menu")
 	_clear_level()
 	_menu.hide()
 	var lobby: Lobby = LOBBY_SCENE.instantiate()
@@ -138,6 +145,7 @@ func _clear_level() -> void:
 
 func _leave_game(message: String) -> void:
 	_pause_menu.close()
+	Music.play(&"menu")
 	Net.leave_game()
 	for child: Node in _level.get_children():
 		_level.remove_child(child)

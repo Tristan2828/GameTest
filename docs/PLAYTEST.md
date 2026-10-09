@@ -1,4 +1,4 @@
-# Playtest Review (v0.8.0)
+# Playtest Review (v0.9.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (159 unit tests, plus online host+client runs).
@@ -54,7 +54,9 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Dash: is the cooldown OK? Do you trust dashing *through* bullets?
 - [ ] **New:** screen shake (hurt, bombs, boss death). Too much, too little, or annoying? *(Can be turned off in Settings)*
 - [ ] **New:** hit sparks, death puffs, red flash when hurt. Helpful or noisy?
-- [ ] **New:** sound effects (synthesized placeholders). Any sound too loud, grating, or missing?
+- [ ] **New:** music. Menu/shop theme, one track per stage, boss theme. Does each fit its stage? Gets repetitive (loops are 14–27 s)? Too loud vs effects? *(Music volume in Settings)*
+  - *Tune: scores are text in `src/audio/tracks.gd` (tempo, chords, melody, drums).*
+- [ ] **New:** sound effects (synthesized, now with filtering/echo). Any sound too loud, grating, or missing?
   - Shots, hits, enemy deaths, gems, coins, level-up, bomb, boss roar, dash, victory/defeat jingles.
   - *Tune: `src/autoload/sfx.gd` (each sound is one line) and the `Sfx.play(...)` volumes.*
 
@@ -147,7 +149,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Can you always tell the enemy types apart? The bosses?
 - [ ] Your character in your player color: easy to find yourself? Is the white hitbox dot clear?
 - [ ] Any sprite you'd like redrawn (too small, wrong vibe, ugly)? *(Sprites are text grids in `src/art/pixel_art.gd`; easy to change.)*
-- [ ] Each stage's floor: atmospheric? Distracting?
+- [ ] **New:** pixel-art floors (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet) with props. Atmospheric? Too busy or too dark to read bullets?
 
 ---
 
@@ -171,8 +173,8 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 ---
 
 ## 5. Known limitations (not bugs)
-- No music yet; sound effects are simple synthesized placeholders.
-- Sprites are drawn by Claude as text grids (no animation beyond bats/imps and a walk bob); floors, effects and UI are still simple code drawing.
+- All audio is synthesized (chiptune style); no recorded sounds or composed soundtrack.
+- Sprites and floors are drawn by Claude as text grids/code (little animation: bats, imps, walk bob); effects and UI are simple code drawing.
 - Enemy bullets already on screen aren't sent to a friend who joins mid-fight (new ones are).
 - Joining mid-run always gives the Wanderer.
 - The autopilot used in automated tests can't dodge, so it can't tell us anything about balance.

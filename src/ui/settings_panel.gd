@@ -7,6 +7,7 @@ signal closed
 
 @onready var _master: HSlider = %MasterSlider
 @onready var _sfx: HSlider = %SfxSlider
+@onready var _music: HSlider = %MusicSlider
 @onready var _fullscreen: CheckButton = %FullscreenCheck
 @onready var _shake: CheckButton = %ShakeCheck
 @onready var _back: Button = %BackButton
@@ -21,6 +22,9 @@ func _ready() -> void:
 		Settings.sfx_volume = value
 		Settings.apply()
 		Sfx.play(&"gem"))
+	_music.value_changed.connect(func(value: float) -> void:
+		Settings.music_volume = value
+		Settings.apply())
 	_fullscreen.toggled.connect(func(on: bool) -> void:
 		Settings.fullscreen = on
 		Settings.apply())
@@ -32,6 +36,7 @@ func _ready() -> void:
 func open() -> void:
 	_master.set_value_no_signal(Settings.master_volume)
 	_sfx.set_value_no_signal(Settings.sfx_volume)
+	_music.set_value_no_signal(Settings.music_volume)
 	_fullscreen.set_pressed_no_signal(Settings.fullscreen)
 	_shake.set_pressed_no_signal(Settings.screen_shake)
 	show()

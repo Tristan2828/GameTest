@@ -181,6 +181,7 @@ wait = 2.6
 
 [resource]
 script = ExtResource("1_stage")
+music = &"cathedral"
 title = "The Burning Cathedral"
 spawns = Array[ExtResource("2_spawn")]([SubResource("spawn_0"), SubResource("spawn_1"), SubResource("spawn_2"), SubResource("spawn_3")])
 pack_type = 7

@@ -7,6 +7,8 @@ extends Resource
 enum PropStyle { CRYPT, MARSH, CATHEDRAL }
 
 @export var title: String = "Stage"
+## Tracks name for this stage's music.
+@export var music: StringName = &"crypt"
 
 @export_group("Enemies")
 @export var spawns: Array[SpawnEntry] = []

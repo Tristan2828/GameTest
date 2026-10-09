@@ -103,7 +103,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Setting:** Dark fantasy (undead hordes, demons, dark magic).
 - **Art style:** Pixel art. Sprites are text grids with a shared palette (`src/art/pixel_art.gd`).
 - Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
-- Audio: synthesized placeholder sound effects (v0.7.0). Music and final sounds TBD.
+- Audio: everything is synthesized in code from text (no audio files). Sound effects use a small synth with filters, layering and echo; music is five looping chiptune-style tracks written as text scores (menu, Crypt, Marsh, Cathedral, boss). Final audio direction TBD after playtesting.
 
 ## 7. Milestones
 
@@ -182,6 +182,10 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
 - All characters, enemies, bosses, pickups and orbit skulls are pixel-art sprites drawn as text grids in `src/art/pixel_art.gd`, using one shared limited palette.
 - Player sprites are tinted with each player's slot color; bosses are drawn at 2x; bats and imps animate.
 - Bullets stay as glowing code-drawn circles and the player's hitbox dot is always visible (readability first).
+
+### Floors and sound pass (v0.9.0, by Claude)
+- Floors: each stage's ground is baked into one image from a seed (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet), with pixel-art props, shadows and candle light.
+- Sound: richer synthesized effects, plus music: calm menu/between-stages track, one per stage, and a boss theme, crossfading as the game changes phase. Music volume in Settings.
 
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
