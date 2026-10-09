@@ -1,7 +1,8 @@
 class_name MainMenu
 extends CanvasLayer
 ## Title menu: play solo, host a game, or join a host by IP address. Also opens
-## Settings, the Compendium (info on heroes, weapons, items, enemies) and the
+## Settings, the Compendium (info on heroes, weapons, items, enemies), Records
+## (your best runs on this PC) and the
 ## Playtest Checklist (what still needs testing, from docs/PLAYTEST.md).
 ## In the exported game it also checks GitHub for a newer version and offers an
 ## Update button (see Updater).
@@ -21,6 +22,7 @@ signal join_requested(address: String, port: int)
 @onready var _settings: SettingsPanel = %Settings
 @onready var _compendium_button: Button = %CompendiumButton
 @onready var _checklist_button: Button = %ChecklistButton
+@onready var _records_button: Button = %RecordsButton
 @onready var _panel: Control = $Center/Panel
 @onready var _backdrop: TextureRect = %Backdrop
 var compendium: Compendium = null
@@ -30,6 +32,7 @@ var updater: Updater = null
 @onready var _update_button: Button = %UpdateButton
 @onready var _page_button: Button = %PageButton
 var checklist: PlaytestChecklist = null
+var records: RecordsScreen = null
 
 
 func _ready() -> void:
@@ -49,7 +52,8 @@ func _ready() -> void:
 		_settings_button.grab_focus())
 	compendium = Compendium.new()
 	checklist = PlaytestChecklist.new()
-	for page: Array in [[compendium, _compendium_button], [checklist, _checklist_button]]:
+	records = RecordsScreen.new()
+	for page: Array in [[compendium, _compendium_button], [records, _records_button], [checklist, _checklist_button]]:
 		var screen: ListScreen = page[0]
 		var button: Button = page[1]
 		add_child(screen)
@@ -114,6 +118,7 @@ func show_menu(message: String = "") -> void:
 	_settings.hide()
 	compendium.hide()
 	checklist.hide()
+	records.hide()
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()

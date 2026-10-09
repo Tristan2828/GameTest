@@ -9,7 +9,8 @@ const BUS: StringName = &"Music"
 const FADE_SECONDS: float = 1.2
 const SILENT_DB: float = -40.0
 ## Render order: the menu first (it's needed first), then the stages.
-const RENDER_ORDER: Array[StringName] = [&"menu", &"crypt", &"boss", &"marsh", &"cathedral"]
+const RENDER_ORDER: Array[StringName] = [&"menu", &"crypt", &"boss", &"marsh", &"cathedral",
+	&"metal_crypt", &"metal_boss", &"metal_marsh", &"metal_cathedral"]
 
 var _streams: Dictionary[StringName, AudioStreamWAV] = {}
 var _tasks: Array[int] = []

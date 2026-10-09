@@ -98,6 +98,31 @@ static func echo(buffer: PackedFloat32Array, delay: float, feedback: float, repe
 	return out
 
 
+## Distortion: soft-clips the buffer (tanh). Higher `gain` = more crunch.
+## The result stays within -1..1.
+static func drive(buffer: PackedFloat32Array, gain: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(buffer.size())
+	for i: int in buffer.size():
+		out[i] = tanh(buffer[i] * gain)
+	return out
+
+
+## A two-pass one-pole low-pass filter (`brightness` 0..1, lower = darker),
+## then scaled by `volume`. Tames the fizz of distorted sounds.
+static func lowpass(buffer: PackedFloat32Array, brightness: float, volume: float = 1.0) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(buffer.size())
+	var smoothing := clampf(brightness, 0.01, 1.0)
+	var first := 0.0
+	var second := 0.0
+	for i: int in buffer.size():
+		first += (buffer[i] - first) * smoothing
+		second += (first - second) * smoothing
+		out[i] = second * volume
+	return out
+
+
 ## Converts samples to a playable 16-bit stream (clipping safely). With `loop`,
 ## the stream repeats seamlessly (music).
 static func to_stream(buffer: PackedFloat32Array, loop: bool = false) -> AudioStreamWAV:

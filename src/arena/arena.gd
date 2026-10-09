@@ -293,9 +293,9 @@ func _update_music() -> void:
 	if _is_between_stages():
 		Music.play(&"menu")
 	elif _enemies.find_boss() != null:
-		Music.play(&"boss")
+		Music.play(Tracks.for_soundtrack(&"boss", _config.soundtrack, _stage))
 	else:
-		Music.play(Stages.get_stage(_stage).music)
+		Music.play(Tracks.for_soundtrack(Stages.get_stage(_stage).music, _config.soundtrack, _stage))
 
 
 func _play_phase_jingle() -> void:
@@ -699,10 +699,25 @@ func _record_weapon_breakdown(player: Player) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_run_stats(data: Dictionary) -> void:
 	_final_stats = RunStats.decode(data)
+	var stage_in_run := _final_stats.stage_reached - _config.first_stage() + 1
+	_hud.run_summary.score_multiplier = _config.score_multiplier()
+	_hud.run_summary.local_record_rank = _save_record(stage_in_run)
 	var is_host := multiplayer.is_server()
 	var restart_hint := "or press R / Select" if is_host else "Waiting for the host to return to character select..."
 	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, _stage_count(),
-		restart_hint, is_host, _final_stats.stage_reached - _config.first_stage() + 1)
+		restart_hint, is_host, stage_in_run)
+
+
+## Saves this PC's player's run to Records. Returns its rank for that hero
+## (0 = new best, -1 = not kept). Test runs (headless, autopilot) aren't saved.
+func _save_record(stage_in_run: int) -> int:
+	var local := _local_player()
+	if local == null or DisplayServer.get_name() == "headless" or LaunchOptions.autopilot:
+		return -1
+	var map_title := Stages.get_stage(_final_stats.stage_reached).title
+	var entry := RunRecords.entry_for(_final_stats, local.peer_id, local.character_id, _config, stage_in_run,
+		map_title, _player_nodes().size())
+	return RunRecords.add(entry)
 
 
 func _settle_stage_rewards() -> void:

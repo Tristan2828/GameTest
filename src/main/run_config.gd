@@ -18,6 +18,7 @@ const LIMITS: Dictionary[String, Array] = {
 	"stage": [1, 3, 1, 1],
 	"wave_seconds": [60.0, 600.0, 30.0, 240.0],
 	"bonus_levels": [0, 10, 1, 0],
+	"soundtrack": [0, 3, 1, 0],
 }
 
 ## Difficulty presets (only the difficulty values; custom game options stay).
@@ -54,6 +55,8 @@ var boss_enabled: bool = true
 var bonus_levels: int = 0
 ## Everyone starts with every auto weapon at level 1.
 var start_with_weapons: bool = false
+## Music during the run (Tracks.SOUNDTRACKS index): classic, metal, ...
+var soundtrack: int = 0
 
 const FLAGS: Array[String] = ["single_stage", "boss_enabled", "start_with_weapons"]
 
@@ -85,6 +88,17 @@ func difficulty_name() -> String:
 	return "Custom"
 
 
+## Records: harder settings score more, easier ones less (1.0 = Normal).
+func score_multiplier() -> float:
+	var toughness := (enemy_health + boss_health + enemy_count) / 3.0
+	toughness *= 1.0 - 0.1 * hearts_bonus
+	toughness *= 1.0 - 0.04 * bonus_levels
+	toughness /= sqrt(maxf(xp_rate, 0.01))
+	if start_with_weapons:
+		toughness *= 0.7
+	return clampf(toughness, 0.1, 5.0)
+
+
 ## How many stages this run has.
 func stage_count() -> int:
 	return 1 if single_stage else Stages.ALL.size()
@@ -108,6 +122,8 @@ func summary() -> String:
 		extras += "   +%d levels" % bonus_levels
 	if start_with_weapons:
 		extras += "   all weapons"
+	if soundtrack != 0:
+		extras += "   %s music" % Tracks.SOUNDTRACKS[clampi(soundtrack, 0, Tracks.SOUNDTRACKS.size() - 1)]
 	return "Difficulty: %s   %s   %d:%02d waves%s" % [difficulty_name(), mode, whole / 60, whole % 60, extras]
 
 

@@ -29,6 +29,10 @@ var _players: Array[Player] = []
 var _cards: HBoxContainer = null
 var _page: int = 0
 var _page_buttons: Array[Button] = []
+## Set by the arena before open(): the difficulty's score factor, and where this
+## PC's run landed in its hero's Records (0 = new best, -1 = not kept).
+var score_multiplier: float = 1.0
+var local_record_rank: int = -1
 
 var _stage_in_run: int = 1
 ## Labels that count up: label -> [final value, is_time]
@@ -233,6 +237,21 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 		grid.add_child(value_label)
 		_count_up(value_label, stats.get_stat(player.peer_id, stat as RunStats.Stat), false)
 
+	# Score (as kept in Records), with this PC's placing.
+	var score_row := HBoxContainer.new()
+	score_row.add_theme_constant_override("separation", 3)
+	var score_name := _label("Score", 9, AWARD_COLOR, false)
+	score_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	score_row.add_child(score_name)
+	if player.is_local() and local_record_rank == 0:
+		score_row.add_child(_label("NEW BEST!", 9, VICTORY_COLOR, false))
+	elif player.is_local() and local_record_rank > 0:
+		score_row.add_child(_label("#%d best" % (local_record_rank + 1), 9, LABEL_COLOR, false))
+	var score_label := _label("0", 9, AWARD_COLOR, false)
+	score_row.add_child(score_label)
+	_count_up(score_label, _score(stats, player.peer_id), false)
+	lines.add_child(score_row)
+
 	# Build: weapon icons, upgrades, relics.
 	lines.add_child(_divider())
 	lines.add_child(_weapons_row(player))
@@ -257,6 +276,11 @@ func _weapons_row(player: Player) -> HBoxContainer:
 		icons.set_weapons(player.weapon_levels)
 		row.add_child(icons)
 	return row
+
+
+func _score(stats: RunStats, peer_id: int) -> int:
+	return RunRecords.score_for(stats.get_stat(peer_id, RunStats.Stat.KILLS), stats.get_stat(peer_id, RunStats.Stat.DAMAGE),
+		stats.bosses_defeated, stats.victory, score_multiplier)
 
 
 ## [icon, title, count] for each different upgrade, in the order first taken.
