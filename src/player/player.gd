@@ -26,6 +26,9 @@ const MAX_QUEUED_INPUTS: int = 6
 const CATCH_UP_THRESHOLD: int = 3
 const REMOTE_SMOOTHING: float = 18.0
 const CORRECTION_SMOOTHING: float = 10.0
+const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
+const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
+const TOMBSTONE_COLOR: Color = Color(0.35, 0.33, 0.4)
 
 @export var stats: CharacterStats
 
@@ -33,6 +36,8 @@ var peer_id: int = 1
 var slot: int = 0
 var bounds: Rect2 = Rect2()
 var state: PlayerState = PlayerState.new()
+## Host-owned; clients get copies from snapshots.
+var health: PlayerHealth = PlayerHealth.new()
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -58,6 +63,9 @@ func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_
 	slot = player_slot
 	bounds = arena_bounds
 	name = str(owner_peer_id)
+	# Each player gets its own copy so upgrades only change this player.
+	stats = stats.duplicate()
+	health.reset(stats.max_hearts)
 	state.position = spawn_position
 	position = spawn_position
 	_remote_target = spawn_position
@@ -85,12 +93,25 @@ func is_dashing() -> bool:
 	return state.is_dashing()
 
 
+func is_downed() -> bool:
+	return health.is_downed()
+
+
+## Host: checked when an enemy touches this player. Dashing dodges hits.
+func can_be_hit() -> bool:
+	return not health.is_downed() and not health.is_invulnerable() and not state.is_dashing()
+
+
 func muzzle_position() -> Vector2:
 	return state.position + Vector2.from_angle(state.aim) * MUZZLE_DISTANCE
 
 
-## Advances this player by one physics tick.
+## Advances this player by one physics tick (only while the run is being played).
 func tick(delta: float) -> void:
+	if multiplayer.is_server():
+		health.tick(delta)
+	if health.is_downed():
+		return
 	if multiplayer.is_server():
 		if is_local():
 			_simulate(_read_local_input(), delta)
@@ -104,7 +125,16 @@ func tick(delta: float) -> void:
 
 
 ## Client: apply this player's entry from a host snapshot.
-func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack_seq: int) -> void:
+func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack_seq: int,
+		hearts: int, max_hearts: int, invulnerable: bool) -> void:
+	health.max_hearts = max_hearts
+	health.hearts = hearts
+	# Only used for the flashing effect on clients.
+	health.invulnerable_left = 1.0 if invulnerable else 0.0
+	if is_local() and health.is_downed():
+		state.position = server_position
+		_visual_offset = Vector2.ZERO
+		return
 	if is_local():
 		var error := _predictor.reconcile(ack_seq, server_position)
 		if error == Vector2.ZERO:
@@ -136,6 +166,13 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var color: Color = SLOT_COLORS[slot % SLOT_COLORS.size()]
+	_draw_heart_pips()
+	if health.is_downed():
+		_draw_tombstone(color)
+		return
+	# Blink while invulnerable after a hit.
+	if health.is_invulnerable() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
+		color = Color(color, 0.25)
 	if is_dashing():
 		draw_circle(Vector2.ZERO, stats.body_radius + 3.0, Color(color, 0.35))
 		color = color.lightened(0.4)
@@ -143,6 +180,22 @@ func _draw() -> void:
 	var aim_direction := Vector2.from_angle(state.aim)
 	draw_line(aim_direction * 4.0, aim_direction * MUZZLE_DISTANCE, Color(0.92, 0.92, 0.98), 2.0)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
+
+
+func _draw_heart_pips() -> void:
+	var spacing := 4.0
+	var start_x := -(health.max_hearts - 1) * spacing / 2.0
+	for i: int in health.max_hearts:
+		var filled := i < health.hearts
+		draw_circle(Vector2(start_x + i * spacing, stats.body_radius + 5.0), 1.5,
+			HEART_COLOR if filled else HEART_EMPTY_COLOR)
+
+
+func _draw_tombstone(color: Color) -> void:
+	draw_rect(Rect2(-5, -7, 10, 12), TOMBSTONE_COLOR)
+	draw_circle(Vector2(0, -7), 5.0, TOMBSTONE_COLOR)
+	draw_rect(Rect2(-1, -9, 2, 8), color)
+	draw_rect(Rect2(-3, -6, 6, 2), color)
 
 
 func _shows_remote_state() -> bool:

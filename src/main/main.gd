@@ -79,7 +79,19 @@ func _on_server_disconnected() -> void:
 
 func _load_arena() -> void:
 	_menu.hide()
-	_level.add_child(ARENA_SCENE.instantiate())
+	var arena: Arena = ARENA_SCENE.instantiate()
+	# Deferred: swap arenas after the current frame, not in the middle of its tick.
+	arena.restart_requested.connect(_restart_arena, CONNECT_DEFERRED)
+	_level.add_child(arena)
+
+
+## Host: replace the arena with a fresh one. LevelSpawner removes the old arena
+## and creates the new one on every client too.
+func _restart_arena() -> void:
+	for child: Node in _level.get_children():
+		_level.remove_child(child)
+		child.queue_free()
+	_load_arena()
 
 
 func _leave_game(message: String) -> void:

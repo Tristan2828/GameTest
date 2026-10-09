@@ -29,7 +29,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 - Tests use **GUT** (`addons/gut`, v9.7.1). Run them with `pwsh tools/run_tests.ps1`. Don't call GUT directly: GUT silently skips test files that fail to parse and still says "All tests passed", and the wrapper catches that.
 - Online smoke test: `pwsh tools/net_smoke_test.ps1` starts a headless host and client on autopilot and checks that they connected and that the client's shots damaged dummies on the host. Run it after any networking change.
 - Build the Windows exe: `pwsh tools/build.ps1`. It writes `builds/windows/GameTest.exe` (one file, game data embedded) and `builds/GameTest-<version>-windows.zip`. The export preset is `export_presets.cfg` (excludes GUT, tests and tools). Bump `config/version` in `project.godot` for each build you send to friends; the menu shows it. Needs the 4.7.2 export templates in `%APPDATA%\Godot\export_templates\4.7.2.stable\`.
-- Game launch flags (after `--`): `--solo | --host | --join=<ip>`, `--port=<n>`, `--autopilot`, `--run-for=<seconds>`, `--local-only`. See `src/main/launch_options.gd`. Automated tests must host with `--local-only` so they don't touch the router (UPnP) or call the public-IP web service.
+- Game launch flags (after `--`): `--solo | --host | --join=<ip>`, `--port=<n>`, `--autopilot`, `--run-for=<seconds>`, `--local-only`, `--stage-seconds=<n>`. With `--autopilot`, the host also restarts automatically 2s after a stage ends. See `src/main/launch_options.gd`. Automated tests must host with `--local-only` so they don't touch the router (UPnP) or call the public-IP web service.
 - After adding a new `class_name` script, run `--import` before running scripts headless. Godot only learns about new global classes during an import, and without it you get "Could not find type" parse errors. The tools scripts already do this.
 - Test helpers must not reuse Node callback names (`_input`, `_process`, `_ready`...): `GutTest` is a Node.
 
@@ -37,11 +37,12 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/autoload/`: global singletons. `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
 - `src/main/`: root scene `main.tscn` (menu plus `Level` slot plus `LevelSpawner`) and `LaunchOptions`.
-- `src/ui/`: menus and HUD widgets.
-- `src/arena/`: arena scene. Owns the fixed tick order (players, then enemies, then bullets, then hits) and host snapshots.
-- `src/player/`: `Player` node, pure `PlayerMotor` sim, `ClientPredictor`, `LocalInput`, `CharacterStats` resource. Character `.tres` files live in `characters/`.
+- `src/ui/`: main menu, `Hud` scene (hearts, timer, banners), and HUD widgets.
+- `src/arena/`: arena scene and `SpawnDirector` (spawn pacing). The arena owns the fixed tick order (players, then spawning, then enemies, then contact damage, then bullets, then hits, then the phase check), the stage timer and end states, and host snapshots.
+- `src/player/`: `Player` node, pure `PlayerMotor` sim, `ClientPredictor`, `PlayerHealth`, `LocalInput`, `CharacterStats` resource. Character `.tres` files live in `characters/`. Each player duplicates its stats at spawn so upgrades stay per-player.
 - `src/combat/`: `ProjectileManager` (flat-array bullet pool) and `ShotPatterns` (seeded, deterministic patterns).
-- `src/enemies/`: `EnemyManager` (node pool and snapshots) and enemy scenes.
+- `src/enemies/`: `EnemyManager` (pool of 300, separation, byte-packed snapshots), `Enemy`, `EnemyType` resources in `types/` registered in `EnemyTypes.ALL` (index = network id; append only).
+- `src/core/`: engine-agnostic helpers (`SpatialGrid`).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
 - `tools/`: PowerShell helper scripts.
 
@@ -51,3 +52,5 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - RPC channels: 0 = reliable events, 1 = host snapshots, 2 = client inputs. Host only sends to peers in `_ready_peers` (arena loaded).
 - `untyped_declaration` is an error in project settings, so type every declaration, including `for` loop variables (`for i: int in n:`).
 - Placeholder art is drawn with `_draw()` for now. It will be replaced by pixel-art sprites later.
+- RPC gotcha: an **empty** `PackedByteArray` sent as an RPC's only argument arrives as "no arguments" and the call fails. Always send a count or another argument alongside packed data.
+- Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).

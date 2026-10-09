@@ -9,6 +9,7 @@ extends RefCounted
 ##   --autopilot                     the local player moves, aims and fires by itself
 ##   --run-for=<seconds>             print a report and quit (for headless smoke tests)
 ##   --local-only                    host without touching the router or looking up the public IP
+##   --stage-seconds=<n>             shorter/longer stage (default 300) for testing
 
 enum Mode { MENU, SOLO, HOST, JOIN }
 
@@ -20,6 +21,7 @@ static var port: int = NetScript.DEFAULT_PORT
 static var autopilot: bool = false
 static var run_for_seconds: float = 0.0
 static var local_only: bool = false
+static var stage_seconds: float = 0.0
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -39,5 +41,7 @@ static func parse(args: PackedStringArray) -> void:
 			run_for_seconds = arg.trim_prefix("--run-for=").to_float()
 		elif arg == "--local-only":
 			local_only = true
+		elif arg.begins_with("--stage-seconds="):
+			stage_seconds = arg.trim_prefix("--stage-seconds=").to_float()
 		else:
 			push_warning("Unknown launch option: %s" % arg)

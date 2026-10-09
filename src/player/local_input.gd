@@ -46,21 +46,28 @@ func sample(player: Player, delta: float) -> PlayerInput:
 	return input
 
 
-## Test mode (`--autopilot`): circle around, shoot the nearest dummy, dash regularly.
+## Test mode (`--autopilot`): kite away from the nearest enemy while shooting it,
+## drift in a circle, and dash regularly.
 func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 	_autopilot_time += delta
 	var input := PlayerInput.new()
-	input.move = Vector2.from_angle(_autopilot_time * 1.5) * 0.8
+	input.move = Vector2.from_angle(_autopilot_time * 0.7) * 0.5
 	input.dash_count = int(_autopilot_time / AUTOPILOT_DASH_INTERVAL)
 
-	var nearest: Node2D = null
+	var nearest: Enemy = null
+	var nearest_distance := INF
 	for node: Node in player.get_tree().get_nodes_in_group("enemies"):
-		var enemy := node as DummyEnemy
+		var enemy := node as Enemy
 		if enemy == null or not enemy.active:
 			continue
-		if nearest == null or enemy.global_position.distance_squared_to(player.global_position) < nearest.global_position.distance_squared_to(player.global_position):
+		var distance := enemy.global_position.distance_squared_to(player.global_position)
+		if distance < nearest_distance:
 			nearest = enemy
+			nearest_distance = distance
 	if nearest != null:
-		input.aim = (nearest.global_position - player.global_position).angle()
+		var to_enemy := nearest.global_position - player.global_position
+		input.aim = to_enemy.angle()
 		input.fire = true
+		if to_enemy.length() < 120.0:
+			input.move = (input.move - to_enemy.normalized()).limit_length(1.0)
 	return input

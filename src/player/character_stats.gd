@@ -12,6 +12,11 @@ extends Resource
 ## Counted from the start of the dash.
 @export var dash_cooldown: float = 0.8
 
+@export_group("Health")
+@export var max_hearts: int = 3
+## Seconds of invulnerability after taking a hit.
+@export var hit_invulnerability: float = 1.0
+
 @export_group("Body")
 ## Size used for drawing and keeping the player inside the arena.
 @export var body_radius: float = 6.0

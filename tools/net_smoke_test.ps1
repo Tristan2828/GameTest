@@ -1,5 +1,5 @@
 # Online smoke test: starts a headless host and a headless client on this PC, both
-# on autopilot (moving, dashing, shooting dummies), then prints their reports.
+# on autopilot (moving, dashing, shooting enemies), then prints their reports.
 #
 # Passes when:
 #   - the client connected,
@@ -59,4 +59,4 @@ if ($failures.Count -gt 0) {
 	Write-Host "FAILED: $($failures -join '; ')" -ForegroundColor Red
 	exit 1
 }
-Write-Host "OK: client $clientId connected, moved, and its shots damaged dummies on the host." -ForegroundColor Green
+Write-Host "OK: client $clientId connected, moved, and its shots damaged enemies on the host." -ForegroundColor Green

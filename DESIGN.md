@@ -52,11 +52,14 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ### Threat model (hybrid)
 - Hordes of enemies that swarm the player (contact damage).
+  - **Spawning:** continuous ramp (Vampire Survivors style). A steady trickle off-screen around the players gets denser over time, with occasional **pack surges** (a tight cluster from one direction).
+  - **First melee roster (M2):** Shambler (basic, medium speed, low HP), Bat (fast, very weak, erratic), Ghoul (slow, tanky, big).
 - Some enemy types, and all bosses, fire readable bullet patterns.
 - **Bullet density:** readable (Enter the Gungeon-like), not hardcore shmup. See *Ideas for Later*.
 
 ### Player
-- **Health:** a few hearts, with a hitbox much smaller than the sprite.
+- **Health:** 3 hearts, with a hitbox much smaller than the sprite. Enemy contact costs 1 heart, then ~1s of invulnerability (flashing). Dashing is also invulnerable.
+- **Downed:** at 0 hearts the player is downed (can't act). Placeholder until ghosts arrive in M4.
 - **Movement:** free 8-direction / analog movement.
 - **Aiming:** manual 360° aim with the mouse or right stick.
 - **Defense:**
@@ -74,7 +77,8 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 ## 4. Progression
 
 ### In-run
-- **XP level-ups:** enemies drop XP; on level-up, pick 1 of 3 upgrades.
+- **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades.
+  - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
 - **Weapon pickups:** new auto weapons found during stages.
 - **Passive items / relics:** stat boosts and synergies.
 - **Shop between stages:** spend coins on items.
@@ -89,10 +93,10 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Players | 1–4 |
 | Friendly fire | Off |
 | XP | **Shared** team XP bar; each player picks their **own** upgrade |
-| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously |
+| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes early once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another |
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
 | Death | Player becomes a **ghost until the next stage** and then respawns. Run ends if all players are dead |
-| Difficulty scaling | TBD, to be tuned during playtesting |
+| Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
 
 ## 6. Art & audio
 
@@ -111,7 +115,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Goal:** prove the netcode early, before content is built on top of it.
 
 ### Future milestones (rough)
-- M2: Enemy horde spawning + XP + level-up flow (networked).
+- M2: Enemy horde spawning + XP + level-up flow (networked). A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
 - M3: First arena stage + first boss with bullet patterns.
 - M4: Shop, relics, weapon pickups, ghost/respawn.
 - M5: Multiple characters, multiple stages, full 15–20 min run.
@@ -125,7 +129,6 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - Number of stages per run and their themes.
 - Shop economy: how coins are earned, what's sold.
 - Ghost mechanics: can ghosts do anything (e.g., distract, collect)?
-- How difficulty scales with player count.
 - Bomb count and how bombs are replenished.
 
 ## 9. Ideas for Later
