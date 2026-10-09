@@ -103,7 +103,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ## 7. Milestones
 
-### Milestone 1: Online movement & shooting (implemented; awaiting hands-on playtest)
+### Milestone 1: Online movement & shooting ✅ (done 2026-10-09; internet playtest with a friend felt smooth)
 - Godot project setup and project rules file (`CLAUDE.md`, Godot 4.x only, typed GDScript).
 - Host / join by IP.
 - 2+ players move, dash, and shoot (mouse and gamepad).
