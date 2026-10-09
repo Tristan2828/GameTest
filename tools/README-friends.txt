@@ -24,6 +24,10 @@ Controls (keyboard + mouse, or a gamepad):
 Can't connect? Check that the version in the bottom-right of the menu matches
 your host's, then let them know. They may need to open a port on their router.
 
+New versions: https://github.com/Tristan2828/GameTest/releases/latest
+(they're also announced in the Discord #builds channel).
+Found a bug? Post it in Discord #bug-reports with your version number.
+
 Level-ups: everyone picks an upgrade card (click it, or use the gamepad and
 press A). Once someone has picked, the rest have 30 seconds.
 
