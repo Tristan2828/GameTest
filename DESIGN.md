@@ -1,0 +1,125 @@
+# Game Design Document
+
+> Working title: TBD
+> Last updated: 2026-10-08
+
+A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
+
+---
+
+## 1. Vision
+
+- **Pillars**
+  1. **Power fantasy through builds.** Start weak, end the run with the screen full of your own attacks.
+  2. **Real dodging.** Tiny hitbox, few hearts, readable enemy bullet patterns. Skill matters.
+  3. **Better with friends.** Online co-op for 1–4 players, but solo is fully supported.
+  4. **Easy to pick up.** Simple controls, short runs, friends can jump in quickly.
+- **Audience:** Me and my friends. Long-term goal is a complete game.
+- **Platform:** Windows PC.
+
+## 2. Tech
+
+| Item | Decision |
+|---|---|
+| Engine | Godot 4.x |
+| Language | GDScript, **statically typed** throughout |
+| Development | AI-assisted coding. Keep everything text-editable and verifiable via `godot --headless` |
+| Networking | Godot built-in high-level multiplayer (ENet), host-authoritative |
+| Connection | Direct IP / LAN. Recommend Tailscale so friends can connect without port forwarding |
+| Input | Mouse + keyboard and gamepad, both fully supported |
+
+### Networking approach (initial plan)
+- One player hosts; the host owns the true game state.
+- Player inputs are sent to the host; player positions are synced back.
+- Enemies: host simulates; positions sent in compact batches at a modest tick rate, interpolated on clients.
+- Bullets: **never synced individually.** Send pattern events (`pattern id, origin, time, seed`) and let every client simulate the bullets deterministically.
+- Heavy use of object pooling for enemies, bullets, and pickups.
+
+## 3. Core gameplay
+
+### Format
+- Twin-stick roguelite with runs made of **arena stages in sequence**.
+- Each stage: a few minutes of enemy waves, then a boss, then a shop / upgrade break.
+- **Run length target:** 15–20 minutes.
+
+### Threat model (hybrid)
+- Hordes of enemies that swarm the player (contact damage).
+- Some enemy types, and all bosses, fire readable bullet patterns.
+- **Bullet density:** readable (Enter the Gungeon-like), not hardcore shmup. See *Ideas for Later*.
+
+### Player
+- **Health:** a few hearts, with a hitbox much smaller than the sprite.
+- **Movement:** free 8-direction / analog movement.
+- **Aiming:** manual 360° aim with the mouse or right stick.
+- **Defense:**
+  - **Dodge roll / dash:** brief invulnerability or reposition, on a cooldown.
+  - **Bomb:** limited-use screen clear for enemy bullets.
+
+### Weapons
+- **Main gun:** aimed and fired manually by the player. Defined by the character.
+- **Auto weapons:** gained through level-ups and pickups, fire automatically (orbitals, auras, homing shots, etc.).
+
+### Characters
+- Multiple playable characters, each with a **unique kit** (main gun, stats, unique ability).
+- Encourages team composition in co-op.
+
+## 4. Progression
+
+### In-run
+- **XP level-ups:** enemies drop XP; on level-up, pick 1 of 3 upgrades.
+- **Weapon pickups:** new auto weapons found during stages.
+- **Passive items / relics:** stat boosts and synergies.
+- **Shop between stages:** spend coins on items.
+
+### Meta
+- **None.** Each run stands alone, with no unlocks or permanent upgrades.
+
+## 5. Co-op rules
+
+| Topic | Rule |
+|---|---|
+| Players | 1–4 |
+| Friendly fire | Off |
+| XP | **Shared** team XP bar; each player picks their **own** upgrade |
+| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously |
+| Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
+| Death | Player becomes a **ghost until the next stage** and then respawns. Run ends if all players are dead |
+| Difficulty scaling | TBD, to be tuned during playtesting |
+
+## 6. Art & audio
+
+- **Setting:** Dark fantasy (undead hordes, demons, dark magic).
+- **Art style:** Pixel art.
+- Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
+- Audio: TBD.
+
+## 7. Milestones
+
+### Milestone 1: Online movement & shooting
+- Godot project setup and project rules file (`CLAUDE.md`, Godot 4.x only, typed GDScript).
+- Host / join by IP.
+- 2+ players move, dash, and shoot (mouse and gamepad).
+- Dummy enemies that take damage, synced across clients.
+- **Goal:** prove the netcode early, before content is built on top of it.
+
+### Future milestones (rough)
+- M2: Enemy horde spawning + XP + level-up flow (networked).
+- M3: First arena stage + first boss with bullet patterns.
+- M4: Shop, relics, weapon pickups, ghost/respawn.
+- M5: Multiple characters, multiple stages, full 15–20 min run.
+
+## 8. Open questions
+
+- Working title?
+- Character roster: how many, and what are their kits?
+- Enemy roster and boss designs.
+- Weapon, auto-weapon, and relic lists; synergy rules.
+- Number of stages per run and their themes.
+- Shop economy: how coins are earned, what's sold.
+- Ghost mechanics: can ghosts do anything (e.g., distract, collect)?
+- How difficulty scales with player count.
+- Bomb count and how bombs are replenished.
+
+## 9. Ideas for Later
+
+- **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
