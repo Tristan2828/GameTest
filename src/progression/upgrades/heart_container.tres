@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Heart Container"
+icon = "up_heart_container"
 description = "+1 max heart (and heal 1)"
 stat = 3
 amount = 1.0

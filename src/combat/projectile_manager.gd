@@ -35,6 +35,8 @@ var _ages: PackedFloat32Array = PackedFloat32Array()
 var _lifetimes: PackedFloat32Array = PackedFloat32Array()
 var _damages: PackedInt32Array = PackedInt32Array()
 var _owners: PackedInt32Array = PackedInt32Array()
+## DamageSource of each bullet (main gun or Seeking Bolts), for the run's weapon breakdown.
+var _sources: PackedByteArray = PackedByteArray()
 ## Enemies each bullet can still pass through.
 var _pierce: PackedInt32Array = PackedInt32Array()
 ## Pool index of the enemy last hit, so a piercing bullet doesn't hit it again next tick.
@@ -48,6 +50,7 @@ func _init() -> void:
 	_lifetimes.resize(CAPACITY)
 	_damages.resize(CAPACITY)
 	_owners.resize(CAPACITY)
+	_sources.resize(CAPACITY)
 	_pierce.resize(CAPACITY)
 	_last_hit.resize(CAPACITY)
 
@@ -55,7 +58,7 @@ func _init() -> void:
 ## Returns false if the pool is full.
 ## `start_age` < 0 delays the bullet; > 0 starts it partway along its path.
 func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, owner_peer_id: int,
-		pierce: int = 0, start_age: float = 0.0) -> bool:
+		pierce: int = 0, start_age: float = 0.0, source: int = DamageSource.MAIN_GUN) -> bool:
 	if _count >= CAPACITY:
 		return false
 	_origins[_count] = origin
@@ -64,6 +67,7 @@ func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, own
 	_lifetimes[_count] = lifetime
 	_damages[_count] = damage
 	_owners[_count] = owner_peer_id
+	_sources[_count] = source
 	_pierce[_count] = pierce
 	_last_hit[_count] = -1
 	_count += 1
@@ -111,7 +115,7 @@ func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 			continue
 		hit_at.emit(position_of(i))
 		if apply_damage:
-			enemies.damage(enemy, _damages[i], _owners[i])
+			enemies.damage(enemy, _damages[i], _owners[i], _sources[i])
 		if _pierce[i] > 0:
 			_pierce[i] -= 1
 			_last_hit[i] = enemy.pool_index
@@ -182,6 +186,7 @@ func _remove(index: int) -> void:
 	_lifetimes[index] = _lifetimes[last]
 	_damages[index] = _damages[last]
 	_owners[index] = _owners[last]
+	_sources[index] = _sources[last]
 	_pierce[index] = _pierce[last]
 	_last_hit[index] = _last_hit[last]
 	_count = last

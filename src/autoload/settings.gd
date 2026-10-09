@@ -10,6 +10,10 @@ var sfx_volume: float = 0.8
 var music_volume: float = 0.6
 var fullscreen: bool = false
 var screen_shake: bool = true
+## In-game mouse cursor (GameCursor): style, size and color indexes.
+var cursor_style: int = 1
+var cursor_size: int = 1
+var cursor_color: int = 2
 
 
 func _enter_tree() -> void:
@@ -20,6 +24,8 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	load_settings()
 	apply()
+	# The in-game cursor is sized in window pixels: rebuild it when the window resizes.
+	get_tree().root.size_changed.connect(GameCursor.refresh)
 
 
 func load_settings() -> void:
@@ -31,6 +37,9 @@ func load_settings() -> void:
 	music_volume = clampf(config.get_value("audio", "music_volume", music_volume), 0.0, 1.0)
 	fullscreen = config.get_value("video", "fullscreen", fullscreen)
 	screen_shake = config.get_value("video", "screen_shake", screen_shake)
+	cursor_style = clampi(config.get_value("cursor", "style", cursor_style), 0, GameCursor.STYLES.size() - 1)
+	cursor_size = clampi(config.get_value("cursor", "size", cursor_size), 0, GameCursor.SIZES.size() - 1)
+	cursor_color = clampi(config.get_value("cursor", "color", cursor_color), 0, GameCursor.COLORS.size() - 1)
 
 
 func save() -> void:
@@ -40,6 +49,9 @@ func save() -> void:
 	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("video", "fullscreen", fullscreen)
 	config.set_value("video", "screen_shake", screen_shake)
+	config.set_value("cursor", "style", cursor_style)
+	config.set_value("cursor", "size", cursor_size)
+	config.set_value("cursor", "color", cursor_color)
 	config.save(PATH)
 
 
@@ -63,3 +75,4 @@ func apply() -> void:
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)
+	GameCursor.refresh()

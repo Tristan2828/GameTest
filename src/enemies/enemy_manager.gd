@@ -27,6 +27,9 @@ const FLAG_HEXED: int = 2
 var damage_by_peer: Dictionary[int, int] = {}
 ## Host: the part of that damage dealt to bosses.
 var boss_damage_by_peer: Dictionary[int, int] = {}
+## Host: damage and kills per peer per DamageSource (peer id -> {source: amount}).
+var damage_by_source: Dictionary[int, Dictionary] = {}
+var kills_by_source: Dictionary[int, Dictionary] = {}
 var bounds: Rect2 = Rect2(-10000, -10000, 20000, 20000)
 
 var _pool: Array[Enemy] = []
@@ -166,7 +169,8 @@ func hex_in_radius(center: Vector2, radius: float, seconds: float, multiplier: f
 
 
 ## Host: damage every active enemy within `radius` (Grave Blast).
-func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int) -> void:
+func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int,
+		source: int = DamageSource.ABILITY) -> void:
 	var targets: Array[Enemy] = []
 	_nearby.clear()
 	_grid.query(center, radius + MAX_ENEMY_RADIUS, _nearby)
@@ -177,11 +181,11 @@ func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id:
 			targets.append(enemy)
 	for enemy: Enemy in targets:
 		if enemy.active:
-			damage(enemy, amount, from_peer_id)
+			damage(enemy, amount, from_peer_id, source)
 
 
 ## Host only.
-func damage(enemy: Enemy, amount: int, from_peer_id: int) -> void:
+func damage(enemy: Enemy, amount: int, from_peer_id: int, source: int = DamageSource.MAIN_GUN) -> void:
 	if enemy.hexed:
 		amount = roundi(amount * enemy.hex_multiplier)
 	var dealt := mini(amount, enemy.hp)
@@ -189,9 +193,18 @@ func damage(enemy: Enemy, amount: int, from_peer_id: int) -> void:
 	damage_by_peer[from_peer_id] = damage_by_peer.get(from_peer_id, 0) + dealt
 	if enemy.type.is_boss:
 		boss_damage_by_peer[from_peer_id] = boss_damage_by_peer.get(from_peer_id, 0) + dealt
+	_count_source(damage_by_source, from_peer_id, source, dealt)
 	if died:
+		_count_source(kills_by_source, from_peer_id, source, 1)
 		_release(enemy)
 		enemy_killed.emit(enemy, from_peer_id)
+
+
+func _count_source(table: Dictionary[int, Dictionary], peer_id: int, source: int, amount: int) -> void:
+	if not table.has(peer_id):
+		table[peer_id] = {}
+	var row: Dictionary = table[peer_id]
+	row[source] = int(row.get(source, 0)) + amount
 
 
 ## Host: remove every enemy (e.g. when the stage ends).

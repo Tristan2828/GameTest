@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Sharpened Bolts"
+icon = "up_sharpened_bolts"
 description = "+4 bullet damage"
 stat = 0
 amount = 4.0

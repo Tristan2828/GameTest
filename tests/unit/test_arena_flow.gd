@@ -228,11 +228,14 @@ func test_run_end_shows_stats_table() -> void:
 func test_run_summary_button_returns_to_character_select_once() -> void:
 	_local_player().take_hit(99)
 	_arena._update_phase()
-	var buttons := _arena._hud.run_summary.find_children("*", "Button", true, false)
+	var buttons: Array[Button] = []
+	for node: Node in _arena._hud.run_summary.find_children("*", "Button", true, false):
+		if (node as Button).text.begins_with("Return"):
+			buttons.append(node as Button)
 	assert_eq(buttons.size(), 1, "the host gets a return button")
 	watch_signals(_arena)
-	(buttons[0] as Button).pressed.emit()
-	(buttons[0] as Button).pressed.emit()
+	buttons[0].pressed.emit()
+	buttons[0].pressed.emit()
 	assert_signal_emit_count(_arena, "restart_requested", 1)
 
 

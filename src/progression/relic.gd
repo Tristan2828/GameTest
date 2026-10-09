@@ -4,6 +4,8 @@ extends Resource
 ## `src/progression/relics/`, registered in Relics.ALL (index = network id).
 
 @export var title: String = "Relic"
+## PixelArt sprite shown in the shop and the run summary.
+@export var icon: String = ""
 @export_multiline var description: String = ""
 @export var price: int = 20
 ## Stat effects, applied in order (they can include drawbacks).

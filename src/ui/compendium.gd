@@ -86,14 +86,17 @@ func _show_upgrades() -> void:
 		var limit := "No limit" if upgrade.max_stacks <= 0 else "Up to %d times" % upgrade.max_stacks
 		if upgrade.stat == Upgrade.Stat.HEAL:
 			limit = "Only offered when you're hurt"
-		_entry("", upgrade.title, upgrade.description, limit)
+		_entry(upgrade.icon, upgrade.title, upgrade.description, limit)
 
 
 func _show_relics() -> void:
 	clear_list()
 	add_heading("Sold in the shop between stages. Each player sees their own offers; each relic can be bought once.")
 	for relic: Relic in Relics.ALL:
-		_entry("coin_big", relic.title, relic.description, "%d coins" % relic.price, TITLE_COLOR)
+		var details := "%d coins" % relic.price
+		if relic.co_op_only:
+			details += "   (co-op only)"
+		_entry(relic.icon, relic.title, relic.description, details, TITLE_COLOR)
 
 
 func _show_pickups() -> void:

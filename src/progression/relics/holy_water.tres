@@ -11,6 +11,7 @@ amount = 0.4
 [resource]
 script = ExtResource("1_relic")
 title = "Holy Water"
+icon = "rel_holy_water"
 description = "Your ability is 40% stronger"
 price = 60
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

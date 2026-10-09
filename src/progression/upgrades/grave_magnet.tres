@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Grave Magnet"
+icon = "up_grave_magnet"
 description = "Pick up XP from 30% farther"
 stat = 6
 amount = 0.3

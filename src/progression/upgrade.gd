@@ -10,6 +10,8 @@ enum Stat {
 }
 
 @export var title: String = "Upgrade"
+## PixelArt sprite shown on cards and the run summary.
+@export var icon: String = ""
 @export_multiline var description: String = ""
 @export var stat: Stat = Stat.DAMAGE
 ## Meaning depends on the stat: flat amount for DAMAGE/MAX_HEARTS/EXTRA_BOLT/PIERCE/HEAL,

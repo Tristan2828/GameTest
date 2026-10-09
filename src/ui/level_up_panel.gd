@@ -14,6 +14,8 @@ const UNPICKED_MODULATE: Color = Color(0.45, 0.42, 0.5, 1.0)
 
 var _offered: Array[int] = []
 var _pips: Array[LevelPips] = []
+## The upgrade's icon at the top of each card.
+var _icons: Array[SpriteIcon] = []
 ## The pressed-card look (gold border), reused to mark your pick.
 var _picked_style: StyleBox = null
 static var _screenshot_taken: bool = false
@@ -36,6 +38,8 @@ func open(level: int, offered: Array[int], player: Player = null) -> void:
 			var upgrade := Upgrades.get_upgrade(offered[i])
 			(button.get_node("Lines/Title") as Label).text = upgrade.title
 			(button.get_node("Lines/Description") as Label).text = upgrade.description
+			_icons[i].sprite = upgrade.icon
+			_icons[i].queue_redraw()
 			var level_label := button.get_node("Lines/Level") as Label
 			var preview_label := button.get_node("Lines/Preview") as Label
 			level_label.text = ""
@@ -99,6 +103,10 @@ func _ready() -> void:
 		lines.add_child(pips)
 		lines.move_child(pips, 1)  # Right under the title.
 		_pips.append(pips)
+		var icon := SpriteIcon.new("", Vector2(20, 20))
+		lines.add_child(icon)
+		lines.move_child(icon, 0)  # Above the title.
+		_icons.append(icon)
 
 
 func _on_card_pressed(index: int) -> void:

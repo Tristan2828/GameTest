@@ -18,6 +18,8 @@ const TOO_EXPENSIVE_COLOR: Color = Color(1.0, 0.5, 0.45)
 const OWNED_COLOR: Color = Color(0.55, 0.9, 0.6)
 
 var _offers: Array[int] = []
+## The relic's icon at the top of each card.
+var _icons: Array[SpriteIcon] = []
 static var _screenshot_taken: bool = false
 
 
@@ -25,6 +27,11 @@ func _ready() -> void:
 	var buttons := _cards.get_children()
 	for i: int in buttons.size():
 		(buttons[i] as Button).pressed.connect(_on_card_pressed.bind(i))
+		var icon := SpriteIcon.new("", Vector2(20, 20))
+		var lines := buttons[i].get_node("Lines")
+		lines.add_child(icon)
+		lines.move_child(icon, 0)  # Above the title.
+		_icons.append(icon)
 	_reroll_button.pressed.connect(func() -> void: reroll_pressed.emit())
 	_ready_button.pressed.connect(func() -> void: ready_pressed.emit())
 
@@ -54,6 +61,9 @@ func refresh(coins: int, owned: Array[int], is_ready: bool, status: String, rero
 		var owned_it := owned.has(_offers[i])
 		var affordable := coins >= relic.price
 		(button.get_node("Lines/Title") as Label).text = relic.title
+		if _icons[i].sprite != relic.icon:
+			_icons[i].sprite = relic.icon
+			_icons[i].queue_redraw()
 		(button.get_node("Lines/Description") as Label).text = relic.description
 		var price := button.get_node("Lines/Price") as Label
 		if owned_it:

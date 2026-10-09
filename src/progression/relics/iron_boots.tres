@@ -16,6 +16,7 @@ amount = -0.08
 [resource]
 script = ExtResource("1_relic")
 title = "Iron Boots"
+icon = "rel_iron_boots"
 description = "+1 max heart, but 8% slower"
 price = 55
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0"), SubResource("effect_1")])

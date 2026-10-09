@@ -1,8 +1,10 @@
 class_name RunSummaryPanel
 extends Control
 ## The end-of-run screen (Run over / Victory): headline, run totals, and one card
-## per player with their numbers, build and co-op awards. Built in code because
-## the number of player cards changes. Numbers count up when it opens.
+## per player. Two pages: Overview (numbers with a star for the best player in
+## each, build icons, co-op awards) and Weapons (damage, DPS and kills of each
+## player's main gun, ability and auto weapons). Built in code because the number
+## of player cards changes. Numbers count up when it opens.
 ## The host gets a button back to character select; clients see a waiting line.
 
 ## Host: the "Return to character select" button was pressed.
@@ -18,6 +20,15 @@ const CARD_BG: Color = Color(0.1, 0.08, 0.14, 1.0)
 const COUNT_UP_SECONDS: float = 1.2
 ## Card width by player count (index = players - 1); fits 640 px wide.
 const CARD_WIDTHS: Array[int] = [250, 210, 170, 138]
+const BAR_COLOR: Color = Color(0.95, 0.78, 0.4)
+const BAR_BACK_COLOR: Color = Color(0.2, 0.16, 0.26)
+const PAGES: Array[String] = ["Overview", "Weapons"]
+
+var _stats: RunStats = null
+var _players: Array[Player] = []
+var _cards: HBoxContainer = null
+var _page: int = 0
+var _page_buttons: Array[Button] = []
 
 var _stage_in_run: int = 1
 ## Labels that count up: label -> [final value, is_time]
@@ -39,6 +50,10 @@ func open(stats: RunStats, players: Array[Player], stage_title: String, stage_co
 	for child: Node in get_children():
 		child.queue_free()
 	_counters.clear()
+	_stats = stats
+	_players = players
+	_page = 0
+	_page_buttons.clear()
 	var accent := VICTORY_COLOR if stats.victory else DEFEAT_COLOR
 
 	var dim := ColorRect.new()
@@ -63,13 +78,22 @@ func open(stats: RunStats, players: Array[Player], stage_title: String, stage_co
 	column.add_child(_summary_row(stats, stage_count))
 	column.add_child(_divider())
 
-	var cards := HBoxContainer.new()
-	cards.alignment = BoxContainer.ALIGNMENT_CENTER
-	cards.add_theme_constant_override("separation", 6)
-	column.add_child(cards)
-	var width := CARD_WIDTHS[clampi(players.size(), 1, CARD_WIDTHS.size()) - 1]
-	for player: Player in players:
-		cards.add_child(_player_card(player, stats, width, players.size()))
+	var tabs := HBoxContainer.new()
+	tabs.alignment = BoxContainer.ALIGNMENT_CENTER
+	tabs.add_theme_constant_override("separation", 4)
+	column.add_child(tabs)
+	for page: int in PAGES.size():
+		var tab := Button.new()
+		tab.text = PAGES[page]
+		tab.custom_minimum_size.x = 80
+		tab.pressed.connect(_show_page.bind(page))
+		tabs.add_child(tab)
+		_page_buttons.append(tab)
+	_cards = HBoxContainer.new()
+	_cards.alignment = BoxContainer.ALIGNMENT_CENTER
+	_cards.add_theme_constant_override("separation", 6)
+	column.add_child(_cards)
+	_build_cards()
 
 	var return_button: Button = null
 	if can_return:
@@ -85,6 +109,36 @@ func open(stats: RunStats, players: Array[Player], stage_title: String, stage_co
 	_animate_in(hint_label)
 	if return_button != null:
 		return_button.grab_focus()
+	else:
+		_page_buttons[0].grab_focus()
+
+
+## Switch between Overview and Weapons (numbers show their final values).
+func _show_page(page: int) -> void:
+	if page == _page:
+		return
+	_page = page
+	_build_cards()
+	_set_counters(1.0)
+
+
+func _build_cards() -> void:
+	for child: Node in _cards.get_children():
+		_cards.remove_child(child)
+		child.queue_free()
+	for label: Label in _counters.keys():
+		if not is_instance_valid(label) or not label.is_inside_tree():
+			_counters.erase(label)
+	var width := CARD_WIDTHS[clampi(_players.size(), 1, CARD_WIDTHS.size()) - 1]
+	for player: Player in _players:
+		if _page == 0:
+			_cards.add_child(_player_card(player, _stats, width, _players.size()))
+		else:
+			_cards.add_child(_weapon_card(player, _stats, width, _players.size()))
+	for page: int in _page_buttons.size():
+		var color := AWARD_COLOR if page == _page else VALUE_COLOR
+		_page_buttons[page].add_theme_color_override("font_color", color)
+		_page_buttons[page].add_theme_color_override("font_focus_color", color)
 
 
 func _headline(stats: RunStats, stage_title: String, stage_count: int) -> String:
@@ -127,7 +181,9 @@ func _chip_text(title: String, value: String) -> VBoxContainer:
 	return chip
 
 
-func _player_card(player: Player, stats: RunStats, width: int, player_count: int) -> PanelContainer:
+## An empty player card with the header (portrait, color name, character).
+## Returns [card, the column to add lines to].
+func _card_frame(player: Player, width: int, player_count: int) -> Array:
 	var color: Color = Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()]
 	var card := PanelContainer.new()
 	card.custom_minimum_size.x = width
@@ -135,8 +191,6 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 	var lines := VBoxContainer.new()
 	lines.add_theme_constant_override("separation", 3)
 	card.add_child(lines)
-
-	# Header: portrait, color name, character.
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 6)
 	lines.add_child(header)
@@ -153,17 +207,27 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 	var you := " (you)" if player.is_local() and player_count > 1 else ""
 	names.add_child(_label(player.display_name() + you, 9, color, false))
 	names.add_child(_label(player.stats.display_name, 9, LABEL_COLOR, false))
+	return [card, lines]
 
-	# Numbers.
+
+func _player_card(player: Player, stats: RunStats, width: int, player_count: int) -> PanelContainer:
+	var frame := _card_frame(player, width, player_count)
+	var card: PanelContainer = frame[0]
+	var lines: VBoxContainer = frame[1]
+
+	# Numbers, with a star for the best player in each (co-op).
 	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 6)
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 3)
 	grid.add_theme_constant_override("v_separation", 1)
 	lines.add_child(grid)
 	for stat: int in RunStats.Stat.size():
 		var name_label := _label(RunStats.STAT_LABELS[stat], 9, LABEL_COLOR, false)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(name_label)
+		var star := SpriteIcon.new("star" if stats.best(stat as RunStats.Stat) == player.peer_id else "", Vector2(9, 9))
+		star.max_scale = 1
+		grid.add_child(star)
 		var value_label := _label("0", 9, VALUE_COLOR, false)
 		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		grid.add_child(value_label)
@@ -172,12 +236,8 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 	# Build: weapon icons, upgrades, relics.
 	lines.add_child(_divider())
 	lines.add_child(_weapons_row(player))
-	var detailed := player_count <= 2
-	for text: String in _build_lines(player, detailed):
-		var build_label := _label(text, 9, VALUE_COLOR, false)
-		build_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		build_label.custom_minimum_size.x = width - 12
-		lines.add_child(build_label)
+	lines.add_child(_icon_row("Upgrades:", _upgrade_icons(player), width))
+	lines.add_child(_icon_row("Relics:", _relic_icons(player), width))
 
 	for award: String in stats.awards_for(player.peer_id):
 		lines.add_child(_label("* " + award + " *", 9, AWARD_COLOR, true))
@@ -199,25 +259,109 @@ func _weapons_row(player: Player) -> HBoxContainer:
 	return row
 
 
-## "Upgrades: Quick Hands x2, ..." (or just counts when space is tight), "Relics: ...".
-func _build_lines(player: Player, detailed: bool) -> Array[String]:
-	var result: Array[String] = []
-	if detailed:
-		var counts: Dictionary[int, int] = {}
-		for id: int in player.upgrade_ids:
-			counts[id] = counts.get(id, 0) + 1
-		var upgrades := PackedStringArray()
-		for id: int in counts:
-			var title := Upgrades.get_upgrade(id).title
-			upgrades.append(title if counts[id] == 1 else "%s x%d" % [title, counts[id]])
-		result.append("Upgrades: " + (", ".join(upgrades) if not upgrades.is_empty() else "none"))
-		var relics := PackedStringArray()
-		for id: int in player.relic_ids:
-			relics.append(Relics.get_relic(id).title)
-		result.append("Relics: " + (", ".join(relics) if not relics.is_empty() else "none"))
-	else:
-		result.append("Upgrades: %d   Relics: %d" % [player.upgrade_ids.size(), player.relic_ids.size()])
+## [icon, title, count] for each different upgrade, in the order first taken.
+func _upgrade_icons(player: Player) -> Array[Array]:
+	var counts: Dictionary[int, int] = {}
+	for id: int in player.upgrade_ids:
+		counts[id] = counts.get(id, 0) + 1
+	var result: Array[Array] = []
+	for id: int in counts:
+		var upgrade := Upgrades.get_upgrade(id)
+		result.append([upgrade.icon, upgrade.title, counts[id]])
 	return result
+
+
+func _relic_icons(player: Player) -> Array[Array]:
+	var result: Array[Array] = []
+	for id: int in player.relic_ids:
+		var relic := Relics.get_relic(id)
+		result.append([relic.icon, relic.title, 1])
+	return result
+
+
+## "Upgrades:" then a wrapping row of icons, each with "x2" when taken more than
+## once. Hovering an icon shows its name.
+func _icon_row(title: String, icons: Array[Array], width: int) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 1)
+	box.add_child(_label(title + (" none" if icons.is_empty() else ""), 9, VALUE_COLOR, false))
+	var flow := HFlowContainer.new()
+	flow.custom_minimum_size.x = width - 12
+	flow.add_theme_constant_override("h_separation", 3)
+	flow.add_theme_constant_override("v_separation", 1)
+	box.add_child(flow)
+	for entry: Array in icons:
+		var item := HBoxContainer.new()
+		item.add_theme_constant_override("separation", 0)
+		item.tooltip_text = entry[1]
+		item.mouse_filter = Control.MOUSE_FILTER_PASS
+		var icon := SpriteIcon.new(entry[0], Vector2(11, 11))
+		icon.max_scale = 1
+		item.add_child(icon)
+		if entry[2] > 1:
+			item.add_child(_label("x%d" % entry[2], 9, LABEL_COLOR, false))
+		flow.add_child(item)
+	return box
+
+
+## Weapons page: each damage source with its share of this player's damage,
+## then damage / DPS / kills, most damage first.
+func _weapon_card(player: Player, stats: RunStats, width: int, player_count: int) -> PanelContainer:
+	var frame := _card_frame(player, width, player_count)
+	var card: PanelContainer = frame[0]
+	var lines: VBoxContainer = frame[1]
+	var rows := stats.sources_for(player.peer_id)
+	var total := 0
+	for row: Array in rows:
+		total += int(row[1])
+	lines.add_child(_divider())
+	if rows.is_empty():
+		lines.add_child(_label("No damage dealt", 9, LABEL_COLOR, false))
+	for row: Array in rows:
+		var source: int = row[0]
+		var damage: int = row[1]
+		var top := HBoxContainer.new()
+		top.add_theme_constant_override("separation", 4)
+		var icon := SpriteIcon.new(DamageSource.icon(source), Vector2(11, 11))
+		icon.max_scale = 1
+		top.add_child(icon)
+		var name_label := _label(DamageSource.title(source, player.stats), 9, VALUE_COLOR, false)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_label.clip_text = true
+		top.add_child(name_label)
+		var share := roundi(100.0 * damage / maxf(total, 1.0))
+		top.add_child(_label("%d%%" % share, 9, AWARD_COLOR, false))
+		lines.add_child(top)
+		lines.add_child(_share_bar(float(damage) / maxf(total, 1.0), width - 12))
+		var detail := "%s dmg  %s dps  %d kills" % [compact(damage), compact(roundi(RunStats.dps(damage, row[3]))), row[2]]
+		lines.add_child(_label(detail, 9, LABEL_COLOR, false))
+	lines.add_child(_divider())
+	var total_label := _label("", 9, VALUE_COLOR, false)
+	lines.add_child(total_label)
+	total_label.text = "Total %s dmg  %s dps" % [compact(total), compact(roundi(RunStats.dps(total, roundi(stats.run_seconds))))]
+	return card
+
+
+func _share_bar(ratio: float, width: int) -> Control:
+	var back := ColorRect.new()
+	back.color = BAR_BACK_COLOR
+	back.custom_minimum_size = Vector2(width, 2)
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fill := ColorRect.new()
+	fill.color = BAR_COLOR
+	fill.size = Vector2(roundf(width * clampf(ratio, 0.0, 1.0)), 2)
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back.add_child(fill)
+	return back
+
+
+## 950 -> "950", 12345 -> "12.3k", 2500000 -> "2.5M".
+static func compact(value: int) -> String:
+	if value >= 1000000:
+		return "%.1fM" % (value / 1000000.0)
+	if value >= 10000:
+		return "%.1fk" % (value / 1000.0)
+	return str(value)
 
 
 func _label(text: String, font_size: int, color: Color, centered: bool) -> Label:
@@ -255,6 +399,8 @@ func _set_counters(progress: float) -> void:
 	# Ease out so the numbers slow down as they land.
 	var eased := 1.0 - pow(1.0 - progress, 3.0)
 	for label: Label in _counters:
+		if not is_instance_valid(label):
+			continue
 		var value: float = _counters[label][0] * eased
 		label.text = RunStats.format_time(value) if _counters[label][1] else str(roundi(value))
 

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Quick Hands"
+icon = "up_quick_hands"
 description = "Fire 15% faster"
 stat = 1
 amount = 0.15

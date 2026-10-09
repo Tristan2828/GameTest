@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Extra Bolt"
+icon = "up_extra_bolt"
 description = "+1 bolt per shot, fanned out"
 stat = 4
 amount = 1.0

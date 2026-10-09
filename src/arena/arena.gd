@@ -88,6 +88,8 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _run_stats: RunStats = RunStats.new()
 ## Host: Bone Effigies standing in the arena.
 var _effigies: Array[Effigy] = []
+## Host: when (in run seconds) each player first got each auto weapon: peer -> {weapon id: seconds}.
+var _weapon_owned_since: Dictionary[int, Dictionary] = {}
 ## Local: seconds our player has been downed (the camera moves to a teammate after a moment).
 var _downed_seconds: float = 0.0
 ## Local: which teammate we're watching while downed (fire / ability switches).
@@ -188,6 +190,10 @@ func _ready() -> void:
 			_add_player(peer_id)
 	else:
 		_notify_ready.rpc_id(1)
+
+
+func _exit_tree() -> void:
+	GameCursor.set_in_game(false)
 
 
 func _physics_process(delta: float) -> void:
@@ -330,6 +336,7 @@ func _process(delta: float) -> void:
 	_play_phase_jingle()
 	_update_music()
 	_update_spectate(delta)
+	GameCursor.set_in_game(not _is_between_stages())
 	var t := PerfLog.start()
 	_update_hud()
 	PerfLog.stop(&"hud", t)
@@ -660,10 +667,32 @@ func _broadcast_run_stats(victory: bool) -> void:
 		_run_stats.set_stat(peer_id, RunStats.Stat.BOSS_DAMAGE, _enemies.boss_damage_by_peer.get(peer_id, 0))
 		_run_stats.set_stat(peer_id, RunStats.Stat.HEARTS_LOST, player.hearts_lost)
 		_run_stats.set_stat(peer_id, RunStats.Stat.DOWNS, player.times_downed)
+		_record_weapon_breakdown(player)
 	var data := _run_stats.encode()
 	_receive_run_stats(data)
 	for peer_id: int in _ready_peers:
 		_receive_run_stats.rpc_id(peer_id, data)
+
+
+## Host: damage, kills and time owned for this player's main gun, ability and
+## every auto weapon they picked up.
+func _record_weapon_breakdown(player: Player) -> void:
+	var peer_id := player.peer_id
+	var run_seconds := roundi(_run_stats.run_seconds)
+	var damage: Dictionary = _enemies.damage_by_source.get(peer_id, {})
+	var kills: Dictionary = _enemies.kills_by_source.get(peer_id, {})
+	var seconds_by_source: Dictionary[int, int] = {DamageSource.MAIN_GUN: run_seconds}
+	if damage.has(DamageSource.ABILITY) or player.stats.ability != CharacterStats.Ability.DASH:
+		seconds_by_source[DamageSource.ABILITY] = run_seconds
+	var owned: Dictionary = _weapon_owned_since.get(peer_id, {})
+	for weapon_id: int in player.weapon_levels:
+		var since: float = owned.get(weapon_id, 0.0)
+		seconds_by_source[DamageSource.of_weapon(weapon_id)] = maxi(roundi(_run_stats.run_seconds - since), 1)
+	for source: int in damage:
+		if not seconds_by_source.has(source):
+			seconds_by_source[source] = run_seconds
+	for source: int in seconds_by_source:
+		_run_stats.set_source(peer_id, source, int(damage.get(source, 0)), int(kills.get(source, 0)), seconds_by_source[source])
 
 
 ## Everyone: the end-of-run numbers arrived; show the summary screen.
@@ -791,6 +820,11 @@ func _on_coin_collected(value: int, collector_peer_id: int) -> void:
 
 
 func _on_weapon_gained(peer_id: int, weapon_id: int) -> void:
+	if multiplayer.is_server():
+		if not _weapon_owned_since.has(peer_id):
+			_weapon_owned_since[peer_id] = {}
+		if not _weapon_owned_since[peer_id].has(weapon_id):
+			_weapon_owned_since[peer_id][weapon_id] = _run_stats.run_seconds
 	var player := _player_by_id(peer_id)
 	if player != null:
 		player.gain_weapon(weapon_id)
@@ -810,7 +844,7 @@ func _spawn_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> 
 	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.SEEKING_BOLTS)
 	for angle: float in AutoWeapons.seeker_angles(level, aim):
 		_projectiles.spawn(origin, Vector2.from_angle(angle) * weapon.speed, weapon.damage_at(level),
-			weapon.reach / weapon.speed, shooter_id)
+			weapon.reach / weapon.speed, shooter_id, 0, 0.0, DamageSource.of_weapon(AutoWeapons.Id.SEEKING_BOLTS))
 
 
 func _on_relic_bought(peer_id: int, relic_id: int) -> void:

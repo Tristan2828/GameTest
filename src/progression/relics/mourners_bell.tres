@@ -11,6 +11,7 @@ amount = 1.0
 [resource]
 script = ExtResource("1_relic")
 title = "Mourner's Bell"
+icon = "rel_mourners_bell"
 description = "Revive downed teammates twice as fast"
 price = 40
 co_op_only = true

@@ -129,7 +129,7 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 				if _orbit_ready_at.get(key, -1.0) > clock:
 					continue
 				_orbit_ready_at[key] = clock + weapon.interval_at(level)
-				enemies.damage(enemy, weapon.damage_at(level), player.peer_id)
+				enemies.damage(enemy, weapon.damage_at(level), player.peer_id, DamageSource.of_weapon(weapon_id))
 		AutoWeapon.Kind.SEEKER:
 			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
 				var target := enemies.find_nearest(player.state.position, weapon.reach)
@@ -140,7 +140,8 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					_timers["%d:%d" % [player.peer_id, weapon_id]] = 0.2
 		AutoWeapon.Kind.AURA:
 			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
-				enemies.damage_in_radius(player.state.position, weapon.radius_at(level), weapon.damage_at(level), player.peer_id)
+				enemies.damage_in_radius(player.state.position, weapon.radius_at(level), weapon.damage_at(level), player.peer_id,
+					DamageSource.of_weapon(weapon_id))
 
 
 ## Counts down this weapon's timer; true (and restarted) when it's time to fire.

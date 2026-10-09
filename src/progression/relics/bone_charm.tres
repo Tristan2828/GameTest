@@ -11,6 +11,7 @@ amount = 1.0
 [resource]
 script = ExtResource("1_relic")
 title = "Bone Charm"
+icon = "rel_bone_charm"
 description = "Your bolts pierce 1 more enemy"
 price = 55
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

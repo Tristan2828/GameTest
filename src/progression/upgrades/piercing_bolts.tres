@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Piercing Bolts"
+icon = "up_piercing_bolts"
 description = "Bolts pass through 1 more enemy"
 stat = 5
 amount = 1.0
