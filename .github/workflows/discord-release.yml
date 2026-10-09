@@ -1,0 +1,54 @@
+# Announces each published GitHub Release in Discord #builds.
+# Needs the repo secret DISCORD_BUILDS_WEBHOOK (the #builds webhook URL):
+#   gh secret set DISCORD_BUILDS_WEBHOOK --repo Tristan2828/GameTest
+# To re-send an announcement (or test the webhook), run this workflow by hand
+# from the Actions tab and enter an existing tag such as v0.12.0.
+name: Announce release in Discord
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to announce (e.g. v0.12.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_BUILDS_WEBHOOK }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK" ]; then
+            echo "::error::Repo secret DISCORD_BUILDS_WEBHOOK is not set."
+            exit 1
+          fi
+          # Read the release fresh so the uploaded zip is included.
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" > release.json
+          jq '{
+            username: "Release Bot",
+            embeds: [{
+              title: ("New build: " + .name),
+              url: .html_url,
+              color: 9055202,
+              description: ((.body // "") | if length > 3500 then .[0:3500] + "\n..." else . end),
+              fields: [{
+                name: "Download (Windows)",
+                value: ([.assets[] | select(.name | endswith(".zip")) | "[" + .name + "](" + .browser_download_url + ")"]
+                        | if length == 0 then "See the release page." else join("\n") end)
+              }],
+              footer: { text: "Unzip and run GameTest.exe. Everyone needs the same version to play together." },
+              timestamp: .published_at
+            }]
+          }' release.json > payload.json
+          curl --fail-with-body -sS -H "Content-Type: application/json" -d @payload.json "$WEBHOOK"
+          echo "Announced $TAG"
