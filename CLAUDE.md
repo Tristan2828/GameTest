@@ -66,5 +66,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `-s some_script.gd` runs do NOT get autoloads (`Net`, `GameInput`), so game scenes can't run that way. To check visuals, launch the real game with `--screenshot-dir`.
 - Gamepad must work in every menu. Esc / Start opens the pause menu (`pause` action); R / Select (`restart`) returns to the lobby after a run.
 - Visual effects (`EffectsLayer` particles, screen shake, hurt flash) are spawned locally on every peer from events they already see (`enemy_vanished`, `hit_at`, `hurt`); never send effects over the network.
+- Mirroring sprites: a negative width in `draw_texture_rect` does NOT flip in Godot 4; it just shifts the image a full width sideways. Use `PixelArt.draw()` / `PixelArt.draw_rect_flipped()` (mirror transform).
+- Animation frames are extra sprites named `<sprite>_walk_1/_walk_2` (walk cycle), `<sprite>_attack` (shown briefly when an enemy fires; triggered on every peer by the pattern event), `<sprite>_1` (flap/flicker/spin). Frames must be the same size as the base sprite (tested).
 - Packed arrays are values: putting them in an Array and calling `resize()` in a loop only resizes copies. Resize each one directly.
 - Gamepad must work in every menu. Godot's default `ui_accept` has no gamepad button, so `GameInput` adds A to it. `tests/unit/test_input_bindings.gd` guards this; extend it when adding new UI.

@@ -35,6 +35,8 @@ const CORRECTION_SMOOTHING: float = 10.0
 const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
 const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
 const HITBOX_OUTLINE_COLOR: Color = Color(0.1, 0.05, 0.12)
+## Steps per second of the walk cycle (matches the bob).
+const WALK_STEPS_PER_SECOND: float = 7.6
 const SECOND_WIND_INVULNERABILITY: float = 2.0
 
 @export var stats: CharacterStats
@@ -86,6 +88,7 @@ var _was_dashing: bool = false
 ## Walk bob height in pixels, and the last movement direction (for dash trails).
 var _bob: float = 0.0
 var _walk_time: float = 0.0
+var _walking: bool = false
 var _last_move: Vector2 = Vector2.RIGHT
 var _last_drawn_position: Vector2 = Vector2.ZERO
 var _shake: float = 0.0
@@ -294,7 +297,8 @@ func _process(delta: float) -> void:
 func _update_walk(delta: float) -> void:
 	var moved := position - _last_drawn_position
 	_last_drawn_position = position
-	if moved.length() > 0.2:
+	_walking = moved.length() > 0.2
+	if _walking:
 		_last_move = moved.normalized()
 		_walk_time += delta
 		_bob = roundf(absf(sin(_walk_time * 12.0)))
@@ -315,9 +319,10 @@ func _draw() -> void:
 	# Blink while invulnerable after a hit.
 	if health.is_invulnerable() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
 		modulate = Color(1, 1, 1, 0.3)
+	var sprite := PixelArt.walk_frame(stats.sprite, _bob > 0.0 or _walking, _walk_time * WALK_STEPS_PER_SECOND)
 	if is_dashing():
-		PixelArt.draw(self, stats.sprite, -_last_move * 6.0, color, false, aim_direction.x < 0.0, 1.0, Color(1, 1, 1, 0.3))
-	PixelArt.draw(self, stats.sprite, Vector2(0, -2 - _bob), color, false, aim_direction.x < 0.0, 1.0, modulate)
+		PixelArt.draw(self, sprite, -_last_move * 6.0, color, false, aim_direction.x < 0.0, 1.0, Color(1, 1, 1, 0.3))
+	PixelArt.draw(self, sprite, Vector2(0, -2 - _bob), color, false, aim_direction.x < 0.0, 1.0, modulate)
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)

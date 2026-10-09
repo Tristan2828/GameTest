@@ -1,4 +1,4 @@
-# Playtest Review (v0.10.0)
+# Playtest Review (v0.11.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (159 unit tests, plus online host+client runs).
@@ -150,6 +150,8 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] **New:** pixel-art sprites for every character, enemy and boss. Do they read well at a glance in a crowd?
 - [ ] Can you always tell the enemy types apart? The bosses?
 - [ ] Your character in your player color: easy to find yourself? Is the white hitbox dot clear?
+- [ ] **New:** animations (walk cycles, enemy attack poses when they fire, death squash-and-fade, spinning coins). Readable and satisfying, or distracting?
+- [ ] **Fixed:** sprites facing left used to be drawn off-center. Do enemies now get hit exactly where they look?
 - [ ] Any sprite you'd like redrawn (too small, wrong vibe, ugly)? *(Sprites are text grids in `src/art/pixel_art.gd`; easy to change.)*
 - [ ] **New:** pixel-art floors (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet) with props. Atmospheric? Too busy or too dark to read bullets?
 

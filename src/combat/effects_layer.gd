@@ -14,6 +14,10 @@ var _lifetimes: PackedFloat32Array = PackedFloat32Array()
 var _sizes: PackedFloat32Array = PackedFloat32Array()
 var _colors: PackedColorArray = PackedColorArray()
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Dying enemies: [sprite, position, flip, scale, age, duration]. Few at once.
+var _corpses: Array[Array] = []
+
+const MAX_CORPSES: int = 120
 
 
 func _init() -> void:
@@ -29,6 +33,17 @@ func _init() -> void:
 
 func count() -> int:
 	return _count
+
+
+func corpse_count() -> int:
+	return _corpses.size()
+
+
+## A sprite that flashes, squashes into the ground and fades (death animation).
+func corpse(sprite: String, at: Vector2, flip: bool, scale: float, duration: float) -> void:
+	if _corpses.size() >= MAX_CORPSES:
+		_corpses.pop_front()
+	_corpses.append([sprite, at, flip, scale, 0.0, duration])
 
 
 ## A ring of particles flying outward.
@@ -48,12 +63,16 @@ func burst(at: Vector2, color: Color, amount: int, speed: float, lifetime: float
 
 func clear() -> void:
 	_count = 0
+	_corpses.clear()
 	queue_redraw()
 
 
 func _process(delta: float) -> void:
-	if _count == 0:
+	if _count == 0 and _corpses.is_empty():
 		return
+	for corpse_data: Array in _corpses:
+		corpse_data[4] += delta
+	_corpses = _corpses.filter(func(corpse_data: Array) -> bool: return corpse_data[4] < corpse_data[5])
 	var i := 0
 	while i < _count:
 		_ages[i] += delta
@@ -67,10 +86,24 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	for corpse_data: Array in _corpses:
+		_draw_corpse(corpse_data)
 	for i: int in _count:
 		var fade := 1.0 - _ages[i] / _lifetimes[i]
 		var size := _sizes[i] * (0.5 + 0.5 * fade)
 		draw_rect(Rect2(_positions[i] - Vector2(size, size) / 2.0, Vector2(size, size)), Color(_colors[i], fade))
+
+
+func _draw_corpse(corpse_data: Array) -> void:
+	var sprite: String = corpse_data[0]
+	var at: Vector2 = corpse_data[1]
+	var t: float = corpse_data[4] / corpse_data[5]
+	var texture := PixelArt.texture(sprite, Color.WHITE, t < 0.15)
+	var base := Vector2(texture.get_size()) * float(corpse_data[3])
+	# Squash down into the ground and spread a little wider, fading out.
+	var size := Vector2(base.x * (1.0 + 0.5 * t), base.y * (1.0 - 0.85 * t))
+	var rect := Rect2((at + Vector2(-size.x / 2.0, base.y / 2.0 - size.y)).round(), size)
+	PixelArt.draw_rect_flipped(self, texture, rect, corpse_data[2], Color(1, 1, 1, 1.0 - t * t))
 
 
 func _remove(index: int) -> void:

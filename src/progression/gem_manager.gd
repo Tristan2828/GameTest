@@ -157,9 +157,21 @@ func clear() -> void:
 
 
 func _draw() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
 	for id: int in CAPACITY:
-		if _active[id] != 0:
-			PixelArt.draw(self, sprite_big if _values[id] >= big_value else sprite_small, _positions[id])
+		if _active[id] == 0:
+			continue
+		var sprite := sprite_big if _values[id] >= big_value else sprite_small
+		# Coins spin (an edge-on frame now and then); everything bobs gently.
+		if PixelArt.has_sprite(sprite + "_1") and int(now * 6.0 + id) % 4 == 0:
+			sprite += "_1"
+		var bob := roundf(sin(now * 4.0 + id) * 1.0) if _targets[id] == 0 else 0.0
+		PixelArt.draw(self, sprite, _positions[id] + Vector2(0, bob))
+
+
+func _process(_delta: float) -> void:
+	if _count > 0:
+		queue_redraw()
 
 func _find_collector(at: Vector2, player_positions: Dictionary[int, Vector2], pickup_radii: Dictionary[int, float]) -> int:
 	var best_id := 0

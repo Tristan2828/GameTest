@@ -703,8 +703,12 @@ func _near_local_player(at: Vector2, distance: float = 340.0) -> bool:
 	return local != null and local.world_position().distance_to(at) <= distance
 
 
-func _on_enemy_vanished(at: Vector2, color: Color, radius: float) -> void:
-	var is_boss := radius >= 18.0
+func _on_enemy_vanished(at: Vector2, type_id: int, facing_left: bool) -> void:
+	var type := EnemyTypes.get_type(type_id)
+	var color := type.color
+	var is_boss := type.is_boss
+	if not type.sprite.is_empty():
+		_effects.corpse(type.sprite, at, facing_left, type.sprite_scale, 1.2 if is_boss else 0.4)
 	if is_boss:
 		Sfx.play(&"bomb", 2.0, 0.6)
 	elif _phase == Phase.PLAYING and _near_local_player(at):
@@ -752,6 +756,10 @@ func _fire_enemy_pattern(pattern: int, origin: Vector2, aim: float) -> void:
 
 ## `age` > 0 starts the pattern partway through (clients catching up on lag).
 func _spawn_enemy_pattern(pattern: int, origin: Vector2, aim: float, seed_value: int, age: float) -> void:
+	# Whoever fired strikes their attack pose (on every peer).
+	var shooter := _enemies.find_hit(origin, 6.0)
+	if shooter != null:
+		shooter.play_attack()
 	if _near_local_player(origin, 360.0):
 		Sfx.play(&"enemy_shot", -12.0)
 	var bullets := ShotPatterns.build(pattern as ShotPatterns.Id, aim, seed_value)

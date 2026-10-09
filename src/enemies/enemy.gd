@@ -10,6 +10,9 @@ const HP_BACK_COLOR: Color = Color(0.15, 0.05, 0.08)
 const HP_FILL_COLOR: Color = Color(0.85, 0.2, 0.28)
 ## Milliseconds per animation frame (bat wings, imp flicker).
 const ANIMATION_MS: float = 140.0
+## Steps per second of the walk cycle, and how long the attack pose shows.
+const WALK_STEPS_PER_SECOND: float = 5.0
+const ATTACK_POSE_SECONDS: float = 0.35
 
 var pool_index: int = -1
 var type_id: int = 0
@@ -28,8 +31,13 @@ var hit_since_snapshot: bool = false
 var target_position: Vector2 = Vector2.ZERO
 
 var _flash_left: float = 0.0
-var _facing_left: bool = false
-var _last_x: float = 0.0
+var facing_left: bool = false
+var _last_position: Vector2 = Vector2.ZERO
+var _moving: bool = false
+var _walk_phase: float = 0.0
+var _attack_left: float = 0.0
+## The sprite drawn last frame (redraw only when it changes).
+var _shown_sprite: String = ""
 
 
 func _ready() -> void:
@@ -53,7 +61,14 @@ func activate(enemy_type_id: int, at: Vector2, hit_points: int = 0) -> void:
 	fire_cooldown = type.fire_interval * randf_range(0.5, 1.0)
 	hit_since_snapshot = false
 	_flash_left = 0.0
+	_attack_left = 0.0
+	_last_position = at
 	queue_redraw()
+
+
+## Show the attack pose briefly (called on every peer when this enemy fires).
+func play_attack() -> void:
+	_attack_left = ATTACK_POSE_SECONDS
 
 
 func deactivate() -> void:
@@ -82,27 +97,38 @@ func _process(delta: float) -> void:
 		return
 	if not multiplayer.is_server():
 		position = position.lerp(target_position, 1.0 - exp(-CLIENT_SMOOTHING * delta))
-	# Face the way we're walking.
-	var moved := position.x - _last_x
-	_last_x = position.x
-	if absf(moved) > 0.05 and (moved < 0.0) != _facing_left:
-		_facing_left = moved < 0.0
-		queue_redraw()
+	# Face and animate the way we're walking.
+	var moved := position - _last_position
+	_last_position = position
+	_moving = moved.length() > 0.05
+	if _moving:
+		_walk_phase += delta * WALK_STEPS_PER_SECOND
+		if absf(moved.x) > 0.05:
+			facing_left = moved.x < 0.0
+	_attack_left = maxf(_attack_left - delta, 0.0)
 	if _flash_left > 0.0:
 		_flash_left -= delta
 		queue_redraw()
-	elif type.sprite_frames > 1:
+	elif _current_sprite() != _shown_sprite or type.sprite_frames > 1:
 		queue_redraw()
+
+
+## Which frame to show right now: attack pose, flap/flicker frames, or walk cycle.
+func _current_sprite() -> String:
+	if type.sprite.is_empty():
+		return ""
+	if _attack_left > 0.0 and PixelArt.has_sprite(type.sprite + "_attack"):
+		return type.sprite + "_attack"
+	if type.sprite_frames > 1:
+		var frame := (int(Time.get_ticks_msec() / ANIMATION_MS) + pool_index) % type.sprite_frames
+		return type.sprite if frame == 0 else "%s_%d" % [type.sprite, frame]
+	return PixelArt.walk_frame(type.sprite, _moving, _walk_phase + pool_index * 0.5)
 
 
 func _draw() -> void:
 	if not type.sprite.is_empty():
-		var sprite := type.sprite
-		if type.sprite_frames > 1:
-			var frame := (int(Time.get_ticks_msec() / ANIMATION_MS) + pool_index) % type.sprite_frames
-			if frame > 0:
-				sprite = "%s_%d" % [type.sprite, frame]
-		PixelArt.draw(self, sprite, Vector2.ZERO, Color.WHITE, _flash_left > 0.0, _facing_left, type.sprite_scale)
+		_shown_sprite = _current_sprite()
+		PixelArt.draw(self, _shown_sprite, Vector2.ZERO, Color.WHITE, _flash_left > 0.0, facing_left, type.sprite_scale)
 	else:
 		draw_circle(Vector2.ZERO, type.radius, Color.WHITE if _flash_left > 0.0 else type.color)
 	if type.show_hp_bar and hp_ratio < 1.0:

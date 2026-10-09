@@ -192,6 +192,10 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
 - Title screen: large gold title, tagline, dimmed Crypt floor backdrop.
 - Removed the aim line drawn on players (owner request); sprites face the aim direction.
 
+### Animation pass (v0.11.0, by Claude)
+- Walk cycles for all heroes and walking enemies; attack poses for bosses and ranged enemies when they fire; enemies squash and fade on death (bosses take longer); coins spin and pickups bob.
+- Fixed: left-facing sprites were drawn one sprite-width off their real position (players and enemy hitboxes didn't line up with what you saw).
+
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
 - M3 (above): First arena stage + first boss with bullet patterns.
