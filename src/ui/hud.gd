@@ -3,6 +3,7 @@ extends CanvasLayer
 ## In-game overlay. The arena pushes values in; the HUD only displays them.
 
 @onready var _hearts: HeartsDisplay = %Hearts
+@onready var minimap: Minimap = %Minimap
 @onready var _hurt_flash: ColorRect = %HurtFlash
 @onready var _xp_bar: XpBar = %XpBar
 @onready var _level_label: Label = %LevelLabel

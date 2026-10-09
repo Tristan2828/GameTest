@@ -806,6 +806,7 @@ func _update_hud() -> void:
 		_hud.set_time_left(_wave_duration - _elapsed)
 	_hud.set_boss(boss.type.display_name if boss != null else "", boss.hp_ratio if boss != null else 0.0)
 	_hud.set_progress(_team.level, _team.progress_ratio())
+	_update_minimap(local, boss)
 
 	var status := "Solo"
 	if Net.is_online():
@@ -847,6 +848,21 @@ func _update_hud() -> void:
 				_hud.show_banner("You're a ghost", "Collect XP and coins for your team. You respawn next stage.")
 			else:
 				_hud.hide_banner()
+
+
+func _update_minimap(local: Player, boss: Enemy) -> void:
+	_hud.minimap.visible = not _is_between_stages()
+	if not _hud.minimap.visible:
+		return
+	var markers: Array[Array] = []
+	for player: Player in _player_nodes():
+		markers.append([player.world_position(), Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()], player.is_local()])
+	var view := Rect2()
+	if local != null:
+		var screen := get_viewport_rect().size
+		view = Rect2(local.view_center() - screen / 2.0, screen)
+	_hud.minimap.show_state(view, markers, _enemies.active_positions(), _weapons.altar_positions(),
+		boss.position if boss != null else Vector2.INF, local.world_position() if local != null else Vector2.INF)
 
 
 func _invite_hud_text() -> String:

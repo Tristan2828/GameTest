@@ -220,6 +220,11 @@ func world_position() -> Vector2:
 	return position if _shows_remote_state() else state.position
 
 
+## Center of what this player's screen shows (their camera), for the minimap.
+func view_center() -> Vector2:
+	return _camera.get_screen_center_position() if is_local() else position
+
+
 func muzzle_position() -> Vector2:
 	return state.position + Vector2.from_angle(state.aim) * MUZZLE_DISTANCE
 

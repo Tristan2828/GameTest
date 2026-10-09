@@ -88,3 +88,14 @@ func test_settings_panel_changes_apply_immediately() -> void:
 	Settings.sfx_volume = before
 	Settings.apply()
 	Settings.save()
+
+
+func test_minimap_accepts_state_and_warns_near_walls() -> void:
+	var minimap := Minimap.new()
+	minimap.size = Vector2(100, 62)
+	add_child_autofree(minimap)
+	var markers: Array[Array] = [[Vector2(20, 500), Color.BLUE, true]]
+	minimap.show_state(Rect2(0, 320, 640, 360), markers, PackedVector2Array([Vector2(800, 500)]),
+		PackedVector2Array(), Vector2.INF, Vector2(20, 500))
+	assert_eq(minimap.players.size(), 1)
+	assert_lt(minimap.local_position.x, Minimap.EDGE_WARNING_DISTANCE, "left wall warning would show")

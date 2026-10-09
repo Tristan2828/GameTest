@@ -74,6 +74,13 @@ func nearest_altar(from: Vector2) -> Vector2:
 	return best
 
 
+func altar_positions() -> PackedVector2Array:
+	var positions := PackedVector2Array()
+	for altar_id: int in _altars:
+		positions.append(_altars[altar_id][0])
+	return positions
+
+
 func altar_count() -> int:
 	return _altars.size()
 

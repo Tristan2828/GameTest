@@ -66,6 +66,15 @@ func find_nearest(point: Vector2, max_distance: float) -> Enemy:
 	return best
 
 
+## Where every active enemy is (for the minimap).
+func active_positions() -> PackedVector2Array:
+	var positions := PackedVector2Array()
+	for enemy: Enemy in _pool:
+		if enemy.active:
+			positions.append(enemy.position)
+	return positions
+
+
 ## The active boss, or null.
 func find_boss() -> Enemy:
 	for enemy: Enemy in _pool:

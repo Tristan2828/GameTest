@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://src/ui/xp_bar.gd" id="3_xp"]
 [ext_resource type="Script" path="res://src/ui/level_up_panel.gd" id="4_levelup"]
 [ext_resource type="Script" path="res://src/ui/shop_panel.gd" id="5_shop"]
+[ext_resource type="Script" path="res://src/ui/minimap.gd" id="6_minimap"]
 
 [node name="Hud" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -110,6 +111,20 @@ custom_minimum_size = Vector2(300, 6)
 layout_mode = 2
 script = ExtResource("3_xp")
 fill_color = Color(0.85, 0.2, 0.28, 1)
+
+[node name="Minimap" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -108.0
+offset_top = 26.0
+offset_right = -8.0
+offset_bottom = 88.0
+grow_horizontal = 0
+mouse_filter = 2
+script = ExtResource("6_minimap")
 
 [node name="StatusLabel" type="Label" parent="."]
 unique_name_in_owner = true
