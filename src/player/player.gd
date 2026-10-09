@@ -34,7 +34,6 @@ const REMOTE_SMOOTHING: float = 18.0
 const CORRECTION_SMOOTHING: float = 10.0
 const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
 const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
-const GUN_COLOR: Color = Color(0.92, 0.92, 0.98)
 const HITBOX_OUTLINE_COLOR: Color = Color(0.1, 0.05, 0.12)
 const SECOND_WIND_INVULNERABILITY: float = 2.0
 
@@ -319,7 +318,6 @@ func _draw() -> void:
 	if is_dashing():
 		PixelArt.draw(self, stats.sprite, -_last_move * 6.0, color, false, aim_direction.x < 0.0, 1.0, Color(1, 1, 1, 0.3))
 	PixelArt.draw(self, stats.sprite, Vector2(0, -2 - _bob), color, false, aim_direction.x < 0.0, 1.0, modulate)
-	draw_line(aim_direction * 4.0, aim_direction * MUZZLE_DISTANCE, GUN_COLOR, 2.0)
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
