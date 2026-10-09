@@ -81,3 +81,57 @@ static func apply_effect(upgrade: Upgrade, stats: CharacterStats, health: Player
 			stats.bullet_speed *= 1.0 + upgrade.amount
 		Upgrade.Stat.KILL_HEAL:
 			stats.heal_every_kills = int(upgrade.amount)
+
+
+## How many times this player already took this upgrade.
+static func stacks_owned(id: int, owned: Array[int]) -> int:
+	return owned.count(id)
+
+
+## Card line like "Lv 2 -> 3 of 5" (empty for one-off effects like healing).
+static func level_text(id: int, owned: Array[int]) -> String:
+	var upgrade := get_upgrade(id)
+	if upgrade.stat == Upgrade.Stat.HEAL:
+		return ""
+	var have := stacks_owned(id, owned)
+	var text := "Lv %d -> %d" % [have, have + 1]
+	if upgrade.max_stacks > 0:
+		text += " of %d" % upgrade.max_stacks
+	return text
+
+
+## Card line with the player's real stat now and after taking it, e.g.
+## "Damage 13 -> 16". Applies the upgrade to copies, so it uses the same math.
+static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -> String:
+	var upgrade := get_upgrade(id)
+	var after_stats := stats.duplicate() as CharacterStats
+	var after_health := PlayerHealth.new()
+	after_health.max_hearts = health.max_hearts
+	after_health.hearts = health.hearts
+	apply_effect(upgrade, after_stats, after_health)
+	match upgrade.stat:
+		Upgrade.Stat.DAMAGE:
+			return "Damage %d -> %d" % [stats.bullet_damage, after_stats.bullet_damage]
+		Upgrade.Stat.FIRE_RATE:
+			return "Shots/s %.1f -> %.1f" % [1.0 / stats.fire_interval, 1.0 / after_stats.fire_interval]
+		Upgrade.Stat.MOVE_SPEED:
+			return "Speed %d -> %d" % [roundi(stats.move_speed), roundi(after_stats.move_speed)]
+		Upgrade.Stat.MAX_HEARTS:
+			return "Max hearts %d -> %d" % [stats.max_hearts, after_stats.max_hearts]
+		Upgrade.Stat.EXTRA_BOLT:
+			return "Bolts %d -> %d" % [stats.projectile_count, after_stats.projectile_count]
+		Upgrade.Stat.PIERCE:
+			return "Pierce %d -> %d" % [stats.pierce, after_stats.pierce]
+		Upgrade.Stat.PICKUP_RADIUS:
+			return "Range %d -> %d" % [roundi(stats.pickup_radius), roundi(after_stats.pickup_radius)]
+		Upgrade.Stat.ABILITY_COOLDOWN:
+			return "Cooldown %.2fs -> %.2fs" % [stats.ability_cooldown, after_stats.ability_cooldown]
+		Upgrade.Stat.HEAL:
+			return "Hearts %d -> %d" % [health.hearts, after_health.hearts]
+		Upgrade.Stat.ABILITY_POWER:
+			return "Power %d%% -> %d%%" % [roundi(stats.ability_power * 100.0), roundi(after_stats.ability_power * 100.0)]
+		Upgrade.Stat.BULLET_SPEED:
+			return "Bolt speed %d -> %d" % [roundi(stats.bullet_speed), roundi(after_stats.bullet_speed)]
+		Upgrade.Stat.KILL_HEAL:
+			return "Heal every %d kills" % after_stats.heal_every_kills
+	return ""

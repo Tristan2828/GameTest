@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://src/ui/level_up_panel.gd" id="4_levelup"]
 [ext_resource type="Script" path="res://src/ui/shop_panel.gd" id="5_shop"]
 [ext_resource type="Script" path="res://src/ui/minimap.gd" id="6_minimap"]
+[ext_resource type="Script" path="res://src/ui/run_summary_panel.gd" id="7_summary"]
 
 [node name="Hud" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -220,9 +221,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -240.0
-offset_top = -80.0
+offset_top = -90.0
 offset_right = 240.0
-offset_bottom = 80.0
+offset_bottom = 90.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 8
@@ -241,7 +242,7 @@ alignment = 1
 theme_override_constants/separation = 8
 
 [node name="Card0" type="Button" parent="LevelUpPanel/Box/Cards"]
-custom_minimum_size = Vector2(160, 90)
+custom_minimum_size = Vector2(160, 112)
 layout_mode = 2
 
 [node name="Lines" type="VBoxContainer" parent="LevelUpPanel/Box/Cards/Card0"]
@@ -263,13 +264,24 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
 horizontal_alignment = 1
 
+[node name="Level" type="Label" parent="LevelUpPanel/Box/Cards/Card0/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.58, 0.7, 1)
+horizontal_alignment = 1
+
 [node name="Description" type="Label" parent="LevelUpPanel/Box/Cards/Card0/Lines"]
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="Preview" type="Label" parent="LevelUpPanel/Box/Cards/Card0/Lines"]
+layout_mode = 2
+size_flags_vertical = 10
+theme_override_colors/font_color = Color(0.95, 0.8, 0.45, 1)
+horizontal_alignment = 1
+
 [node name="Card1" type="Button" parent="LevelUpPanel/Box/Cards"]
-custom_minimum_size = Vector2(160, 90)
+custom_minimum_size = Vector2(160, 112)
 layout_mode = 2
 
 [node name="Lines" type="VBoxContainer" parent="LevelUpPanel/Box/Cards/Card1"]
@@ -291,13 +303,24 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
 horizontal_alignment = 1
 
+[node name="Level" type="Label" parent="LevelUpPanel/Box/Cards/Card1/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.58, 0.7, 1)
+horizontal_alignment = 1
+
 [node name="Description" type="Label" parent="LevelUpPanel/Box/Cards/Card1/Lines"]
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="Preview" type="Label" parent="LevelUpPanel/Box/Cards/Card1/Lines"]
+layout_mode = 2
+size_flags_vertical = 10
+theme_override_colors/font_color = Color(0.95, 0.8, 0.45, 1)
+horizontal_alignment = 1
+
 [node name="Card2" type="Button" parent="LevelUpPanel/Box/Cards"]
-custom_minimum_size = Vector2(160, 90)
+custom_minimum_size = Vector2(160, 112)
 layout_mode = 2
 
 [node name="Lines" type="VBoxContainer" parent="LevelUpPanel/Box/Cards/Card2"]
@@ -319,10 +342,21 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
 horizontal_alignment = 1
 
+[node name="Level" type="Label" parent="LevelUpPanel/Box/Cards/Card2/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.58, 0.7, 1)
+horizontal_alignment = 1
+
 [node name="Description" type="Label" parent="LevelUpPanel/Box/Cards/Card2/Lines"]
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="Preview" type="Label" parent="LevelUpPanel/Box/Cards/Card2/Lines"]
+layout_mode = 2
+size_flags_vertical = 10
+theme_override_colors/font_color = Color(0.95, 0.8, 0.45, 1)
+horizontal_alignment = 1
 
 [node name="LevelUpStatus" type="Label" parent="LevelUpPanel/Box"]
 unique_name_in_owner = true
@@ -544,3 +578,15 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
+
+[node name="RunSummary" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_summary")

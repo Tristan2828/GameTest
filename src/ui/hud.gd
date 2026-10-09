@@ -18,6 +18,7 @@ extends CanvasLayer
 @onready var _banner_subtitle: Label = %BannerSubtitle
 @onready var level_up_panel: LevelUpPanel = %LevelUpPanel
 @onready var shop_panel: ShopPanel = %ShopPanel
+@onready var run_summary: RunSummaryPanel = %RunSummary
 @onready var _coins_label: Label = %CoinsLabel
 @onready var _weapons_label: Label = %WeaponsLabel
 @onready var _ability_label: Label = %AbilityLabel

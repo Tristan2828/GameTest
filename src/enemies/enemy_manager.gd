@@ -24,6 +24,8 @@ const FLAG_HIT: int = 1
 
 ## Host: total damage dealt by each peer id. Handy for tests and debugging.
 var damage_by_peer: Dictionary[int, int] = {}
+## Host: the part of that damage dealt to bosses.
+var boss_damage_by_peer: Dictionary[int, int] = {}
 var bounds: Rect2 = Rect2(-10000, -10000, 20000, 20000)
 
 var _pool: Array[Enemy] = []
@@ -150,6 +152,8 @@ func damage(enemy: Enemy, amount: int, from_peer_id: int) -> void:
 	var dealt := mini(amount, enemy.hp)
 	var died := enemy.apply_damage(amount)
 	damage_by_peer[from_peer_id] = damage_by_peer.get(from_peer_id, 0) + dealt
+	if enemy.type.is_boss:
+		boss_damage_by_peer[from_peer_id] = boss_damage_by_peer.get(from_peer_id, 0) + dealt
 	if died:
 		_release(enemy)
 		enemy_killed.emit(enemy, from_peer_id)

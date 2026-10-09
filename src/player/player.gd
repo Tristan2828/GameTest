@@ -65,6 +65,8 @@ var coins: int = 0
 var kills_toward_heal: int = 0
 ## Host: how many times this player went down this run.
 var times_downed: int = 0
+## Host: hearts lost to hits this run.
+var hearts_lost: int = 0
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -144,9 +146,12 @@ func apply_upgrade(upgrade_id: int) -> void:
 
 ## Host: an enemy or enemy bullet hit this player. Returns true if it landed.
 func take_hit(amount: int) -> bool:
+	var hearts_before := health.hearts
 	var landed := health.take_hit(amount, stats.hit_invulnerability)
+	hearts_lost += hearts_before - health.hearts
 	if landed and health.is_downed():
 		times_downed += 1
+		print("Player %d downed" % peer_id)
 	return landed
 
 

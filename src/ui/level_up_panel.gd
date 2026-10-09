@@ -13,8 +13,9 @@ var _offered: Array[int] = []
 static var _screenshot_taken: bool = false
 
 
-## Shows the cards for these upgrade ids.
-func open(level: int, offered: Array[int]) -> void:
+## Shows the cards for these upgrade ids. `player` (this machine's, may be null)
+## fills in each card's level and stat preview.
+func open(level: int, offered: Array[int], player: Player = null) -> void:
 	_offered = offered
 	_title.text = "Level %d! Choose an upgrade" % level
 	var buttons := _cards.get_children()
@@ -26,6 +27,14 @@ func open(level: int, offered: Array[int]) -> void:
 			var upgrade := Upgrades.get_upgrade(offered[i])
 			(button.get_node("Lines/Title") as Label).text = upgrade.title
 			(button.get_node("Lines/Description") as Label).text = upgrade.description
+			var level_label := button.get_node("Lines/Level") as Label
+			var preview_label := button.get_node("Lines/Preview") as Label
+			level_label.text = ""
+			preview_label.text = ""
+			if player != null:
+				level_label.text = Upgrades.level_text(offered[i], player.upgrade_ids)
+				preview_label.text = Upgrades.preview_text(offered[i], player.stats, player.health)
+			level_label.visible = not level_label.text.is_empty()
 	show()
 	Sfx.play(&"level_up", -4.0)
 	if not offered.is_empty():

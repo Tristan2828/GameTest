@@ -115,6 +115,8 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 
 ### 3.6 Level-ups and upgrades
 - [ ] How often do level-ups pause the game? Too often in co-op?
+- [ ] Level-up cards show "Lv X -> Y of max" and your real stat before -> after (e.g. "Damage 13 -> 16"). Useful, and are the numbers right after a few picks and relics?
+- [ ] Run over / Victory screen: headline (what killed you, which stage), run totals, a card per player with stats, build and co-op awards. Readable? Any stat you miss?
 - [ ] Are the 9 upgrades meaningfully different? Any always/never picked?
 - [ ] 30-second countdown after the first pick: right length?
   - *Tune: XP curve in `src/progression/team_progress.gd`; upgrades in `src/progression/upgrades/*.tres`.*

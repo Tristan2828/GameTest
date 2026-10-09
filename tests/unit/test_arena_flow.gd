@@ -204,11 +204,23 @@ func test_killed_enemies_sometimes_drop_coins() -> void:
 
 func test_run_end_shows_stats_table() -> void:
 	var player := _local_player()
-	_arena._kills_by_peer[1] = 12
-	player.take_hit(99)  # Second Wind saves the Wanderer once...
-	player.health.invulnerable_left = 0.0
-	player.take_hit(99)  # ...but not twice.
+	_arena._run_stats.add(1, RunStats.Stat.KILLS, 12)
+	var hearts := player.health.hearts
+	player.take_hit(99)
 	_arena._update_phase()
 	assert_eq(_arena._phase, Arena.Phase.RUN_OVER)
-	assert_string_contains(_arena._run_stats_text, "12 kills")
-	assert_string_contains(_arena._run_stats_text, "downed 1 time")
+	var stats: RunStats = _arena._final_stats
+	assert_not_null(stats)
+	assert_eq(stats.get_stat(1, RunStats.Stat.KILLS), 12)
+	assert_eq(stats.get_stat(1, RunStats.Stat.DOWNS), 1)
+	assert_eq(stats.get_stat(1, RunStats.Stat.HEARTS_LOST), hearts)
+	assert_false(stats.victory)
+	assert_eq(stats.stage_reached, 1)
+	assert_true(_arena._hud.run_summary.visible, "run summary screen is shown")
+
+
+func test_run_end_names_the_boss_that_won() -> void:
+	_arena._spawn_boss()
+	_local_player().take_hit(99)
+	_arena._update_phase()
+	assert_eq(_arena._final_stats.fell_to, EnemyTypes.get_type(Stages.get_stage(1).boss_type).display_name)

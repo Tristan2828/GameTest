@@ -76,7 +76,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 ## 4. Progression
 
 ### In-run
-- **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades.
+- **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades. Each card shows its current level (and max) and the player's real stat before -> after taking it.
   - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
 - **Weapon pickups:** new auto weapons found during stages.
 - **Passive items / relics:** stat boosts and synergies.

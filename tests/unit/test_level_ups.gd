@@ -160,3 +160,27 @@ func test_piercing_bullet_passes_through_one_enemy() -> void:
 	assert_eq(first.hp, first.type.max_hp - 10, "hit once, not every tick while overlapping")
 	assert_eq(second.hp, second.type.max_hp - 10)
 	assert_eq(projectiles.count(), 0, "pierce used up on the second enemy")
+
+
+# --- Card level / stat preview ---
+
+func test_level_text_counts_owned_stacks() -> void:
+	var owned: Array[int] = [4, 0, 4]  # two Extra Bolts (max 3)
+	assert_eq(Upgrades.level_text(4, owned), "Lv 2 -> 3 of 3")
+	assert_eq(Upgrades.level_text(0, owned), "Lv 1 -> 2")  # Sharpened Bolts, no limit
+
+
+func test_preview_shows_stat_before_and_after_without_changing_it() -> void:
+	var stats := CharacterStats.new()
+	stats.bullet_damage = 10
+	stats.projectile_count = 2
+	var health := PlayerHealth.new()
+	health.reset(3)
+	health.hearts = 1
+	assert_eq(Upgrades.preview_text(0, stats, health), "Damage 10 -> 13")
+	assert_eq(Upgrades.preview_text(4, stats, health), "Bolts 2 -> 3")
+	assert_eq(Upgrades.preview_text(8, stats, health), "Hearts 1 -> 2")
+	assert_eq(stats.bullet_damage, 10)
+	assert_eq(health.hearts, 1)
+	for id: int in Upgrades.ALL.size():
+		assert_ne(Upgrades.preview_text(id, stats, health), "", "upgrade %d has a preview" % id)

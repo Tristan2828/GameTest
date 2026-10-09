@@ -74,8 +74,8 @@ var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
 var _director: SpawnDirector = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
-## Host: kills per peer id (for reports; scoreboards later).
-var _kills_by_peer: Dictionary[int, int] = {}
+## Host: kills, coins, XP... per player for the end-of-run screen.
+var _run_stats: RunStats = RunStats.new()
 ## Shared team XP and level (host-owned, copied to clients in snapshots).
 var _team: TeamProgress = TeamProgress.new()
 var _copied_feedback_left: float = 0.0
@@ -114,7 +114,7 @@ func _ready() -> void:
 	if multiplayer.is_server():
 		_stage = LaunchOptions.start_stage
 	_setup_stage()
-	_level_up.bind_panel(_hud.level_up_panel)
+	_level_up.bind_panel(_hud.level_up_panel, _local_player)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
 	_shop.relic_bought.connect(_on_relic_bought)
 	_weapons.bounds = BOUNDS
@@ -160,6 +160,7 @@ func _physics_process(delta: float) -> void:
 	var is_host := multiplayer.is_server()
 	if _phase == Phase.PLAYING:
 		_elapsed += delta
+		_run_stats.run_seconds += delta
 		for player: Player in _player_nodes():
 			player.tick(delta)
 		if is_host:
@@ -206,8 +207,8 @@ func _physics_process(delta: float) -> void:
 
 
 var _jingle_phase: Phase = Phase.PLAYING
-## End-of-run table, shown under the Victory / Run over banner.
-var _run_stats_text: String = ""
+## Everyone: the final numbers once the run ends (null before that).
+var _final_stats: RunStats = null
 
 
 ## Calm music between stages, the boss theme during boss fights, otherwise the stage's own.
@@ -230,7 +231,7 @@ func _play_phase_jingle() -> void:
 		Phase.RUN_OVER:
 			Sfx.play(&"defeat", -2.0)
 	if _is_run_finished() and not LaunchOptions.screenshot_dir.is_empty():
-		await get_tree().create_timer(0.5).timeout
+		await get_tree().create_timer(1.7).timeout  # After the summary's count-up.
 		Main.save_screenshot(get_tree(), "run_end.png")
 
 
@@ -268,7 +269,7 @@ func debug_report() -> String:
 		_enemies.active_count(), _gems.count(), _team.level, _team.xp])
 	if multiplayer.is_server():
 		lines.append("[report]   damage by peer: %s" % [_enemies.damage_by_peer])
-		lines.append("[report]   kills by peer: %s" % [_kills_by_peer])
+		lines.append("[report]   kills by peer: %s" % [_run_stats_kills()])
 		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
 	lines.append("[report]   enemy bullets alive: %d   altars: %d   music: %s" % [_enemy_bullets.count(), _weapons.altar_count(), Music.now_playing()])
 	var boss := _enemies.find_boss()
@@ -276,6 +277,13 @@ func debug_report() -> String:
 		lines.append("[report]   boss: %s hp %.0f%% phase %d" % [boss.type.display_name, boss.hp_ratio * 100.0, _boss_brain.phase])
 	lines.append("[report]   bullets alive: %d   physics time: %.2f ms/tick" % [_projectiles.count(), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
 	return "\n".join(lines)
+
+
+func _run_stats_kills() -> Dictionary[int, int]:
+	var kills: Dictionary[int, int] = {}
+	for peer_id: int in _run_stats.by_peer:
+		kills[peer_id] = _run_stats.get_stat(peer_id, RunStats.Stat.KILLS)
+	return kills
 
 
 # --- Players -----------------------------------------------------------------
@@ -427,7 +435,7 @@ func _end_stage(phase: Phase) -> void:
 		_settle_stage_rewards()
 	else:
 		_level_up.host_reset()
-		_broadcast_run_stats()
+		_broadcast_run_stats(phase == Phase.VICTORY)
 	_enemies.clear_all()
 	_projectiles.clear()
 	_enemy_bullets.clear()
@@ -440,30 +448,32 @@ func _end_stage(phase: Phase) -> void:
 ## Host: nothing is left behind when a stage is won. Gems still on the ground
 ## go to the team bar (level-ups wait for the next stage), loose coins are split
 ## evenly, and everyone gets the boss bounty.
-func _broadcast_run_stats() -> void:
-	var ids := PackedInt32Array()
-	var kills := PackedInt32Array()
-	var damage := PackedInt32Array()
-	var downs := PackedInt32Array()
+func _broadcast_run_stats(victory: bool) -> void:
+	_run_stats.victory = victory
+	_run_stats.stage_reached = _stage
+	_run_stats.team_level = _team.level
+	_run_stats.bosses_defeated = _stage if victory else _stage - 1
+	var boss := _enemies.find_boss()
+	_run_stats.fell_to = "" if victory or boss == null else boss.type.display_name
 	for player: Player in _player_nodes():
-		ids.append(player.peer_id)
-		kills.append(_kills_by_peer.get(player.peer_id, 0))
-		damage.append(_enemies.damage_by_peer.get(player.peer_id, 0))
-		downs.append(player.times_downed)
-	_receive_run_stats(ids, kills, damage, downs)
+		var peer_id := player.peer_id
+		_run_stats.add(peer_id, RunStats.Stat.KILLS, 0)  # Everyone gets a column.
+		_run_stats.set_stat(peer_id, RunStats.Stat.DAMAGE, _enemies.damage_by_peer.get(peer_id, 0))
+		_run_stats.set_stat(peer_id, RunStats.Stat.BOSS_DAMAGE, _enemies.boss_damage_by_peer.get(peer_id, 0))
+		_run_stats.set_stat(peer_id, RunStats.Stat.HEARTS_LOST, player.hearts_lost)
+		_run_stats.set_stat(peer_id, RunStats.Stat.DOWNS, player.times_downed)
+	var data := _run_stats.encode()
+	_receive_run_stats(data)
 	for peer_id: int in _ready_peers:
-		_receive_run_stats.rpc_id(peer_id, ids, kills, damage, downs)
+		_receive_run_stats.rpc_id(peer_id, data)
 
 
-## Everyone: format the end-of-run table.
+## Everyone: the end-of-run numbers arrived; show the summary screen.
 @rpc("authority", "call_remote", "reliable")
-func _receive_run_stats(ids: PackedInt32Array, kills: PackedInt32Array, damage: PackedInt32Array, downs: PackedInt32Array) -> void:
-	var lines := PackedStringArray()
-	for i: int in ids.size():
-		var player := _player_by_id(ids[i])
-		var who := "%s (%s)" % [player.display_name(), player.stats.display_name] if player != null else "Someone"
-		lines.append("%s: %d kills, %d damage, downed %d time%s" % [who, kills[i], damage[i], downs[i], "" if downs[i] == 1 else "s"])
-	_run_stats_text = "\n".join(lines)
+func _receive_run_stats(data: Dictionary) -> void:
+	_final_stats = RunStats.decode(data)
+	var restart_hint := "Press R / Select to return to the lobby" if multiplayer.is_server() else "Waiting for the host to return to the lobby..."
+	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, STAGE_COUNT, restart_hint)
 
 
 func _settle_stage_rewards() -> void:
@@ -477,6 +487,7 @@ func _settle_stage_rewards() -> void:
 	var bounty := BOSS_BOUNTY + BOSS_BOUNTY_PER_STAGE * (_stage - 1)
 	for player: Player in players:
 		player.coins += share + bounty
+		_run_stats.add(player.peer_id, RunStats.Stat.COINS_EARNED, share + bounty)
 
 
 ## Host: the next stage starts. The run (level, upgrades, relics, coins) carries
@@ -549,10 +560,11 @@ func _tick_boss(delta: float) -> void:
 
 
 func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
-	_kills_by_peer[killer_peer_id] = _kills_by_peer.get(killer_peer_id, 0) + 1
+	_run_stats.add(killer_peer_id, RunStats.Stat.KILLS, 1)
 	if enemy.type.is_boss:
 		# Don't end the stage mid-hit-check; the phase check does it this tick.
 		_boss_defeated = true
+		print("Boss killed by peer %d at %.1fs" % [killer_peer_id, _elapsed])
 		return
 	if not _gems.spawn_host(enemy.position, enemy.type.xp_value):
 		# Too many gems on the ground: grant the XP directly instead.
@@ -571,6 +583,7 @@ func _on_coin_collected(value: int, collector_peer_id: int) -> void:
 	var player := _player_by_id(collector_peer_id)
 	if player != null:
 		player.coins += value
+		_run_stats.add(collector_peer_id, RunStats.Stat.COINS_EARNED, value)
 
 
 func _on_weapon_gained(peer_id: int, weapon_id: int) -> void:
@@ -602,7 +615,8 @@ func _on_relic_bought(peer_id: int, relic_id: int) -> void:
 		player.apply_relic(relic_id)
 
 
-func _on_gem_collected(value: int, _collector_peer_id: int) -> void:
+func _on_gem_collected(value: int, collector_peer_id: int) -> void:
+	_run_stats.add(collector_peer_id, RunStats.Stat.XP_GATHERED, value)
 	var levels_gained := _team.add_xp(value)
 	if levels_gained > 0:
 		_level_up.host_queue(levels_gained)
@@ -830,7 +844,6 @@ func _update_hud() -> void:
 		info = _invite_hud_text() + "\n" + info
 	_hud.set_info(info)
 
-	var restart_hint := "Press R / Select to return to the lobby" if multiplayer.is_server() else "Waiting for the host..."
 	var name_of := func(peer_id: int) -> String:
 		var player := _player_by_id(peer_id)
 		return player.display_name() if player != null else "someone"
@@ -849,10 +862,8 @@ func _update_hud() -> void:
 				_hud.show_banner("Level up!", "Others are choosing.   " + _level_up.status_text(name_of))
 		Phase.STAGE_CLEAR:
 			_hud.show_banner("Stage %d cleared!" % _stage, "Stage %d of %d is next. Everyone respawns." % [_stage + 1, STAGE_COUNT])
-		Phase.VICTORY:
-			_hud.show_banner("Victory!", "Every stage is cleansed.\n\n%s\n\n%s" % [_run_stats_text, restart_hint])
-		Phase.RUN_OVER:
-			_hud.show_banner("Run over", "Fell in stage %d.\n\n%s\n\n%s" % [_stage, _run_stats_text, restart_hint])
+		Phase.VICTORY, Phase.RUN_OVER:
+			_hud.hide_banner()  # The run summary panel shows instead.
 		_:
 			if _boss_banner_left > 0.0 and boss != null:
 				_hud.show_banner("%s rises!" % boss.type.display_name, "Destroy it to clear the stage.")

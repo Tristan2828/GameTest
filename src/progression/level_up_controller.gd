@@ -25,6 +25,8 @@ var _session: LevelUpSession = LevelUpSession.new()
 var _round_active: bool = false
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _panel: LevelUpPanel = null
+## Returns this machine's Player (or null), for the cards' stat preview.
+var _local_player: Callable = func() -> Player: return null
 ## This machine's open choices (empty = nothing to pick right now).
 var _my_choices: Array[int] = []
 var _my_pick_sent: bool = false
@@ -34,8 +36,9 @@ func _ready() -> void:
 	_rng.randomize()
 
 
-func bind_panel(panel: LevelUpPanel) -> void:
+func bind_panel(panel: LevelUpPanel, local_player: Callable) -> void:
 	_panel = panel
+	_local_player = local_player
 	_panel.picked.connect(_pick_locally)
 
 
@@ -156,7 +159,7 @@ func _show_choices(level: int, choices: Array[int]) -> void:
 	_my_choices = choices
 	_my_pick_sent = false
 	if _panel != null:
-		_panel.open(level, choices)
+		_panel.open(level, choices, _local_player.call() as Player)
 	if LaunchOptions.autopilot and not choices.is_empty():
 		var delay := _rng.randf_range(AUTOPILOT_PICK_DELAY_MIN, AUTOPILOT_PICK_DELAY_MAX)
 		get_tree().create_timer(delay).timeout.connect(func() -> void:
