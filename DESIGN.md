@@ -209,12 +209,14 @@ Owner played solo, beat stage 1. Requested and done:
 6. Title screen shows version, build commit and date.
 Also: lobby cards restyled.
 
-### Where things stand (2026-10-09, v0.12.0)
+### Where things stand (2026-10-09, v0.13.0, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
-- **Not yet played by a human:** stages 2–3 and their bosses, Victory, the reworked abilities and shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
+- v0.13.0 added: level-up card previews (level + stat before -> after), the end-of-run summary screen (`RunStats` + `RunSummaryPanel`), the Necromancer (Bone Effigy) and the Witch's Hex Snare.
+- **Not yet played by a human:** stages 2–3 and their bosses, Victory, Hex Snare, the Necromancer, the end-of-run screen, the shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
+- **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
 
 ### Next (proposed, in rough priority)
-1. Full co-op playtest of v0.12.0 (everything above), then tune numbers.
+1. Full co-op playtest of v0.13.0 (everything above), then tune numbers.
 2. Working title (replace "GameTest" in the title, window, and build file names).
 3. Content depth: more upgrades/relics/weapons with synergies, more enemy variety per stage, boss attack variety.
 4. Meta/feel: hero portraits, records/stats screen, more animation.
