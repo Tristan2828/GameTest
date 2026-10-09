@@ -6,7 +6,7 @@ extends RefCounted
 ## - Steady trickle that ramps up over the stage.
 ## - More players = more enemies (same toughness).
 ## - Every so often, a "pack surge": a tight cluster from one direction.
-## - Tougher/faster types unlock as time passes.
+## - Which enemies appear, and when, comes from the stage's spawn table.
 
 const BASE_SPAWNS_PER_SECOND: float = 1.0
 ## Extra spawns per second gained every second of the stage.
@@ -17,18 +17,18 @@ const MAX_ALIVE: int = 260
 const PACK_SIZE: int = 12
 const PACK_INTERVAL_MIN: float = 35.0
 const PACK_INTERVAL_MAX: float = 50.0
-const BAT_UNLOCK_TIME: float = 45.0
-const GHOUL_UNLOCK_TIME: float = 90.0
-const CULTIST_UNLOCK_TIME: float = 120.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var spawns: Array[SpawnEntry] = []
 
 var _budget: float = 0.0
 var _next_pack_time: float = 0.0
 
 
-func _init(seed_value: int = 0) -> void:
+## Without a table, uses the first stage's.
+func _init(seed_value: int = 0, spawn_table: Array[SpawnEntry] = []) -> void:
 	rng.seed = seed_value
+	spawns = spawn_table if not spawn_table.is_empty() else Stages.get_stage(1).spawns
 	_next_pack_time = rng.randf_range(PACK_INTERVAL_MIN, PACK_INTERVAL_MAX)
 
 
@@ -57,17 +57,14 @@ func pack_due(elapsed: float, alive: int) -> bool:
 	return alive + PACK_SIZE <= MAX_ALIVE
 
 
-## Weighted pick; later types join the mix (and grow more common) over time.
+## Weighted pick from the spawn table; later types join the mix over time.
 func pick_type(elapsed: float) -> int:
-	var shambler_weight := 10.0
-	var bat_weight := 0.0 if elapsed < BAT_UNLOCK_TIME else 4.0
-	var ghoul_weight := 0.0 if elapsed < GHOUL_UNLOCK_TIME else 1.5 + (elapsed - GHOUL_UNLOCK_TIME) / 60.0
-	var cultist_weight := 0.0 if elapsed < CULTIST_UNLOCK_TIME else 2.5
-	var roll := rng.randf() * (shambler_weight + bat_weight + ghoul_weight + cultist_weight)
-	if roll < shambler_weight:
-		return EnemyTypes.Id.SHAMBLER
-	if roll < shambler_weight + bat_weight:
-		return EnemyTypes.Id.BAT
-	if roll < shambler_weight + bat_weight + ghoul_weight:
-		return EnemyTypes.Id.GHOUL
-	return EnemyTypes.Id.CULTIST
+	var total := 0.0
+	for entry: SpawnEntry in spawns:
+		total += entry.weight_at(elapsed)
+	var roll := rng.randf() * total
+	for entry: SpawnEntry in spawns:
+		roll -= entry.weight_at(elapsed)
+		if roll < 0.0:
+			return entry.enemy_type
+	return spawns[0].enemy_type

@@ -1,0 +1,161 @@
+[gd_resource type="Resource" script_class="StageDef" format=3]
+
+[ext_resource type="Script" path="res://src/stages/stage_def.gd" id="1_stage"]
+[ext_resource type="Script" path="res://src/stages/spawn_entry.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://src/stages/boss_step.gd" id="3_step"]
+
+[sub_resource type="Resource" id="spawn_0"]
+script = ExtResource("2_spawn")
+enemy_type = 0
+unlock_time = 0.0
+weight = 10.0
+weight_per_minute = 0.0
+
+[sub_resource type="Resource" id="spawn_1"]
+script = ExtResource("2_spawn")
+enemy_type = 1
+unlock_time = 45.0
+weight = 4.0
+weight_per_minute = 0.0
+
+[sub_resource type="Resource" id="spawn_2"]
+script = ExtResource("2_spawn")
+enemy_type = 2
+unlock_time = 90.0
+weight = 1.5
+weight_per_minute = 1.0
+
+[sub_resource type="Resource" id="spawn_3"]
+script = ExtResource("2_spawn")
+enemy_type = 3
+unlock_time = 120.0
+weight = 2.5
+weight_per_minute = 0.0
+
+[sub_resource type="Resource" id="p1_0"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 0.7
+
+[sub_resource type="Resource" id="p1_1"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 0.7
+
+[sub_resource type="Resource" id="p1_2"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 1.8
+
+[sub_resource type="Resource" id="p1_3"]
+script = ExtResource("3_step")
+pattern = 3
+aim = 0
+angle = 0.0
+wait = 3.2
+
+[sub_resource type="Resource" id="p1_4"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 0.9
+
+[sub_resource type="Resource" id="p1_5"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 0.9
+
+[sub_resource type="Resource" id="p1_6"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 2.2
+
+[sub_resource type="Resource" id="p2_0"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 0.5
+
+[sub_resource type="Resource" id="p2_1"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 0.5
+
+[sub_resource type="Resource" id="p2_2"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 0.5
+
+[sub_resource type="Resource" id="p2_3"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 1.4
+
+[sub_resource type="Resource" id="p2_4"]
+script = ExtResource("3_step")
+pattern = 4
+aim = 0
+angle = 0.0
+wait = 3.0
+
+[sub_resource type="Resource" id="p2_5"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 0.6
+
+[sub_resource type="Resource" id="p2_6"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 0.6
+
+[sub_resource type="Resource" id="p2_7"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 0.6
+
+[sub_resource type="Resource" id="p2_8"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 1.6
+
+[resource]
+script = ExtResource("1_stage")
+title = "The Crypt"
+spawns = Array[ExtResource("2_spawn")]([SubResource("spawn_0"), SubResource("spawn_1"), SubResource("spawn_2"), SubResource("spawn_3")])
+pack_type = 0
+boss_type = 4
+boss_phase_one = Array[ExtResource("3_step")]([SubResource("p1_0"), SubResource("p1_1"), SubResource("p1_2"), SubResource("p1_3"), SubResource("p1_4"), SubResource("p1_5"), SubResource("p1_6")])
+boss_phase_two = Array[ExtResource("3_step")]([SubResource("p2_0"), SubResource("p2_1"), SubResource("p2_2"), SubResource("p2_3"), SubResource("p2_4"), SubResource("p2_5"), SubResource("p2_6"), SubResource("p2_7"), SubResource("p2_8")])
+stone_colors = Array[Color]([Color(0.1, 0.09, 0.12, 1), Color(0.11, 0.1, 0.13, 1), Color(0.09, 0.085, 0.11, 1), Color(0.12, 0.105, 0.135, 1)])
+grout_color = Color(0.065, 0.06, 0.08, 1)
+crack_color = Color(0.05, 0.045, 0.06, 1)
+moss_color = Color(0.13, 0.17, 0.11, 1)
+wall_color = Color(0.2, 0.17, 0.25, 1)
+wall_edge_color = Color(0.4, 0.33, 0.5, 1)
+prop_style = 0

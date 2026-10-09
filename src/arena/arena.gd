@@ -62,7 +62,9 @@ var _stage: int = 1
 var _stage_clear_left: float = 0.0
 var _elapsed: float = 0.0
 var _wave_duration: float = WAVE_DURATION
-var _boss_brain: BossBrain = BossBrain.new()
+var _boss_brain: BossBrain = null
+## Turning angle for SPIN boss steps.
+var _boss_spin: float = 0.0
 ## Host: the boss has been spawned this stage.
 var _boss_spawned: bool = false
 ## Host: the boss died this tick (the stage ends at the phase check).
@@ -73,7 +75,7 @@ var _boss_banner_left: float = 0.0
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
-var _director: SpawnDirector = SpawnDirector.new(randi())
+var _director: SpawnDirector = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Host: kills per peer id (for reports; scoreboards later).
 var _kills_by_peer: Dictionary[int, int] = {}
@@ -100,6 +102,7 @@ var _pattern_times: PackedFloat32Array = PackedFloat32Array()
 @onready var _enemy_bullets: ProjectileManager = $EnemyProjectiles
 @onready var _level_up: LevelUpController = $LevelUp
 @onready var _hud: Hud = $Hud
+@onready var _floor: ArenaFloor = $Floor
 
 
 func _ready() -> void:
@@ -110,6 +113,7 @@ func _ready() -> void:
 	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_rng.randomize()
+	_setup_stage()
 	_level_up.bind_panel(_hud.level_up_panel)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
 	_shop.relic_bought.connect(_on_relic_bought)
@@ -308,10 +312,10 @@ func _spawn_enemies(delta: float) -> void:
 	if not _boss_spawned and _director.pack_due(_elapsed, _enemies.active_count()):
 		var center := _offscreen_spawn_point(alive_players)
 		if center.is_finite():
+			var pack_type := Stages.get_stage(_stage).pack_type
 			for i: int in SpawnDirector.PACK_SIZE:
 				var offset := Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(0.0, PACK_RADIUS)
-				_enemies.spawn(EnemyTypes.Id.SHAMBLER, (center + offset).clamp(BOUNDS.position, BOUNDS.end),
-					_scaled_hp(EnemyTypes.Id.SHAMBLER))
+				_enemies.spawn(pack_type, (center + offset).clamp(BOUNDS.position, BOUNDS.end), _scaled_hp(pack_type))
 
 
 ## Enemy max HP for the current stage.
@@ -399,13 +403,21 @@ func _begin_next_stage() -> void:
 	_elapsed = 0.0
 	_boss_spawned = false
 	_boss_defeated = false
-	_boss_brain = BossBrain.new()
-	_director = SpawnDirector.new(randi())
+	_setup_stage()
 	_weapons.reset_stage()
 	for player: Player in _player_nodes():
 		player.respawn(BOUNDS.get_center() + SPAWN_OFFSETS[player.slot])
 	_phase = Phase.PLAYING
 	print("Stage %d begins" % _stage)
+
+
+## Everyone: load the current stage's enemies, boss script and floor.
+func _setup_stage() -> void:
+	var stage := Stages.get_stage(_stage)
+	_director = SpawnDirector.new(randi(), stage.spawns)
+	_boss_brain = BossBrain.new(stage.boss_phase_one, stage.boss_phase_two)
+	_boss_spin = 0.0
+	_floor.apply_stage(stage)
 
 
 func _spawn_boss() -> void:
@@ -416,12 +428,13 @@ func _spawn_boss() -> void:
 		center += point / alive.size()
 	var inner := BOUNDS.grow(-40.0)
 	var at := (center + Vector2.from_angle(_rng.randf() * TAU) * BOSS_SPAWN_DISTANCE).clamp(inner.position, inner.end)
-	var boss_type := EnemyTypes.get_type(EnemyTypes.Id.BONE_WARDEN)
+	var boss_type_id := Stages.get_stage(_stage).boss_type
+	var boss_type := EnemyTypes.get_type(boss_type_id)
 	var players := maxi(_player_nodes().size(), 1)
-	var hit_points := roundi(_scaled_hp(EnemyTypes.Id.BONE_WARDEN) * (1.0 + boss_type.hp_per_extra_player * (players - 1)))
+	var hit_points := roundi(_scaled_hp(boss_type_id) * (1.0 + boss_type.hp_per_extra_player * (players - 1)))
 	if LaunchOptions.weak_bosses:
 		hit_points = maxi(roundi(hit_points * 0.02), 1)
-	_enemies.spawn(EnemyTypes.Id.BONE_WARDEN, at, hit_points)
+	_enemies.spawn(boss_type_id, at, hit_points)
 	print("Boss spawned with %d HP at %.1fs" % [hit_points, _elapsed])
 
 
@@ -430,16 +443,26 @@ func _tick_boss(delta: float) -> void:
 	var boss := _enemies.find_boss()
 	if boss == null:
 		return
-	match _boss_brain.tick(delta, boss.hp_ratio):
-		BossBrain.Attack.RING:
-			_fire_enemy_pattern(ShotPatterns.Id.RING_24, boss.position, 0.0)
-		BossBrain.Attack.SPIRAL:
-			_fire_enemy_pattern(ShotPatterns.Id.SPIRAL, boss.position, 0.0)
-		BossBrain.Attack.DOUBLE_SPIRAL:
-			_fire_enemy_pattern(ShotPatterns.Id.DOUBLE_SPIRAL, boss.position, 0.0)
-		BossBrain.Attack.FANS:
-			for target: Vector2 in _alive_player_positions():
-				_fire_enemy_pattern(ShotPatterns.Id.AIMED_FAN_7, boss.position, (target - boss.position).angle())
+	var step := _boss_brain.tick(delta, boss.hp_ratio)
+	if step == null:
+		return
+	var targets := _alive_player_positions()
+	match step.aim:
+		BossStep.Aim.FIXED:
+			_fire_enemy_pattern(step.pattern, boss.position, step.angle)
+		BossStep.Aim.SPIN:
+			_boss_spin += step.angle
+			_fire_enemy_pattern(step.pattern, boss.position, _boss_spin)
+		BossStep.Aim.AT_EACH_PLAYER:
+			for target: Vector2 in targets:
+				_fire_enemy_pattern(step.pattern, boss.position, (target - boss.position).angle())
+		BossStep.Aim.AT_NEAREST:
+			if not targets.is_empty():
+				var nearest := targets[0]
+				for target: Vector2 in targets:
+					if boss.position.distance_squared_to(target) < boss.position.distance_squared_to(nearest):
+						nearest = target
+				_fire_enemy_pattern(step.pattern, boss.position, (nearest - boss.position).angle())
 
 
 func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
@@ -768,7 +791,9 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			player.bombs_left = bombs[i]
 			player.coins = coins[i]
 	_sync_clock(elapsed)
-	_stage = stage
+	if stage != _stage:
+		_stage = stage
+		_setup_stage()
 	_team.level = team_level
 	_team.xp = team_xp
 	if phase == Phase.SHOP:

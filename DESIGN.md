@@ -155,6 +155,21 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
   - Found as **weapon altars** that appear twice per stage (~1:20 and ~2:40). First player to touch one takes it. Taking a weapon you already own levels it up (max level 3).
   - Three weapons to start: **Orbiting Skulls** (circle you, hurt on touch), **Seeking Bolts** (auto-fire at the nearest enemy), and **Holy Aura** (pulses damage around you).
 
+### Milestone 5: Characters, lobby, three themed stages (in progress)
+The owner approved the plan; details below are Claude's defaults. **Revisit in the next playtest.**
+- **Lobby:**
+  - Solo/Host/Join leads to a lobby: pick a character, press Ready, and the host starts (solo starts right away).
+  - After Victory or Run over, the host returns everyone to the lobby.
+  - Friends joining mid-run still drop in, as the Wanderer.
+- **Characters (one passive ability each):**
+  - **Wanderer:** balanced. *Second Wind:* the first lethal hit each stage leaves you at 1 heart instead.
+  - **Gravekeeper:** slow, 5 hearts, short-range shotgun. *Grave Ward:* starts each stage with 3 bombs, and each bomb also heals 1 heart.
+  - **Hexblade Witch:** fast, 2 hearts, rapid piercing bolts. *Blink:* longer, faster-recharging dash.
+- **Stages** (each has its own floor, enemy mix and boss; data-driven `StageDef` resources):
+  1. **The Crypt:** Shamblers, Bats, Ghouls, Cultists. Boss: the Bone Warden.
+  2. **The Bone Marsh:** Mire Crawlers (fast swarms), Plague Spitters (slow bullet rings), Ghouls. Boss: the Mire Hag (sweeping bullet walls, random sprays).
+  3. **The Burning Cathedral:** Flame Imps (fast, erratic), Fallen Paladins (tanky, aimed lines), Cultists. Boss: the Ashen Bishop (rotating crosses, aimed bursts).
+
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
 - M3 (above): First arena stage + first boss with bullet patterns.
@@ -164,14 +179,11 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
 ## 8. Open questions
 
 - Working title?
-- Character roster: how many, and what are their kits?
 - Enemy roster and boss designs.
 - Weapon, auto-weapon, and relic lists; synergy rules.
-- Number of stages per run and their themes.
 - Shop economy: how coins are earned, what's sold.
 
 ## 9. Ideas for Later
 
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
 - **Join codes / no port forwarding at all:** a small relay or matchmaking server (short codes like `KQ7F`), or Steam invites via Steamworks ($100 app fee). Revisit if port forwarding becomes a hurdle or near release.
-- **Lobby + ready-up:** replace drop-in joining with a lobby screen (players gather, pick characters, host clicks Start). Likely needed by M5 (character select).
