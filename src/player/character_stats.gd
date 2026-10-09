@@ -31,3 +31,7 @@ extends Resource
 @export var bullet_speed: float = 320.0
 @export var bullet_damage: int = 10
 @export var bullet_lifetime: float = 1.2
+## Bolts per shot, fanned out around the aim direction.
+@export var projectile_count: int = 1
+## Extra enemies each bolt can pass through.
+@export var pierce: int = 0

@@ -1,3 +1,4 @@
+class_name Main
 extends Node
 ## Root scene. Shows the main menu, starts solo/host/join sessions, and owns the
 ## `Level` slot. The host puts the arena into that slot; `LevelSpawner` (a
@@ -36,8 +37,28 @@ func _apply_launch_options() -> void:
 		LaunchOptions.Mode.JOIN:
 			var invite: Dictionary = Net.parse_invite(LaunchOptions.address, LaunchOptions.port)
 			_start_join(invite["address"], invite["port"])
+	if not LaunchOptions.screenshot_dir.is_empty():
+		_take_screenshots_periodically()
 	if LaunchOptions.run_for_seconds > 0.0:
 		get_tree().create_timer(LaunchOptions.run_for_seconds).timeout.connect(_report_and_quit)
+
+
+## Saves the screen to the --screenshot-dir folder (debug aid).
+static func save_screenshot(tree: SceneTree, file_name: String) -> void:
+	if LaunchOptions.screenshot_dir.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	await RenderingServer.frame_post_draw
+	var path := LaunchOptions.screenshot_dir.path_join(file_name)
+	tree.root.get_texture().get_image().save_png(path)
+	print("Saved screenshot %s" % path)
+
+
+func _take_screenshots_periodically() -> void:
+	var index := 0
+	while is_inside_tree():
+		await get_tree().create_timer(10.0).timeout
+		index += 1
+		save_screenshot(get_tree(), "gameplay_%02d.png" % index)
 
 
 func _start_solo() -> void:

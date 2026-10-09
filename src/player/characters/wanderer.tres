@@ -19,3 +19,5 @@ fire_interval = 0.12
 bullet_speed = 320.0
 bullet_damage = 10
 bullet_lifetime = 1.2
+projectile_count = 1
+pierce = 0

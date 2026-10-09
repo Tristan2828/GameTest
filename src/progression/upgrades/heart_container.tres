@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Heart Container"
+description = "+1 max heart (and heal 1)"
+stat = 3
+amount = 1.0
+max_stacks = 3

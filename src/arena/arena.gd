@@ -3,12 +3,13 @@ extends Node2D
 ## One stage of a run: players, the enemy horde, and bullets.
 ##
 ## Every physics tick (while the run is being played) runs in a fixed order:
-## players -> spawning -> enemies -> contact damage -> bullets -> hits -> phase check.
+## players -> spawning -> enemies -> contact damage -> bullets -> hits -> gems -> phase check.
+## Level-ups pause all of that (phase LEVEL_UP) until LevelUpController is done.
 ## The host then sends snapshots to every client that has finished loading.
 
 signal restart_requested
 
-enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER }
+enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP }
 
 const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
@@ -53,6 +54,7 @@ var _time_since_stage_end: float = 0.0
 @onready var _enemies: EnemyManager = $Enemies
 @onready var _gems: GemManager = $Gems
 @onready var _projectiles: ProjectileManager = $Projectiles
+@onready var _level_up: LevelUpController = $LevelUp
 @onready var _hud: Hud = $Hud
 
 
@@ -63,6 +65,8 @@ func _ready() -> void:
 	_projectiles.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_rng.randomize()
+	_level_up.bind_panel(_hud.level_up_panel)
+	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	if LaunchOptions.stage_seconds > 0.0:
 		_stage_duration = LaunchOptions.stage_seconds
 	if multiplayer.is_server():
@@ -96,6 +100,14 @@ func _physics_process(delta: float) -> void:
 		_tick_gems(delta, is_host)
 		if is_host:
 			_update_phase()
+		if is_host and _phase == Phase.PLAYING and _level_up.host_should_start():
+			_start_level_up()
+	elif _phase == Phase.LEVEL_UP:
+		if is_host and _level_up.host_tick(delta, _ready_peer_list()):
+			if _level_up.host_should_start():
+				_start_level_up()
+			else:
+				_phase = Phase.PLAYING
 	elif is_host and LaunchOptions.autopilot:
 		_time_since_stage_end += delta
 		if _time_since_stage_end >= AUTOPILOT_RESTART_DELAY:
@@ -114,7 +126,7 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("copy_invite") and Net.invite.copy_to_clipboard():
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
-	if event.is_action_pressed("restart") and multiplayer.is_server() and _phase != Phase.PLAYING:
+	if event.is_action_pressed("restart") and multiplayer.is_server() and _is_stage_over():
 		restart_requested.emit()
 
 
@@ -133,8 +145,8 @@ func debug_report() -> String:
 	var role := "host" if multiplayer.is_server() else "client"
 	lines.append("[report] peer %d (%s)  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, Phase.keys()[_phase], _elapsed])
 	for player: Player in _player_nodes():
-		var line := "[report]   player %d slot %d at %s  hearts %d/%d" % [
-			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts]
+		var line := "[report]   player %d slot %d at %s  hearts %d/%d  upgrades %s" % [
+			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts, player.upgrade_ids]
 		if player.is_local() and not multiplayer.is_server():
 			line += "  corrections=%d largest=%.2fpx" % [player.correction_count, player.largest_correction]
 		lines.append(line)
@@ -181,6 +193,7 @@ func _add_player(peer_id: int) -> void:
 
 func _remove_player(peer_id: int) -> void:
 	_ready_peers.erase(peer_id)
+	_level_up.host_remove_player(peer_id)
 	var player := _player_by_id(peer_id)
 	if player != null:
 		player.queue_free()
@@ -263,6 +276,7 @@ func _update_phase() -> void:
 
 func _end_stage(phase: Phase) -> void:
 	_phase = phase
+	_level_up.host_reset()
 	_enemies.clear_all()
 	_projectiles.clear()
 	_gems.clear()
@@ -277,7 +291,32 @@ func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
 
 
 func _on_gem_collected(value: int, _collector_peer_id: int) -> void:
-	_team.add_xp(value)
+	var levels_gained := _team.add_xp(value)
+	if levels_gained > 0:
+		_level_up.host_queue(levels_gained)
+
+
+func _start_level_up() -> void:
+	_phase = Phase.LEVEL_UP
+	# With several level-ups queued, show the level this particular choice is for.
+	var level := _team.level - _level_up.pending_levels + 1
+	_level_up.host_start(_player_nodes(), level, _ready_peer_list())
+
+
+func _on_upgrade_announced(peer_id: int, upgrade_id: int) -> void:
+	var player := _player_by_id(peer_id)
+	if player != null:
+		player.apply_upgrade(upgrade_id)
+
+
+func _is_stage_over() -> bool:
+	return _phase == Phase.STAGE_CLEAR or _phase == Phase.RUN_OVER
+
+
+func _ready_peer_list() -> Array[int]:
+	var peers: Array[int] = []
+	peers.assign(_ready_peers.keys())
+	return peers
 
 
 func _tick_gems(delta: float, is_host: bool) -> void:
@@ -312,8 +351,9 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 	if shooter == null:
 		return
 	var stats := shooter.stats
-	for angle: float in ShotPatterns.angles(pattern, aim, seed_value):
-		_projectiles.spawn(origin, Vector2.from_angle(angle) * stats.bullet_speed, stats.bullet_damage, stats.bullet_lifetime, shooter_id)
+	for angle: float in ShotPatterns.angles(pattern, aim, seed_value, stats.projectile_count):
+		_projectiles.spawn(origin, Vector2.from_angle(angle) * stats.bullet_speed, stats.bullet_damage,
+			stats.bullet_lifetime, shooter_id, stats.pierce)
 
 
 # --- HUD ---------------------------------------------------------------------
@@ -336,7 +376,16 @@ func _update_hud() -> void:
 	_hud.set_info(info)
 
 	var restart_hint := "Press R / Start to play again" if multiplayer.is_server() else "Waiting for the host to restart..."
+	var name_of := func(peer_id: int) -> String:
+		var player := _player_by_id(peer_id)
+		return player.display_name() if player != null else "someone"
+	_level_up.refresh_panel_status(name_of)
 	match _phase:
+		Phase.LEVEL_UP:
+			if _level_up.has_local_choices():
+				_hud.hide_banner()
+			else:
+				_hud.show_banner("Level up!", "Others are choosing.   " + _level_up.status_text(name_of))
 		Phase.STAGE_CLEAR:
 			_hud.show_banner("Stage clear!", restart_hint)
 		Phase.RUN_OVER:
@@ -369,8 +418,7 @@ func _on_invite_changed() -> void:
 func _send_snapshots() -> void:
 	if _ready_peers.is_empty():
 		return
-	var peers: Array[int] = []
-	peers.assign(_ready_peers.keys())
+	var peers := _ready_peer_list()
 	_gems.flush_events(peers)
 	if _tick % PLAYER_SNAPSHOT_INTERVAL_TICKS == 0:
 		var ids := PackedInt32Array()
@@ -388,9 +436,10 @@ func _send_snapshots() -> void:
 			hearts.append(player.health.hearts)
 			max_hearts.append(player.health.max_hearts)
 			flags.append((1 if player.state.is_dashing() else 0) | (2 if player.health.is_invulnerable() else 0))
+		var waiting := PackedInt32Array(_level_up.waiting_ids)
 		for peer_id: int in peers:
 			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags,
-				_elapsed, _phase, _team.level, _team.xp)
+				_elapsed, _phase, _team.level, _team.xp, waiting, _level_up.countdown_left)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
 
@@ -402,12 +451,14 @@ func _notify_ready() -> void:
 		var peer_id := multiplayer.get_remote_sender_id()
 		_ready_peers[peer_id] = true
 		_gems.send_full_state(peer_id)
+		_level_up.host_send_history(peer_id, _player_nodes())
 
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
 		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
-		elapsed: float, phase: int, team_level: int, team_xp: int) -> void:
+		elapsed: float, phase: int, team_level: int, team_xp: int,
+		level_up_waiting: PackedInt32Array, level_up_countdown: float) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
@@ -415,9 +466,12 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 	_elapsed = elapsed
 	_team.level = team_level
 	_team.xp = team_xp
+	_level_up.apply_status(level_up_waiting, level_up_countdown)
 	if phase != _phase:
+		if _phase == Phase.LEVEL_UP:
+			_level_up.close_local()
 		_phase = phase as Phase
-		if _phase != Phase.PLAYING:
+		if _is_stage_over():
 			_projectiles.clear()
 			_gems.clear()
 

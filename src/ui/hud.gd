@@ -11,6 +11,7 @@ extends CanvasLayer
 @onready var _banner: Control = %Banner
 @onready var _banner_title: Label = %BannerTitle
 @onready var _banner_subtitle: Label = %BannerSubtitle
+@onready var level_up_panel: LevelUpPanel = %LevelUpPanel
 
 
 func set_hearts(current: int, maximum: int) -> void:

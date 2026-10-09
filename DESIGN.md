@@ -114,8 +114,13 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - Dummy enemies that take damage, synced across clients.
 - **Goal:** prove the netcode early, before content is built on top of it.
 
+### Milestone 2: Hordes, XP, level-ups (implemented; awaiting playtest)
+- Shambler / Bat / Ghoul hordes with ramping spawns and pack surges; hearts, i-frames, downed state.
+- XP gems with magnet pull, shared team level, networked level-up pause with 9 stat upgrades.
+- 5-minute timed stage, "Stage clear" / "Run over", host restart (R / Start).
+
 ### Future milestones (rough)
-- M2: Enemy horde spawning + XP + level-up flow (networked). A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
+- M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
 - M3: First arena stage + first boss with bullet patterns.
 - M4: Shop, relics, weapon pickups, ghost/respawn.
 - M5: Multiple characters, multiple stages, full 15–20 min run.

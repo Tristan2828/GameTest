@@ -25,6 +25,10 @@ var _ages: PackedFloat32Array = PackedFloat32Array()
 var _lifetimes: PackedFloat32Array = PackedFloat32Array()
 var _damages: PackedInt32Array = PackedInt32Array()
 var _owners: PackedInt32Array = PackedInt32Array()
+## Enemies each bullet can still pass through.
+var _pierce: PackedInt32Array = PackedInt32Array()
+## Pool index of the enemy last hit, so a piercing bullet doesn't hit it again next tick.
+var _last_hit: PackedInt32Array = PackedInt32Array()
 
 
 func _init() -> void:
@@ -34,10 +38,12 @@ func _init() -> void:
 	_lifetimes.resize(CAPACITY)
 	_damages.resize(CAPACITY)
 	_owners.resize(CAPACITY)
+	_pierce.resize(CAPACITY)
+	_last_hit.resize(CAPACITY)
 
 
 ## Returns false if the pool is full.
-func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, owner_peer_id: int) -> bool:
+func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, owner_peer_id: int, pierce: int = 0) -> bool:
 	if _count >= CAPACITY:
 		return false
 	_origins[_count] = origin
@@ -46,6 +52,8 @@ func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, own
 	_lifetimes[_count] = lifetime
 	_damages[_count] = damage
 	_owners[_count] = owner_peer_id
+	_pierce[_count] = pierce
+	_last_hit[_count] = -1
 	_count += 1
 	return true
 
@@ -75,17 +83,23 @@ func step(delta: float) -> void:
 	queue_redraw()
 
 
-## Removes bullets touching an enemy. With `apply_damage` (host only) they also hurt it.
+## Removes bullets touching an enemy (or uses up one pierce). With `apply_damage`
+## (host only) they also hurt it.
 func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 	var i := 0
 	while i < _count:
 		var enemy := enemies.find_hit(position_of(i), HIT_RADIUS)
-		if enemy == null:
+		if enemy == null or enemy.pool_index == _last_hit[i]:
 			i += 1
 			continue
 		if apply_damage:
 			enemies.damage(enemy, _damages[i], _owners[i])
-		_remove(i)
+		if _pierce[i] > 0:
+			_pierce[i] -= 1
+			_last_hit[i] = enemy.pool_index
+			i += 1
+		else:
+			_remove(i)
 
 
 func _draw() -> void:
@@ -104,4 +118,6 @@ func _remove(index: int) -> void:
 	_lifetimes[index] = _lifetimes[last]
 	_damages[index] = _damages[last]
 	_owners[index] = _owners[last]
+	_pierce[index] = _pierce[last]
+	_last_hit[index] = _last_hit[last]
 	_count = last

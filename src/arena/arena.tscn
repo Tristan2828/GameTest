@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://src/combat/projectile_manager.gd" id="3_projectiles"]
 [ext_resource type="PackedScene" path="res://src/ui/hud.tscn" id="4_hud"]
 [ext_resource type="Script" path="res://src/progression/gem_manager.gd" id="5_gems"]
+[ext_resource type="Script" path="res://src/progression/level_up_controller.gd" id="6_levelup"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -22,5 +23,8 @@ spawn_path = NodePath("../Players")
 
 [node name="Projectiles" type="Node2D" parent="."]
 script = ExtResource("3_projectiles")
+
+[node name="LevelUp" type="Node" parent="."]
+script = ExtResource("6_levelup")
 
 [node name="Hud" parent="." instance=ExtResource("4_hud")]

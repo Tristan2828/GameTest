@@ -16,6 +16,10 @@ Controls (keyboard + mouse, or a gamepad):
   Fire   left mouse / right trigger (pushing the right stick also fires)
   Dash   Space or right mouse / left trigger
   Leave  Esc
+  Host only, after a stage ends: R / Start to play again
 
 Can't connect? Check that the version in the bottom-right of the menu matches
 your host's, then let them know. They may need to open a port on their router.
+
+Level-ups: everyone picks an upgrade card (click it, or use the gamepad and
+press A). Once someone has picked, the rest have 30 seconds.

@@ -29,7 +29,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 - Tests use **GUT** (`addons/gut`, v9.7.1). Run them with `pwsh tools/run_tests.ps1`. Don't call GUT directly: GUT silently skips test files that fail to parse and still says "All tests passed", and the wrapper catches that.
 - Online smoke test: `pwsh tools/net_smoke_test.ps1` starts a headless host and client on autopilot and checks that they connected and that the client's shots damaged dummies on the host. Run it after any networking change.
 - Build the Windows exe: `pwsh tools/build.ps1`. It writes `builds/windows/GameTest.exe` (one file, game data embedded) and `builds/GameTest-<version>-windows.zip`. The export preset is `export_presets.cfg` (excludes GUT, tests and tools). Bump `config/version` in `project.godot` for each build you send to friends; the menu shows it. Needs the 4.7.2 export templates in `%APPDATA%\Godot\export_templates\4.7.2.stable\`.
-- Game launch flags (after `--`): `--solo | --host | --join=<ip>`, `--port=<n>`, `--autopilot`, `--run-for=<seconds>`, `--local-only`, `--stage-seconds=<n>`. With `--autopilot`, the host also restarts automatically 2s after a stage ends. See `src/main/launch_options.gd`. Automated tests must host with `--local-only` so they don't touch the router (UPnP) or call the public-IP web service.
+- Game launch flags (after `--`): `--solo | --host | --join=<ip>`, `--port=<n>`, `--autopilot`, `--run-for=<seconds>`, `--local-only`, `--stage-seconds=<n>`, `--screenshot-dir=<folder>` (needs a real window: run without `--headless`; saves gameplay every 10s plus the first level-up screen, so you can check visuals by reading the PNGs). With `--autopilot`, the host also restarts automatically 2s after a stage ends. See `src/main/launch_options.gd`. Automated tests must host with `--local-only` so they don't touch the router (UPnP) or call the public-IP web service.
 - After adding a new `class_name` script, run `--import` before running scripts headless. Godot only learns about new global classes during an import, and without it you get "Could not find type" parse errors. The tools scripts already do this.
 - Test helpers must not reuse Node callback names (`_input`, `_process`, `_ready`...): `GutTest` is a Node.
 
@@ -43,7 +43,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/combat/`: `ProjectileManager` (flat-array bullet pool) and `ShotPatterns` (seeded, deterministic patterns).
 - `src/enemies/`: `EnemyManager` (pool of 300, separation, byte-packed snapshots), `Enemy`, `EnemyType` resources in `types/` registered in `EnemyTypes.ALL` (index = network id; append only).
 - `src/core/`: engine-agnostic helpers (`SpatialGrid`).
-- `src/progression/`: `TeamProgress` (shared XP/level curve) and `GemManager` (flat-array XP gem pool; reliable batched spawn/collect events; clients animate the magnet pull, and only host pickups count).
+- `src/progression/`: `TeamProgress` (shared XP/level curve), `LevelUpController` (networked level-up pause: choices, picks, announcements) with pure `LevelUpSession` rules, `Upgrades` registry (`upgrades/*.tres`, index = network id, append only; `Upgrades.apply` runs on every peer so stats match for prediction), and `GemManager` (flat-array XP gem pool; reliable batched spawn/collect events; clients animate the magnet pull, and only host pickups count).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
 - `tools/`: PowerShell helper scripts.
 
@@ -55,3 +55,4 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - Placeholder art is drawn with `_draw()` for now. It will be replaced by pixel-art sprites later.
 - RPC gotcha: an **empty** `PackedByteArray` sent as an RPC's only argument arrives as "no arguments" and the call fails. Always send a count or another argument alongside packed data.
 - Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).
+- `-s some_script.gd` runs do NOT get autoloads (`Net`, `GameInput`), so game scenes can't run that way. To check visuals, launch the real game with `--screenshot-dir`.

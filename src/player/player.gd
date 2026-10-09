@@ -19,6 +19,8 @@ const SLOT_COLORS: Array[Color] = [
 	Color(0.55, 0.9, 0.45),
 	Color(0.95, 0.8, 0.35),
 ]
+## Shown in co-op UI ("Waiting for Red..."); matches SLOT_COLORS.
+const SLOT_NAMES: Array[String] = ["Blue", "Red", "Green", "Gold"]
 const MUZZLE_DISTANCE: float = 9.0
 ## Host: inputs from a client wait here until simulated. Too many queued = drop oldest.
 const MAX_QUEUED_INPUTS: int = 6
@@ -38,6 +40,8 @@ var bounds: Rect2 = Rect2()
 var state: PlayerState = PlayerState.new()
 ## Host-owned; clients get copies from snapshots.
 var health: PlayerHealth = PlayerHealth.new()
+## Every upgrade this player has taken, in order (same on all peers).
+var upgrade_ids: Array[int] = []
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -91,6 +95,17 @@ func is_dashing() -> bool:
 	if _shows_remote_state():
 		return _remote_dashing
 	return state.is_dashing()
+
+
+func display_name() -> String:
+	return SLOT_NAMES[slot % SLOT_NAMES.size()]
+
+
+## Runs on every peer when the host announces this player's pick.
+func apply_upgrade(upgrade_id: int) -> void:
+	upgrade_ids.append(upgrade_id)
+	Upgrades.apply(upgrade_id, stats, health)
+	queue_redraw()
 
 
 func is_downed() -> bool:
