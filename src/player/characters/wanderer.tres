@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CharacterStats" format=3]
+
+[ext_resource type="Script" path="res://src/player/character_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+display_name = "Wanderer"
+move_speed = 110.0
+dash_speed = 340.0
+dash_duration = 0.16
+dash_cooldown = 0.8
+body_radius = 6.0
+hitbox_radius = 2.0
+shot_pattern = 0
+fire_interval = 0.12
+bullet_speed = 320.0
+bullet_damage = 10
+bullet_lifetime = 1.2

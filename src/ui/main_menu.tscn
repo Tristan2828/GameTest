@@ -1,0 +1,72 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/main_menu.gd" id="1_menu"]
+
+[node name="MainMenu" type="CanvasLayer"]
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.055, 0.045, 0.075, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="VBoxContainer" parent="Center"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Center/Panel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.75, 1, 1)
+text = "GameTest"
+horizontal_alignment = 1
+
+[node name="SoloButton" type="Button" parent="Center/Panel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Play Solo"
+
+[node name="HostButton" type="Button" parent="Center/Panel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Host Game"
+
+[node name="AddressRow" type="HBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+
+[node name="AddressEdit" type="LineEdit" parent="Center/Panel/AddressRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "127.0.0.1"
+placeholder_text = "Host IP"
+
+[node name="PortEdit" type="LineEdit" parent="Center/Panel/AddressRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+text = "7777"
+placeholder_text = "Port"
+
+[node name="JoinButton" type="Button" parent="Center/Panel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Join Game"
+
+[node name="StatusLabel" type="Label" parent="Center/Panel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.55, 1)
+horizontal_alignment = 1
+autowrap_mode = 3

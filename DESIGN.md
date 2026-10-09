@@ -28,11 +28,19 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Connection | Direct IP / LAN. Recommend Tailscale so friends can connect without port forwarding |
 | Input | Mouse + keyboard and gamepad, both fully supported |
 
-### Networking approach (initial plan)
-- One player hosts; the host owns the true game state.
-- Player inputs are sent to the host; player positions are synced back.
-- Enemies: host simulates; positions sent in compact batches at a modest tick rate, interpolated on clients.
-- Bullets: **never synced individually.** Send pattern events (`pattern id, origin, time, seed`) and let every client simulate the bullets deterministically.
+| Base resolution | **640x360**, integer-scaled (3x at 1080p, 4x at 1440p, 6x at 4K) |
+| Tests | GUT addon, plus a headless host+client smoke test script |
+
+### Networking approach
+- One player hosts; the host owns the true game state. Solo uses the same code with an offline peer (acts as a host with nobody connected).
+- **Drop-in joining** for now: the host goes straight into the arena, and friends appear when they connect.
+- Clients send one input per tick (60/s) to the host. The host simulates and sends snapshots at **30/s**.
+- **Own player: predict and correct.** The client simulates its own movement immediately with the same deterministic code as the host. When a host snapshot disagrees, it corrects, smoothing small errors and snapping big ones.
+- Other players and enemies on clients: smoothed toward the latest snapshot positions.
+- Enemies: host simulates; positions and HP sent in compact batches, interpolated on clients.
+- Bullets: **never synced individually.** Send pattern events (`pattern id, origin, aim, seed`) and let every client simulate the bullets deterministically. Bullet position = `origin + velocity * age`.
+  - Player shots spawn on receipt. That matches the remote shooter, who is also shown slightly delayed. Enemy/boss patterns (M3) will add a shared clock (`time`) so clients can fast-forward late-arriving patterns.
+  - Only the host's bullets deal damage. Client bullets are visual.
 - Heavy use of object pooling for enemies, bullets, and pickups.
 
 ## 3. Core gameplay
@@ -95,7 +103,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ## 7. Milestones
 
-### Milestone 1: Online movement & shooting
+### Milestone 1: Online movement & shooting (implemented; awaiting hands-on playtest)
 - Godot project setup and project rules file (`CLAUDE.md`, Godot 4.x only, typed GDScript).
 - Host / join by IP.
 - 2+ players move, dash, and shoot (mouse and gamepad).
@@ -123,3 +131,4 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 ## 9. Ideas for Later
 
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
+- **Lobby + ready-up:** replace drop-in joining with a lobby screen (players gather, pick characters, host clicks Start). Likely needed by M5 (character select).
