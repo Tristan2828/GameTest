@@ -11,6 +11,7 @@ dash_duration = 0.16
 dash_cooldown = 0.8
 max_hearts = 3
 hit_invulnerability = 1.0
+bombs_per_stage = 2
 body_radius = 6.0
 hitbox_radius = 2.0
 pickup_radius = 40.0

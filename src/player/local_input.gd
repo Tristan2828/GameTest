@@ -7,10 +7,12 @@ extends Node
 const AIM_STICK_DEADZONE: float = 0.35
 const STICK_AUTOFIRE_THRESHOLD: float = 0.6
 const AUTOPILOT_DASH_INTERVAL: float = 2.0
+const AUTOPILOT_BOMB_INTERVAL: float = 20.0
 
 var _using_mouse: bool = true
 var _last_stick_aim: float = 0.0
 var _dash_count: int = 0
+var _bomb_count: int = 0
 var _autopilot_time: float = 0.0
 
 
@@ -43,6 +45,9 @@ func sample(player: Player, delta: float) -> PlayerInput:
 	if Input.is_action_just_pressed("dash"):
 		_dash_count += 1
 	input.dash_count = _dash_count
+	if Input.is_action_just_pressed("bomb"):
+		_bomb_count += 1
+	input.bomb_count = _bomb_count
 	return input
 
 
@@ -53,6 +58,7 @@ func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 	var input := PlayerInput.new()
 	input.move = Vector2.from_angle(_autopilot_time * 0.7) * 0.5
 	input.dash_count = int(_autopilot_time / AUTOPILOT_DASH_INTERVAL)
+	input.bomb_count = int(_autopilot_time / AUTOPILOT_BOMB_INTERVAL)
 
 	var nearest: Enemy = null
 	var nearest_distance := INF

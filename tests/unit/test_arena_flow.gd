@@ -66,3 +66,34 @@ func test_level_up_pauses_until_pick_then_applies_upgrade() -> void:
 	await wait_physics_frames(2)
 	assert_eq(_arena._phase, Arena.Phase.PLAYING)
 	assert_eq(_local_player().upgrade_ids, [choice])
+
+
+func _bomb_input(count: int) -> PlayerInput:
+	var input := PlayerInput.new()
+	input.bomb_count = count
+	return input
+
+
+func test_bomb_press_spends_one_bomb_and_stops_at_zero() -> void:
+	var player := _local_player()
+	watch_signals(player)
+	player._simulate(_bomb_input(1), 1.0 / 60.0)
+	player._simulate(_bomb_input(1), 1.0 / 60.0)
+	assert_eq(player.bombs_left, player.stats.bombs_per_stage - 1, "holding doesn't re-trigger")
+	player._simulate(_bomb_input(2), 1.0 / 60.0)
+	player._simulate(_bomb_input(3), 1.0 / 60.0)
+	assert_eq(player.bombs_left, 0)
+	assert_signal_emit_count(player, "bomb_requested", 2)
+
+
+func test_bomb_clears_bullets_damages_enemies_and_protects() -> void:
+	var player := _local_player()
+	var at := player.state.position
+	_arena._enemy_bullets.spawn(at + Vector2(100, 0), Vector2.ZERO, 1, 5.0, 0)
+	_arena._enemy_bullets.spawn(at + Vector2(400, 0), Vector2.ZERO, 1, 5.0, 0)
+	var ghoul := _arena._enemies.spawn(EnemyTypes.Id.GHOUL, at + Vector2(50, 0))
+	_arena._enemies.rebuild_grid()
+	_arena._on_player_bomb_requested(player)
+	assert_eq(_arena._enemy_bullets.count(), 1, "far bullet survives")
+	assert_eq(ghoul.hp, ghoul.max_hp - Arena.BOMB_DAMAGE)
+	assert_true(player.health.is_invulnerable())

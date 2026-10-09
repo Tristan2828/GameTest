@@ -28,6 +28,11 @@ const SPAWN_OFFSETS: Array[Vector2] = [Vector2(-24, -24), Vector2(24, -24), Vect
 ## Enemy bullets: hearts per hit and how long they fly.
 const ENEMY_BULLET_DAMAGE: int = 1
 const ENEMY_BULLET_LIFETIME: float = 7.0
+## Bombs: clear enemy bullets in a big radius, hurt enemies in a smaller one.
+const BOMB_CLEAR_RADIUS: float = 220.0
+const BOMB_DAMAGE_RADIUS: float = 90.0
+const BOMB_DAMAGE: int = 60
+const BOMB_INVULNERABILITY: float = 1.5
 ## Clients fast-forward enemy patterns by at most this much (very laggy = less fair, not broken).
 const MAX_PATTERN_FAST_FORWARD: float = 0.4
 ## Enemies appear just off-screen: the screen is 640x360, so ~367 px to a corner.
@@ -39,7 +44,7 @@ const GRID_SIZE: int = 32
 const FLOOR_COLOR: Color = Color(0.09, 0.08, 0.11)
 const GRID_COLOR: Color = Color(0.13, 0.12, 0.16)
 const WALL_COLOR: Color = Color(0.4, 0.33, 0.5)
-const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Esc leave"
+const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Q / RB bomb   Esc leave"
 const COPIED_FEEDBACK_SECONDS: float = 4.0
 ## In --autopilot test mode, the host restarts by itself this long after a stage ends.
 const AUTOPILOT_RESTART_DELAY: float = 2.0
@@ -178,8 +183,8 @@ func debug_report() -> String:
 	var role := "host" if multiplayer.is_server() else "client"
 	lines.append("[report] peer %d (%s)  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, Phase.keys()[_phase], _elapsed])
 	for player: Player in _player_nodes():
-		var line := "[report]   player %d slot %d at %s  hearts %d/%d  upgrades %s" % [
-			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts, player.upgrade_ids]
+		var line := "[report]   player %d slot %d at %s  hearts %d/%d  bombs %d  upgrades %s" % [
+			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts, player.bombs_left, player.upgrade_ids]
 		if player.is_local() and not multiplayer.is_server():
 			line += "  corrections=%d largest=%.2fpx" % [player.correction_count, player.largest_correction]
 		lines.append(line)
@@ -243,6 +248,7 @@ func _spawn_player(data: Variant) -> Node:
 	var player: Player = PLAYER_SCENE.instantiate()
 	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS)
 	player.shot_requested.connect(_on_player_shot_requested)
+	player.bomb_requested.connect(_on_player_bomb_requested)
 	return player
 
 
@@ -434,6 +440,25 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2])
 
 
+## Host: a player bombed. Resolve it here and show it on every screen.
+func _on_player_bomb_requested(bomber: Player) -> void:
+	var at := bomber.state.position
+	bomber.health.invulnerable_left = maxf(bomber.health.invulnerable_left, BOMB_INVULNERABILITY)
+	_enemies.damage_in_radius(at, BOMB_DAMAGE_RADIUS, BOMB_DAMAGE, bomber.peer_id)
+	_detonate_bomb(at)
+	for peer_id: int in _ready_peers:
+		_receive_bomb.rpc_id(peer_id, at)
+
+
+## Everyone: clear enemy bullets and show the blast.
+func _detonate_bomb(at: Vector2) -> void:
+	_enemy_bullets.clear_near(at, BOMB_CLEAR_RADIUS)
+	var blast := BombBlast.new()
+	blast.radius = BOMB_CLEAR_RADIUS
+	blast.position = at
+	add_child(blast)
+
+
 ## Host: an enemy (or boss) fires a pattern. Spawn it here and tell clients.
 func _fire_enemy_pattern(pattern: int, origin: Vector2, aim: float) -> void:
 	var seed_value := _rng.randi() & 0x7fffffff
@@ -471,6 +496,7 @@ func _update_hud() -> void:
 	var local := _local_player()
 	if local != null:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
+		_hud.set_bombs(local.bombs_left)
 	var boss := _enemies.find_boss()
 	if boss != null and not _boss_seen:
 		_boss_seen = true
@@ -548,6 +574,7 @@ func _send_snapshots() -> void:
 		var hearts := PackedByteArray()
 		var max_hearts := PackedByteArray()
 		var flags := PackedByteArray()
+		var bombs := PackedByteArray()
 		for player: Player in _player_nodes():
 			ids.append(player.peer_id)
 			positions.append(player.state.position)
@@ -556,9 +583,10 @@ func _send_snapshots() -> void:
 			hearts.append(player.health.hearts)
 			max_hearts.append(player.health.max_hearts)
 			flags.append((1 if player.state.is_dashing() else 0) | (2 if player.health.is_invulnerable() else 0))
+			bombs.append(player.bombs_left)
 		var waiting := PackedInt32Array(_level_up.waiting_ids)
 		for peer_id: int in peers:
-			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags,
+			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, bombs,
 				_elapsed, _phase, _team.level, _team.xp, waiting, _level_up.countdown_left)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
@@ -576,13 +604,14 @@ func _notify_ready() -> void:
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
-		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
+		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray, bombs: PackedByteArray,
 		elapsed: float, phase: int, team_level: int, team_xp: int,
 		level_up_waiting: PackedInt32Array, level_up_countdown: float) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
 			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
+			player.bombs_left = bombs[i]
 	_sync_clock(elapsed)
 	_team.level = team_level
 	_team.xp = team_xp
@@ -617,6 +646,11 @@ func _receive_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2A
 	for i: int in patterns.size():
 		var age := clampf(dodge_time - fire_times[i], 0.0, MAX_PATTERN_FAST_FORWARD)
 		_spawn_enemy_pattern(patterns[i], origins[i], aims[i], seeds[i], age)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_bomb(at: Vector2) -> void:
+	_detonate_bomb(at)
 
 
 @rpc("authority", "call_remote", "reliable")

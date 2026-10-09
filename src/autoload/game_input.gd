@@ -29,6 +29,7 @@ func _enter_tree() -> void:
 		_joy(JOY_BUTTON_LEFT_SHOULDER),
 		_joy(JOY_BUTTON_A),
 	])
+	_add_action("bomb", [_key(KEY_Q), _mouse(MOUSE_BUTTON_MIDDLE), _joy(JOY_BUTTON_RIGHT_SHOULDER), _joy(JOY_BUTTON_Y)])
 
 
 func _add_action(action: StringName, events: Array[InputEvent]) -> void:

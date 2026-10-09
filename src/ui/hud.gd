@@ -21,6 +21,10 @@ func set_hearts(current: int, maximum: int) -> void:
 	_hearts.set_hearts(current, maximum)
 
 
+func set_bombs(count: int) -> void:
+	_hearts.set_bombs(count)
+
+
 func set_progress(level: int, ratio: float) -> void:
 	_xp_bar.set_ratio(ratio)
 	_level_label.text = "Lv %d" % level

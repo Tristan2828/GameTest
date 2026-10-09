@@ -12,6 +12,8 @@ extends Node2D
 ## physics loop, so the order of updates is always the same.
 
 signal shot_requested(shooter: Player, input_seq: int)
+## Host: this player used a bomb (already paid for).
+signal bomb_requested(bomber: Player)
 
 const SLOT_COLORS: Array[Color] = [
 	Color(0.36, 0.78, 0.95),
@@ -40,6 +42,8 @@ var bounds: Rect2 = Rect2()
 var state: PlayerState = PlayerState.new()
 ## Host-owned; clients get copies from snapshots.
 var health: PlayerHealth = PlayerHealth.new()
+## Bombs left this stage (host-owned, synced in snapshots).
+var bombs_left: int = 0
 ## Every upgrade this player has taken, in order (same on all peers).
 var upgrade_ids: Array[int] = []
 ## Host: sequence number of the last input it simulated for this player.
@@ -52,6 +56,8 @@ var _local_input: LocalInput = null
 var _next_input_seq: int = 0
 var _input_queue: Array[PlayerInput] = []
 var _newest_received_seq: int = -1
+## Host: last bomb_count seen from this player's input.
+var _last_bomb_count: int = 0
 var _predictor: ClientPredictor = ClientPredictor.new()
 ## Drawn offset from the simulated position; shrinks to zero so corrections look smooth.
 var _visual_offset: Vector2 = Vector2.ZERO
@@ -70,6 +76,7 @@ func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_
 	# Each player gets its own copy so upgrades only change this player.
 	stats = stats.duplicate()
 	health.reset(stats.max_hearts)
+	bombs_left = stats.bombs_per_stage
 	state.position = spawn_position
 	position = spawn_position
 	_remote_target = spawn_position
@@ -141,7 +148,7 @@ func tick(delta: float) -> void:
 			_simulate_queued_inputs(delta)
 	elif is_local():
 		var input := _read_local_input()
-		_submit_input.rpc_id(1, input.seq, input.move, input.aim, input.fire, input.dash_count)
+		_submit_input.rpc_id(1, input.seq, input.move, input.aim, input.fire, input.dash_count, input.bomb_count)
 		_simulate(input, delta)
 		_predictor.record(input.seq, state.position)
 
@@ -243,13 +250,18 @@ func _simulate_queued_inputs(delta: float) -> void:
 
 func _simulate(input: PlayerInput, delta: float) -> void:
 	last_processed_seq = input.seq
+	if multiplayer.is_server() and input.bomb_count != _last_bomb_count:
+		_last_bomb_count = input.bomb_count
+		if bombs_left > 0:
+			bombs_left -= 1
+			bomb_requested.emit(self)
 	if PlayerMotor.step(state, input, stats, bounds, delta):
 		shot_requested.emit(self, input.seq)
 
 
 ## Client -> host, every tick. Unreliable: a lost packet is cheaper than a delay.
 @rpc("any_peer", "call_remote", "unreliable_ordered", 2)
-func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, dash_count: int) -> void:
+func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, dash_count: int, bomb_count: int) -> void:
 	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != peer_id:
 		return
 	if seq <= _newest_received_seq:
@@ -261,6 +273,7 @@ func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, dash_count: 
 	input.aim = aim
 	input.fire = fire
 	input.dash_count = dash_count
+	input.bomb_count = bomb_count
 	_input_queue.append(input)
 	while _input_queue.size() > MAX_QUEUED_INPUTS:
 		_input_queue.pop_front()

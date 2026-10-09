@@ -15,6 +15,7 @@ Controls (keyboard + mouse, or a gamepad):
   Aim    mouse / right stick
   Fire   left mouse / right trigger (pushing the right stick also fires)
   Dash   Space or right mouse / left trigger
+  Bomb   Q or middle mouse / right bumper (2 per stage; clears enemy bullets)
   Leave  Esc
   Host only, after a stage ends: R / Start to play again
 

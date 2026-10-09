@@ -16,6 +16,8 @@ extends Resource
 @export var max_hearts: int = 3
 ## Seconds of invulnerability after taking a hit.
 @export var hit_invulnerability: float = 1.0
+## Bombs at the start of each stage.
+@export var bombs_per_stage: int = 2
 
 @export_group("Body")
 ## Size used for drawing and keeping the player inside the arena.
