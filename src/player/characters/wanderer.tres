@@ -13,6 +13,7 @@ max_hearts = 3
 hit_invulnerability = 1.0
 body_radius = 6.0
 hitbox_radius = 2.0
+pickup_radius = 40.0
 shot_pattern = 0
 fire_interval = 0.12
 bullet_speed = 320.0

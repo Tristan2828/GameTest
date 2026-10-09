@@ -3,6 +3,8 @@ extends CanvasLayer
 ## In-game overlay. The arena pushes values in; the HUD only displays them.
 
 @onready var _hearts: HeartsDisplay = %Hearts
+@onready var _xp_bar: XpBar = %XpBar
+@onready var _level_label: Label = %LevelLabel
 @onready var _timer_label: Label = %TimerLabel
 @onready var _status_label: Label = %StatusLabel
 @onready var _info_label: Label = %InfoLabel
@@ -13,6 +15,11 @@ extends CanvasLayer
 
 func set_hearts(current: int, maximum: int) -> void:
 	_hearts.set_hearts(current, maximum)
+
+
+func set_progress(level: int, ratio: float) -> void:
+	_xp_bar.set_ratio(ratio)
+	_level_label.text = "Lv %d" % level
 
 
 func set_time_left(seconds: float) -> void:

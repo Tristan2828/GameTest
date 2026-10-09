@@ -102,6 +102,12 @@ func can_be_hit() -> bool:
 	return not health.is_downed() and not health.is_invulnerable() and not state.is_dashing()
 
 
+## Best known position of this player on this peer: simulated on the host and
+## for your own player; smoothed snapshot position for other players on clients.
+func world_position() -> Vector2:
+	return position if _shows_remote_state() else state.position
+
+
 func muzzle_position() -> Vector2:
 	return state.position + Vector2.from_angle(state.aim) * MUZZLE_DISTANCE
 

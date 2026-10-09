@@ -43,6 +43,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/combat/`: `ProjectileManager` (flat-array bullet pool) and `ShotPatterns` (seeded, deterministic patterns).
 - `src/enemies/`: `EnemyManager` (pool of 300, separation, byte-packed snapshots), `Enemy`, `EnemyType` resources in `types/` registered in `EnemyTypes.ALL` (index = network id; append only).
 - `src/core/`: engine-agnostic helpers (`SpatialGrid`).
+- `src/progression/`: `TeamProgress` (shared XP/level curve) and `GemManager` (flat-array XP gem pool; reliable batched spawn/collect events; clients animate the magnet pull, and only host pickups count).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
 - `tools/`: PowerShell helper scripts.
 

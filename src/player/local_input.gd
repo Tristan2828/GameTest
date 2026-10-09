@@ -70,4 +70,11 @@ func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 		input.fire = true
 		if to_enemy.length() < 120.0:
 			input.move = (input.move - to_enemy.normalized()).limit_length(1.0)
+			return input
+	# Nothing close: go vacuum up XP.
+	var gems := player.get_tree().get_first_node_in_group("gems") as GemManager
+	if gems != null:
+		var gem := gems.nearest_gem(player.global_position)
+		if gem.is_finite() and gem.distance_to(player.global_position) < 300.0:
+			input.move = (gem - player.global_position).normalized()
 	return input

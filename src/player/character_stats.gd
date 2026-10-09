@@ -22,6 +22,8 @@ extends Resource
 @export var body_radius: float = 6.0
 ## The much smaller circle that enemy bullets must touch to hurt the player.
 @export var hitbox_radius: float = 2.0
+## XP gems within this distance fly to the player.
+@export var pickup_radius: float = 40.0
 
 @export_group("Main gun")
 @export var shot_pattern: ShotPatterns.Id = ShotPatterns.Id.BASIC

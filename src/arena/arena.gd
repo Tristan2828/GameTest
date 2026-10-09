@@ -42,6 +42,8 @@ var _director: SpawnDirector = SpawnDirector.new(randi())
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Host: kills per peer id (for reports; scoreboards later).
 var _kills_by_peer: Dictionary[int, int] = {}
+## Shared team XP and level (host-owned, copied to clients in snapshots).
+var _team: TeamProgress = TeamProgress.new()
 var _copied_feedback_left: float = 0.0
 var _announced_invite: bool = false
 var _time_since_stage_end: float = 0.0
@@ -49,6 +51,7 @@ var _time_since_stage_end: float = 0.0
 @onready var _players: Node2D = $Players
 @onready var _player_spawner: MultiplayerSpawner = $PlayerSpawner
 @onready var _enemies: EnemyManager = $Enemies
+@onready var _gems: GemManager = $Gems
 @onready var _projectiles: ProjectileManager = $Projectiles
 @onready var _hud: Hud = $Hud
 
@@ -66,6 +69,7 @@ func _ready() -> void:
 		Net.invite.changed.connect(_on_invite_changed)
 		_on_invite_changed()
 		_enemies.enemy_killed.connect(_on_enemy_killed)
+		_gems.collected.connect(_on_gem_collected)
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
 		_add_player(1)
@@ -89,6 +93,7 @@ func _physics_process(delta: float) -> void:
 			_enemies.rebuild_grid()
 		_projectiles.step(delta)
 		_projectiles.resolve_hits(_enemies, is_host)
+		_tick_gems(delta, is_host)
 		if is_host:
 			_update_phase()
 	elif is_host and LaunchOptions.autopilot:
@@ -133,7 +138,8 @@ func debug_report() -> String:
 		if player.is_local() and not multiplayer.is_server():
 			line += "  corrections=%d largest=%.2fpx" % [player.correction_count, player.largest_correction]
 		lines.append(line)
-	lines.append("[report]   active enemies: %d" % _enemies.active_count())
+	lines.append("[report]   active enemies: %d   gems on ground: %d   team level %d (%d xp)" % [
+		_enemies.active_count(), _gems.count(), _team.level, _team.xp])
 	if multiplayer.is_server():
 		lines.append("[report]   damage by peer: %s" % [_enemies.damage_by_peer])
 		lines.append("[report]   kills by peer: %s" % [_kills_by_peer])
@@ -259,11 +265,29 @@ func _end_stage(phase: Phase) -> void:
 	_phase = phase
 	_enemies.clear_all()
 	_projectiles.clear()
+	_gems.clear()
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
 
-func _on_enemy_killed(_enemy: Enemy, killer_peer_id: int) -> void:
+func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
 	_kills_by_peer[killer_peer_id] = _kills_by_peer.get(killer_peer_id, 0) + 1
+	if not _gems.spawn_host(enemy.position, enemy.type.xp_value):
+		# Too many gems on the ground: grant the XP directly instead.
+		_on_gem_collected(enemy.type.xp_value, killer_peer_id)
+
+
+func _on_gem_collected(value: int, _collector_peer_id: int) -> void:
+	_team.add_xp(value)
+
+
+func _tick_gems(delta: float, is_host: bool) -> void:
+	var positions: Dictionary[int, Vector2] = {}
+	var radii: Dictionary[int, float] = {}
+	for player: Player in _player_nodes():
+		if not player.is_downed():
+			positions[player.peer_id] = player.world_position()
+			radii[player.peer_id] = player.stats.pickup_radius
+	_gems.tick(delta, positions, radii, is_host)
 
 
 # --- Shots -------------------------------------------------------------------
@@ -299,6 +323,7 @@ func _update_hud() -> void:
 	if local != null:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
 	_hud.set_time_left(_stage_duration - _elapsed)
+	_hud.set_progress(_team.level, _team.progress_ratio())
 
 	var status := "Solo"
 	if Net.is_online():
@@ -346,6 +371,7 @@ func _send_snapshots() -> void:
 		return
 	var peers: Array[int] = []
 	peers.assign(_ready_peers.keys())
+	_gems.flush_events(peers)
 	if _tick % PLAYER_SNAPSHOT_INTERVAL_TICKS == 0:
 		var ids := PackedInt32Array()
 		var positions := PackedVector2Array()
@@ -363,7 +389,8 @@ func _send_snapshots() -> void:
 			max_hearts.append(player.health.max_hearts)
 			flags.append((1 if player.state.is_dashing() else 0) | (2 if player.health.is_invulnerable() else 0))
 		for peer_id: int in peers:
-			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, _elapsed, _phase)
+			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags,
+				_elapsed, _phase, _team.level, _team.xp)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
 
@@ -372,22 +399,27 @@ func _send_snapshots() -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func _notify_ready() -> void:
 	if multiplayer.is_server():
-		_ready_peers[multiplayer.get_remote_sender_id()] = true
+		var peer_id := multiplayer.get_remote_sender_id()
+		_ready_peers[peer_id] = true
+		_gems.send_full_state(peer_id)
 
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
 		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
-		elapsed: float, phase: int) -> void:
+		elapsed: float, phase: int, team_level: int, team_xp: int) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
 			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
 	_elapsed = elapsed
+	_team.level = team_level
+	_team.xp = team_xp
 	if phase != _phase:
 		_phase = phase as Phase
 		if _phase != Phase.PLAYING:
 			_projectiles.clear()
+			_gems.clear()
 
 
 @rpc("authority", "call_remote", "reliable")

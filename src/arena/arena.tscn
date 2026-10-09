@@ -4,9 +4,13 @@
 [ext_resource type="Script" path="res://src/enemies/enemy_manager.gd" id="2_enemies"]
 [ext_resource type="Script" path="res://src/combat/projectile_manager.gd" id="3_projectiles"]
 [ext_resource type="PackedScene" path="res://src/ui/hud.tscn" id="4_hud"]
+[ext_resource type="Script" path="res://src/progression/gem_manager.gd" id="5_gems"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
+
+[node name="Gems" type="Node2D" parent="."]
+script = ExtResource("5_gems")
 
 [node name="Enemies" type="Node2D" parent="."]
 script = ExtResource("2_enemies")
