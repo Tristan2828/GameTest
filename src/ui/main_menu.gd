@@ -3,6 +3,8 @@ extends CanvasLayer
 ## Title menu: play solo, host a game, or join a host by IP address. Also opens
 ## Settings, the Compendium (info on heroes, weapons, items, enemies) and the
 ## Playtest Checklist (what still needs testing, from docs/PLAYTEST.md).
+## In the exported game it also checks GitHub for a newer version and offers an
+## Update button (see Updater).
 
 signal solo_requested
 signal host_requested(port: int)
@@ -22,6 +24,11 @@ signal join_requested(address: String, port: int)
 @onready var _panel: Control = $Center/Panel
 @onready var _backdrop: TextureRect = %Backdrop
 var compendium: Compendium = null
+var updater: Updater = null
+@onready var _update_row: Control = %UpdateRow
+@onready var _update_label: Label = %UpdateLabel
+@onready var _update_button: Button = %UpdateButton
+@onready var _page_button: Button = %PageButton
 var checklist: PlaytestChecklist = null
 
 
@@ -55,6 +62,50 @@ func _ready() -> void:
 			_version_label.show()
 			button.grab_focus())
 	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
+	updater = Updater.new()
+	add_child(updater)
+	updater.changed.connect(_refresh_update)
+	_update_button.pressed.connect(updater.update)
+	_page_button.pressed.connect(updater.open_release_page)
+	_refresh_update()
+
+
+## The update line under the menu buttons, from the updater's state.
+func _refresh_update() -> void:
+	var latest := updater.latest.version if updater.latest != null else "?"
+	var text := ""
+	var color := Color(0.55, 0.9, 0.45)
+	_update_button.visible = false
+	_page_button.visible = false
+	match updater.state:
+		Updater.State.AVAILABLE:
+			text = "Version %s is out!" % latest
+			_update_button.text = "Update now"
+			_update_button.visible = true
+		Updater.State.DOWNLOADING:
+			text = "Downloading %s... %d%%" % [latest, roundi(updater.progress() * 100.0)]
+		Updater.State.INSTALLING:
+			text = "Installing... the game will restart."
+		Updater.State.FAILED:
+			text = updater.error
+			color = Color(0.95, 0.5, 0.45)
+			_update_button.text = "Try again"
+			_update_button.visible = true
+			_page_button.visible = true
+	_update_label.text = text
+	_update_label.add_theme_color_override("font_color", color)
+	_update_row.visible = not text.is_empty()
+	var suffix := ""
+	if updater.state == Updater.State.UP_TO_DATE:
+		suffix = "   (latest version)"
+	elif updater.state == Updater.State.CHECKING:
+		suffix = "   checking for updates..."
+	_version_label.text = BuildInfo.describe() + suffix
+	# No starting a game mid-update (re-enabled if the update fails).
+	if updater.state == Updater.State.DOWNLOADING or updater.state == Updater.State.INSTALLING:
+		_set_buttons_enabled(false)
+	elif updater.state == Updater.State.FAILED:
+		_set_buttons_enabled(true)
 
 
 func show_menu(message: String = "") -> void:

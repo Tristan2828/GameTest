@@ -17,6 +17,10 @@ automatically in the playtest **Discord**. No bots: only Discord webhooks.
    pwsh tools/release.ps1           # builds, creates release v<version> with the zip
    ```
 5. About a minute later, the release appears in Discord `#builds`.
+6. Players on an older version see "Version X is out!" with an **Update now** button on the
+   title screen (in every version after v0.14.0). It downloads the zip from this release, swaps `GameTest.exe`
+   and restarts. So keep the asset name `GameTest-<version>-windows.zip` with `GameTest.exe`
+   at its root, and never publish a release with a lower version than the last one.
 
 `release.ps1` refuses to run unless you are on `main`, have no uncommitted changes, are pushed
 to GitHub, and the version's tag doesn't exist yet.

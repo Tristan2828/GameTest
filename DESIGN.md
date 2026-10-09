@@ -227,6 +227,7 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 10. *(Added after the playtest list)* Title menu: **Compendium** (heroes, weapons, upgrades, relics, pickups, enemies, bosses; all numbers read from the game data) and **Playtest Checklist** (the items in `docs/PLAYTEST.md`, tick as you test, "Copy what's left" to paste to Claude).
 11. *(Added after the playtest list)* Lobby: **Difficulty** and **Custom Game** pages (see Milestone 5, Lobby).
 12. *(Reported after)* Slowdown for 10-20 s after a boss spawns with 2 players: boss bullets (7 s lifetime, aimed at each player) were each drawn as two `draw_circle` shapes, hundreds of draw calls rebuilt every physics tick. Now one baked texture per bullet/gem glow, off-screen ones skipped: client physics step with ~110 bullets 4.7 ms -> 1.1 ms, draw calls ~650 -> ~150. Enemy grid also cheaper (~15%).
+13. *(Requested after)* In-game updater: the title screen checks GitHub's latest release; if newer, **Update now** downloads the zip, swaps `GameTest.exe` (renames the running one to `.old`) and restarts. Falls back to opening the release page.
 
 ### Where things stand (2026-10-09, v0.13.0, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
