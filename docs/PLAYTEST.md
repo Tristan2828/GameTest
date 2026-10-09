@@ -1,4 +1,4 @@
-# Playtest Review (v0.11.0)
+# Playtest Review (v0.12.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (159 unit tests, plus online host+client runs).
@@ -48,11 +48,19 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0 Changes from your first playtest (check these first)
+- [ ] Gems: easy to spot now? Three tiers distinguishable?
+- [ ] Minimap: helpful? Did you notice the red edge warning near walls?
+- [ ] Text: shop, level-up cards, lobby, HUD all readable now?
+- [ ] Shop: about one relic per shop now? Too stingy? (*Tune: coin_chance in enemy `.tres`, relic `price`, `BOSS_BOUNTY` in `src/arena/arena.gd`*)
+- [ ] Abilities: Dash / Grave Blast / Blink each feel good? Cooldowns right? (*Tune: `ability_cooldown` etc. in `src/player/characters/*.tres`*)
+- [ ] Version shown on the title screen.
+
 ### 3.1 Moment-to-moment feel
 - [ ] Does movement still feel instant and smooth (it did in M1/M2)?
 - [ ] Shooting: does the main gun feel good? Too weak or strong early on?
-- [ ] Dash: is the cooldown OK? Do you trust dashing *through* bullets?
-- [ ] **New:** screen shake (hurt, bombs, boss death). Too much, too little, or annoying? *(Can be turned off in Settings)*
+- [ ] Abilities (Space / LT): see 3.0.
+- [ ] **New:** screen shake (hurt, Grave Blast, boss death). Too much, too little, or annoying? *(Can be turned off in Settings)*
 - [ ] **New:** hit sparks, death puffs, red flash when hurt. Helpful or noisy?
 - [ ] **New:** music. Menu/shop theme, one track per stage, boss theme. Does each fit its stage? Gets repetitive (loops are 14–27 s)? Too loud vs effects? *(Music volume in Settings)*
   - *Tune: scores are text in `src/audio/tracks.gd` (tempo, chords, melody, drums).*
@@ -97,9 +105,9 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 
 | Character | Feels distinct? | Too strong / weak? | Ability noticeable? |
 |---|---|---|---|
-| Wanderer (Second Wind) | | | |
-| Gravekeeper (shotgun, 5 hearts, healing bombs) | | | |
-| Hexblade Witch (fast, 2 hearts, piercing hexes, Blink dash) | | | |
+| Wanderer (Dash) | | | |
+| Gravekeeper (shotgun, 5 hearts, Grave Blast) | | | |
+| Hexblade Witch (fast, 2 hearts, piercing hexes, Blink) | | | |
 
 - [ ] Gravekeeper's shotgun range (short). Fun or frustrating?
 - [ ] Witch with 2 hearts. Too fragile?
@@ -114,7 +122,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 ### 3.7 Coins, shop and relics
 - [ ] Coin income: could you afford 1–2 relics per shop? (Boss bounty 20 / 30 / 40 coins + drops.)
 - [ ] Relic prices (15–30) and reroll price (5). Right?
-- [ ] Any relic clearly best / useless? (Cursed Skull, Iron Boots, Cracked Hourglass, Grave Lantern, Bomb Satchel,
+- [ ] Any relic clearly best / useless? (Cursed Skull, Iron Boots, Cracked Hourglass, Grave Lantern, Bone Charm,
       Hunter's Eye, Vampire Fang, Holy Water)
 - [ ] Shop flow: clear what to do? 45 s countdown after first Ready OK?
   - *Tune: `src/progression/relics/*.tres`, `BOSS_BOUNTY` in `src/arena/arena.gd`, coin drop chances in enemy `.tres`.*
@@ -125,10 +133,9 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Do weapons make the screen too busy to read enemy bullets?
   - *Tune: `src/combat/weapons/*.tres`, `ALTAR_TIMES` in `src/combat/weapon_system.gd`.*
 
-### 3.9 Bombs
-- [ ] 2 bombs per stage (Gravekeeper 3). Too few / many?
-- [ ] Clear radius big enough to save you? Damage noticeable?
-  - *Tune: `BOMB_*` constants in `src/arena/arena.gd`; `bombs_per_stage` in character `.tres`.*
+### 3.9 Grave Blast (Gravekeeper)
+- [ ] Clear radius big enough to save you? Damage noticeable? 14 s cooldown fair?
+  - *Tune: `blast_*` and `ability_cooldown` in `src/player/characters/gravekeeper.tres`.*
 
 ### 3.10 Ghosts and co-op (session D)
 - [ ] Being a ghost: fun enough to stay engaged until the next stage? Too long a wait?
@@ -169,7 +176,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
-- **Bombs:** 2 per stage, refilled each stage.
+- **Abilities:** one per character on a cooldown (Dash / Grave Blast / Blink), replacing dash and bombs.
 - **Characters / abilities**, as listed in 3.5.
 - **Mid-run joiners** play the Wanderer.
 - **Sound** is synthesized placeholder; no music yet.

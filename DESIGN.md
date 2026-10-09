@@ -58,13 +58,12 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Bullet density:** readable (Enter the Gungeon-like), not hardcore shmup. See *Ideas for Later*.
 
 ### Player
-- **Health:** 3 hearts, with a hitbox much smaller than the sprite. Enemy contact costs 1 heart, then ~1s of invulnerability (flashing). Dashing is also invulnerable.
+- **Health:** a few hearts (depends on the character), with a hitbox much smaller than the sprite. Enemy contact costs 1 heart, then ~1s of invulnerability (flashing).
 - **Downed:** at 0 hearts the player is downed (can't act). Placeholder until ghosts arrive in M4.
 - **Movement:** free 8-direction / analog movement.
 - **Aiming:** manual 360° aim with the mouse or right stick.
 - **Defense:**
-  - **Dodge roll / dash:** brief invulnerability or reposition, on a cooldown.
-  - **Bomb:** limited-use screen clear for enemy bullets.
+  - **One character ability** on one button, on a cooldown (owner decision after the first playtest; replaces the separate dash and bomb). Dash and a bomb-like blast are abilities of specific characters.
 
 ### Weapons
 - **Main gun:** aimed and fired manually by the player. Defined by the character.
@@ -130,7 +129,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
   - Boss HP scales with player count (+75% per extra player). Regular enemies still don't scale (see Co-op rules).
 - **First ranged enemy, Cultist** (from 2:00): keeps its distance and fires a slow 3-bullet aimed fan.
 - **Enemy bullets:** 1 heart per hit; readable speeds (90–140 px/s); magenta glow with a white core. Dashing passes through them.
-- **Bomb:** 2 per stage, refilled at stage start. It clears enemy bullets within a large radius around you, damages nearby enemies, and gives brief invulnerability. Bound to Q / middle mouse / RB / Y.
+- ~~**Bomb:** 2 per stage.~~ Replaced in v0.12.0 by character abilities (the Gravekeeper's Grave Blast works like the old bomb, on a cooldown).
 - **Fair dodging online:** enemy bullet patterns are fast-forwarded on clients by the network delay, so what you dodge on your screen matches what the host checks.
 - **Arena look:** dark stone floor with seeded variation, plus decorative graves and bones (no collision yet).
 
@@ -142,13 +141,14 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
   - Beating the stage 3 boss = **Victory**.
 - **Between stages:** a **shop break**. The run keeps your team level, upgrades, relics, weapons and coins.
 - **Ghosts:** a downed player becomes a ghost until the next stage.
-  - Ghosts float around freely. They can't shoot, bomb or be hurt.
+  - Ghosts float around freely. They can't shoot, use abilities or be hurt.
   - Ghosts **can still collect XP gems and coins** for the team.
-  - Everyone respawns with full hearts and refilled bombs at the start of the next stage. The run ends if all players are down.
-- **Coins:** enemies sometimes drop coins (10% basic, 50% Ghoul/Cultist; the boss drops a pile). First come, first served: coins go to whoever picks them up.
+  - Everyone respawns with full hearts and a ready ability at the start of the next stage. The run ends if all players are down.
+- **Coins:** enemies sometimes drop coins (v0.12.0: 4% basic, 20% tougher enemies), plus a boss bounty for everyone (25, +15 per stage). First come, first served: coins go to whoever picks them up.
 - **Shop:**
   - Each player sees their own 4 relic offers with prices and buys with their own coins.
-  - A reroll costs 5 coins.
+  - Relics cost 40–80 (v0.12.0, after the playtest showed 350 coins in round 1). Target: about one relic per shop, two if you save.
+  - Rerolls cost 10, then +10 each within the same shop.
   - The shop closes when everyone presses Ready, or 45s after the first Ready (same pattern as level-ups).
 - **Relics:** passive items with stat effects and trade-offs (e.g. Cursed Skull: +damage, −1 max heart). Each relic can be bought once.
 - **Auto weapons:**
@@ -162,9 +162,10 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
   - After Victory or Run over, the host returns everyone to the lobby.
   - Friends joining mid-run still drop in, as the Wanderer.
 - **Characters (one passive ability each):**
-  - **Wanderer:** balanced. *Second Wind:* the first lethal hit each stage leaves you at 1 heart instead.
-  - **Gravekeeper:** slow, 5 hearts, short-range shotgun. *Grave Ward:* starts each stage with 3 bombs, and each bomb also heals 1 heart.
-  - **Hexblade Witch:** fast, 2 hearts, rapid piercing bolts. *Blink:* longer, faster-recharging dash.
+  - **Wanderer:** balanced. Ability **Dash** (0.8s): quick dash, can't be hit while dashing.
+  - **Gravekeeper:** slow, 5 hearts, short-range shotgun. Ability **Grave Blast** (14s): clears nearby enemy bullets, damages enemies around you, heals 1 heart.
+  - **Hexblade Witch:** fast, 2 hearts, rapid piercing bolts. Ability **Blink** (2.5s): instant short teleport, briefly untouchable.
+  - (v0.12.0: the old passives Second Wind and Grave Ward were removed when abilities replaced dash/bomb.)
 - **Stages** (each has its own floor, enemy mix and boss; data-driven `StageDef` resources):
   1. **The Crypt:** Shamblers, Bats, Ghouls, Cultists. Boss: the Bone Warden.
   2. **The Bone Marsh:** Mire Crawlers (fast swarms), Plague Spitters (slow bullet rings), Ghouls. Boss: the Mire Hag (sweeping bullet walls, random sprays).
@@ -195,6 +196,16 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
 ### Animation pass (v0.11.0, by Claude)
 - Walk cycles for all heroes and walking enemies; attack poses for bosses and ranged enemies when they fire; enemies squash and fade on death (bosses take longer); coins spin and pickups bob.
 - Fixed: left-facing sprites were drawn one sprite-width off their real position (players and enemy hitboxes didn't line up with what you saw).
+
+### Playtest 1 changes (v0.12.0)
+Owner played solo, beat stage 1. Requested and done:
+1. Better gem art: three crystal tiers (blue / green / big violet) with a glow.
+2. Minimap (top-right) with your view, players, horde, boss, altars; the side near a wall lights up red.
+3. Readable text: a hand-drawn pixel font everywhere; shop and level-up cards split into title / description / price.
+4. Shop economy: far fewer coins, higher prices, escalating rerolls (see Milestone 4 notes).
+5. Character abilities replace dash and bomb (see Milestone 5 notes).
+6. Title screen shows version, build commit and date.
+Also: lobby cards restyled.
 
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.

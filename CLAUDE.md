@@ -65,6 +65,8 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).
 - `-s some_script.gd` runs do NOT get autoloads (`Net`, `GameInput`), so game scenes can't run that way. To check visuals, launch the real game with `--screenshot-dir`.
 - Gamepad must work in every menu. Esc / Start opens the pause menu (`pause` action); R / Select (`restart`) returns to the lobby after a run.
+- Character abilities: one `ability` action; `CharacterStats.ability` picks Dash / Grave Blast / Blink. Movement abilities run in `PlayerMotor` (predicted); the host resolves the rest in `Arena._on_player_ability_used` and broadcasts effects.
+- Text uses `PixelFont` (glyphs as text grids, built at startup): only use font sizes 9 / 18 / 27 (1x/2x/3x). Labels get a 1px drop shadow from the theme; outlines don't work with the bitmap font.
 - Visual effects (`EffectsLayer` particles, screen shake, hurt flash) are spawned locally on every peer from events they already see (`enemy_vanished`, `hit_at`, `hurt`); never send effects over the network.
 - Mirroring sprites: a negative width in `draw_texture_rect` does NOT flip in Godot 4; it just shifts the image a full width sideways. Use `PixelArt.draw()` / `PixelArt.draw_rect_flipped()` (mirror transform).
 - Animation frames are extra sprites named `<sprite>_walk_1/_walk_2` (walk cycle), `<sprite>_attack` (shown briefly when an enemy fires; triggered on every peer by the pattern event), `<sprite>_1` (flap/flicker/spin). Frames must be the same size as the base sprite (tested).
