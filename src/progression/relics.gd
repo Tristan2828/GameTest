@@ -4,7 +4,9 @@ extends RefCounted
 ## relics at the end.
 
 const OFFERS_PER_SHOP: int = 4
-const REROLL_PRICE: int = 5
+## First reroll in a shop costs this; each further reroll costs REROLL_STEP more.
+const REROLL_PRICE: int = 10
+const REROLL_STEP: int = 10
 
 const ALL: Array[Relic] = [
 	preload("res://src/progression/relics/cursed_skull.tres"),

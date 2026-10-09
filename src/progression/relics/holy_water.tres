@@ -12,5 +12,5 @@ amount = 2.0
 script = ExtResource("1_relic")
 title = "Holy Water"
 description = "Your bombs deal 3x damage"
-price = 20
+price = 60
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

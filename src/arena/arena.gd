@@ -23,8 +23,8 @@ const STAGE_HP_GROWTH: float = 0.5
 ## Seconds the "Stage cleared" banner shows before the shop opens.
 const STAGE_CLEAR_DELAY: float = 4.0
 ## Coins every player gets for beating a stage's boss (more in later stages).
-const BOSS_BOUNTY: int = 20
-const BOSS_BOUNTY_PER_STAGE: int = 10
+const BOSS_BOUNTY: int = 25
+const BOSS_BOUNTY_PER_STAGE: int = 15
 ## Horde waves last this long, then the boss arrives.
 const WAVE_DURATION: float = 240.0
 ## Horde spawn rate while the boss is alive (and no pack surges).

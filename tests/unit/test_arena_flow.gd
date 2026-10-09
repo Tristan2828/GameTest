@@ -210,7 +210,7 @@ func test_killed_enemies_sometimes_drop_coins() -> void:
 	for i: int in 100:
 		var enemy := _arena._enemies.spawn(EnemyTypes.Id.GHOUL, Vector2(300 + i, 300))
 		_arena._enemies.damage(enemy, enemy.hp, 1)
-	assert_between(_arena._coins.count(), 25, 75, "Ghouls drop coins about half the time")
+	assert_between(_arena._coins.count(), 6, 40, "Ghouls drop coins about a fifth of the time")
 
 
 func test_run_end_shows_stats_table() -> void:

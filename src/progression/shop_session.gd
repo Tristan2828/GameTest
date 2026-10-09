@@ -11,6 +11,8 @@ const COUNTDOWN_SECONDS: float = 45.0
 ## peer id -> offered relic ids
 var offers: Dictionary[int, Array] = {}
 var ready: Dictionary[int, bool] = {}
+## peer id -> rerolls used in this shop
+var rerolls: Dictionary[int, int] = {}
 ## Seconds left after the first Ready; negative = not started yet.
 var countdown_left: float = -1.0
 
@@ -18,6 +20,7 @@ var countdown_left: float = -1.0
 func start(offered: Dictionary[int, Array]) -> void:
 	offers = offered
 	ready.clear()
+	rerolls.clear()
 	countdown_left = -1.0
 
 
@@ -33,8 +36,12 @@ func can_buy(peer_id: int, relic_id: int, coins: int, owned: Array[int]) -> bool
 	return coins >= Relics.get_relic(relic_id).price
 
 
+func reroll_price(peer_id: int) -> int:
+	return Relics.REROLL_PRICE + Relics.REROLL_STEP * rerolls.get(peer_id, 0)
+
+
 func can_reroll(peer_id: int, coins: int) -> bool:
-	return offers.has(peer_id) and not ready.has(peer_id) and coins >= Relics.REROLL_PRICE
+	return offers.has(peer_id) and not ready.has(peer_id) and coins >= reroll_price(peer_id)
 
 
 ## Returns true if this changed anything.

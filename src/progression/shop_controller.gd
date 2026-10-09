@@ -22,6 +22,7 @@ var _panel: ShopPanel = null
 var _find_player: Callable
 var _get_ready_peers: Callable
 var _my_offers: Array[int] = []
+var _my_reroll_price: int = Relics.REROLL_PRICE
 var _open: bool = false
 var _ready_sent: bool = false
 
@@ -91,7 +92,8 @@ func _host_reroll(peer_id: int) -> void:
 	var player: Player = _find_player.call(peer_id)
 	if player == null or not _session.can_reroll(peer_id, player.coins):
 		return
-	player.coins -= Relics.REROLL_PRICE
+	player.coins -= _session.reroll_price(peer_id)
+	_session.rerolls[peer_id] = _session.rerolls.get(peer_id, 0) + 1
 	_session.offers[peer_id] = Relics.roll_offers(_rng, player.relic_ids)
 	_send_offers(peer_id)
 
@@ -104,10 +106,11 @@ func _host_ready(peer_id: int) -> void:
 func _send_offers(peer_id: int) -> void:
 	var offer: Array[int] = []
 	offer.assign(_session.offers[peer_id])
+	var price := _session.reroll_price(peer_id)
 	if peer_id == multiplayer.get_unique_id():
-		_show_offers(offer)
+		_show_offers(offer, price)
 	else:
-		_receive_offers.rpc_id(peer_id, offer.size(), PackedInt32Array(offer))
+		_receive_offers.rpc_id(peer_id, price, PackedInt32Array(offer))
 
 
 func _refresh_host_status() -> void:
@@ -142,11 +145,12 @@ func refresh_panel(local_player: Player, name_of: Callable) -> void:
 		parts.append("Waiting for %s" % ", ".join(names))
 	if countdown_left >= 0.0:
 		parts.append("%ds left" % ceili(countdown_left))
-	_panel.refresh(local_player.coins, local_player.relic_ids, _ready_sent, "   ".join(parts))
+	_panel.refresh(local_player.coins, local_player.relic_ids, _ready_sent, "   ".join(parts), _my_reroll_price)
 
 
-func _show_offers(offers: Array[int]) -> void:
+func _show_offers(offers: Array[int], reroll_price: int) -> void:
 	_my_offers = offers
+	_my_reroll_price = reroll_price
 	_open = true
 	if _panel != null:
 		_panel.open(offers)
@@ -193,12 +197,12 @@ func _ready_peers_for_host() -> Array[int]:
 # --- Network messages ------------------------------------------------------------
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_offers(_count: int, ids: PackedInt32Array) -> void:
+func _receive_offers(reroll_price: int, ids: PackedInt32Array) -> void:
 	var offers: Array[int] = []
 	for id: int in ids:
 		if Relics.is_valid_id(id):
 			offers.append(id)
-	_show_offers(offers)
+	_show_offers(offers, reroll_price)
 
 
 @rpc("any_peer", "call_remote", "reliable")

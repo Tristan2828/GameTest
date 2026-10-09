@@ -24,7 +24,8 @@ func open(level: int, offered: Array[int]) -> void:
 		button.disabled = false
 		if i < offered.size():
 			var upgrade := Upgrades.get_upgrade(offered[i])
-			button.text = "%s\n\n%s" % [upgrade.title, upgrade.description]
+			(button.get_node("Lines/Title") as Label).text = upgrade.title
+			(button.get_node("Lines/Description") as Label).text = upgrade.description
 	show()
 	Sfx.play(&"level_up", -4.0)
 	if not offered.is_empty():

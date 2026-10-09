@@ -24,7 +24,7 @@ func _ready() -> void:
 	var floor_image := FloorBaker.bake(Stages.get_stage(1), Vector2i(640, 360), 2024)
 	_backdrop.texture = ImageTexture.create_from_image(floor_image)
 	_port_edit.text = str(Net.DEFAULT_PORT)
-	_version_label.text = "v%s" % ProjectSettings.get_setting("application/config/version", "dev")
+	_version_label.text = BuildInfo.describe()
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)

@@ -17,5 +17,5 @@ amount = -1.0
 script = ExtResource("1_relic")
 title = "Cursed Skull"
 description = "+6 damage, but -1 max heart"
-price = 25
+price = 70
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0"), SubResource("effect_1")])

@@ -14,6 +14,17 @@ $exe = Join-Path $outDir "GameTest.exe"
 $versionLine = Select-String -Path (Join-Path $project "project.godot") -Pattern '^config/version="(.+)"' | Select-Object -First 1
 $version = if ($versionLine) { $versionLine.Matches[0].Groups[1].Value } else { "dev" }
 
+# Stamp which build this is (shown on the title screen). Not committed.
+$commit = (git -C $project rev-parse --short HEAD 2>$null)
+if (-not $commit) { $commit = "unknown" }
+$dirty = if (git -C $project status --porcelain 2>$null) { "+changes" } else { "" }
+@(
+	"[build]",
+	"version=""$version""",
+	"commit=""$commit$dirty""",
+	"date=""$(Get-Date -Format 'yyyy-MM-dd HH:mm')"""
+) | Set-Content -Encoding utf8 (Join-Path $project "build_info.cfg")
+
 if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
 New-Item -ItemType Directory -Force $outDir | Out-Null
 

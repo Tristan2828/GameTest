@@ -12,6 +12,11 @@ var fullscreen: bool = false
 var screen_shake: bool = true
 
 
+func _enter_tree() -> void:
+	# The pixel font must be in place before any menu is created.
+	PixelFont.install()
+
+
 func _ready() -> void:
 	load_settings()
 	apply()

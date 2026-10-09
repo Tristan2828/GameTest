@@ -12,3 +12,6 @@ builds/
 Thumbs.db
 .DS_Store
 .vscode/
+
+# Written by tools/build.ps1 for each exported build
+build_info.cfg

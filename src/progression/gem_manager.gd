@@ -16,11 +16,16 @@ const CAPACITY: int = 400
 const COLLECT_RADIUS: float = 6.0
 const PULL_ACCELERATION: float = 900.0
 const MAX_PULL_SPEED: float = 420.0
-## Values at or above this draw bigger and in big_color.
-@export var big_value: int = 5
-## PixelArt sprites for small and big pickups.
+## Values at or above this use the big sprite.
+@export var big_value: int = 10
+## PixelArt sprites for small, medium and big pickups (by value).
 @export var sprite_small: String = "gem"
+@export var sprite_mid: String = "gem_mid"
 @export var sprite_big: String = "gem_big"
+## Values at or above this use the medium sprite.
+@export var mid_value: int = 3
+## Soft glow under each pickup (alpha 0 = none).
+@export var glow_color: Color = Color(0.4, 0.75, 1.0, 0.16)
 ## Group used by the autopilot to find pickups.
 @export var group_name: StringName = &"gems"
 
@@ -161,11 +166,14 @@ func _draw() -> void:
 	for id: int in CAPACITY:
 		if _active[id] == 0:
 			continue
-		var sprite := sprite_big if _values[id] >= big_value else sprite_small
+		var value := _values[id]
+		var sprite := sprite_big if value >= big_value else (sprite_mid if value >= mid_value else sprite_small)
 		# Coins spin (an edge-on frame now and then); everything bobs gently.
 		if PixelArt.has_sprite(sprite + "_1") and int(now * 6.0 + id) % 4 == 0:
 			sprite += "_1"
 		var bob := roundf(sin(now * 4.0 + id) * 1.0) if _targets[id] == 0 else 0.0
+		if glow_color.a > 0.0:
+			draw_circle(_positions[id], 5.0 if value < mid_value else 7.0, glow_color)
 		PixelArt.draw(self, sprite, _positions[id] + Vector2(0, bob))
 
 

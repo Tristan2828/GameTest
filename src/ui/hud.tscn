@@ -38,9 +38,7 @@ offset_top = 24.0
 offset_right = 108.0
 offset_bottom = 38.0
 theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 text = "Lv 1"
 
 [node name="CoinsLabel" type="Label" parent="."]
@@ -50,9 +48,7 @@ offset_top = 36.0
 offset_right = 108.0
 offset_bottom = 50.0
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 text = "0 coins"
 
 [node name="WeaponsLabel" type="Label" parent="."]
@@ -62,8 +58,6 @@ offset_top = 48.0
 offset_right = 308.0
 offset_bottom = 62.0
 theme_override_colors/font_color = Color(0.75, 0.9, 1, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 9
 
 [node name="Hearts" type="Control" parent="."]
@@ -87,9 +81,7 @@ offset_right = 40.0
 offset_bottom = 30.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.92, 0.88, 1, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 
 [node name="BossBox" type="VBoxContainer" parent="."]
@@ -109,9 +101,7 @@ theme_override_constants/separation = 1
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.85, 0.7, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
 
 [node name="BossBar" type="Control" parent="BossBox"]
@@ -132,7 +122,7 @@ offset_right = -8.0
 offset_bottom = 28.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.8, 0.78, 0.88, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 2
 
 [node name="InfoLabel" type="Label" parent="."]
@@ -146,7 +136,7 @@ offset_right = 632.0
 offset_bottom = -4.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.7, 0.68, 0.78, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 vertical_alignment = 2
 
 [node name="Banner" type="VBoxContainer" parent="."]
@@ -168,18 +158,14 @@ grow_vertical = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.85, 0.55, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 27
 horizontal_alignment = 1
 
 [node name="BannerSubtitle" type="Label" parent="Banner"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.88, 0.95, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -223,8 +209,6 @@ theme_override_constants/separation = 8
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 
@@ -235,30 +219,94 @@ alignment = 1
 theme_override_constants/separation = 8
 
 [node name="Card0" type="Button" parent="LevelUpPanel/Box/Cards"]
-custom_minimum_size = Vector2(150, 90)
+custom_minimum_size = Vector2(160, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 10
+
+[node name="Lines" type="VBoxContainer" parent="LevelUpPanel/Box/Cards/Card0"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 8.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="LevelUpPanel/Box/Cards/Card0/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="LevelUpPanel/Box/Cards/Card0/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="Card1" type="Button" parent="LevelUpPanel/Box/Cards"]
-custom_minimum_size = Vector2(150, 90)
+custom_minimum_size = Vector2(160, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 10
+
+[node name="Lines" type="VBoxContainer" parent="LevelUpPanel/Box/Cards/Card1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 8.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="LevelUpPanel/Box/Cards/Card1/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="LevelUpPanel/Box/Cards/Card1/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="Card2" type="Button" parent="LevelUpPanel/Box/Cards"]
-custom_minimum_size = Vector2(150, 90)
+custom_minimum_size = Vector2(160, 90)
 layout_mode = 2
-theme_override_font_sizes/font_size = 10
+
+[node name="Lines" type="VBoxContainer" parent="LevelUpPanel/Box/Cards/Card2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 8.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="LevelUpPanel/Box/Cards/Card2/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.85, 1, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="LevelUpPanel/Box/Cards/Card2/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="LevelUpStatus" type="Label" parent="LevelUpPanel/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.88, 0.95, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
 
 [node name="ShopPanel" type="Control" parent="."]
@@ -289,10 +337,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -290.0
-offset_top = -110.0
-offset_right = 290.0
-offset_bottom = 110.0
+offset_left = -300.0
+offset_top = -120.0
+offset_right = 300.0
+offset_bottom = 120.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 6
@@ -300,8 +348,6 @@ theme_override_constants/separation = 6
 [node name="ShopTitle" type="Label" parent="ShopPanel/Box"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
-theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 18
 text = "The Wandering Merchant"
 horizontal_alignment = 1
@@ -310,7 +356,7 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.82, 0.35, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
 
 [node name="ShopCards" type="HBoxContainer" parent="ShopPanel/Box"]
@@ -320,28 +366,136 @@ alignment = 1
 theme_override_constants/separation = 6
 
 [node name="ShopCard0" type="Button" parent="ShopPanel/Box/ShopCards"]
-custom_minimum_size = Vector2(128, 96)
+custom_minimum_size = Vector2(140, 104)
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
+
+[node name="Lines" type="VBoxContainer" parent="ShopPanel/Box/ShopCards/ShopCard0"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard0/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard0/Lines"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="Price" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard0/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
 
 [node name="ShopCard1" type="Button" parent="ShopPanel/Box/ShopCards"]
-custom_minimum_size = Vector2(128, 96)
+custom_minimum_size = Vector2(140, 104)
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
+
+[node name="Lines" type="VBoxContainer" parent="ShopPanel/Box/ShopCards/ShopCard1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard1/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard1/Lines"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="Price" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard1/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
 
 [node name="ShopCard2" type="Button" parent="ShopPanel/Box/ShopCards"]
-custom_minimum_size = Vector2(128, 96)
+custom_minimum_size = Vector2(140, 104)
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
+
+[node name="Lines" type="VBoxContainer" parent="ShopPanel/Box/ShopCards/ShopCard2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard2/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard2/Lines"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ShopCard3" type="Button" parent="ShopPanel/Box/ShopCards"]
-custom_minimum_size = Vector2(128, 96)
+[node name="Price" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard2/Lines"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+
+[node name="ShopCard3" type="Button" parent="ShopPanel/Box/ShopCards"]
+custom_minimum_size = Vector2(140, 104)
+layout_mode = 2
+
+[node name="Lines" type="VBoxContainer" parent="ShopPanel/Box/ShopCards/ShopCard3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard3/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+
+[node name="Description" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard3/Lines"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="Price" type="Label" parent="ShopPanel/Box/ShopCards/ShopCard3/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
 
 [node name="ShopButtons" type="HBoxContainer" parent="ShopPanel/Box"]
 layout_mode = 2
@@ -352,19 +506,19 @@ theme_override_constants/separation = 12
 unique_name_in_owner = true
 custom_minimum_size = Vector2(130, 22)
 layout_mode = 2
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 text = "Reroll"
 
 [node name="ReadyButton" type="Button" parent="ShopPanel/Box/ShopButtons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(130, 22)
 layout_mode = 2
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 text = "Ready"
 
 [node name="ShopStatus" type="Label" parent="ShopPanel/Box"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.88, 0.95, 1)
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1

@@ -13,6 +13,10 @@ signal ready_pressed
 @onready var _ready_button: Button = %ReadyButton
 @onready var _status: Label = %ShopStatus
 
+const PRICE_COLOR: Color = Color(1.0, 0.85, 0.4)
+const TOO_EXPENSIVE_COLOR: Color = Color(1.0, 0.5, 0.45)
+const OWNED_COLOR: Color = Color(0.55, 0.9, 0.6)
+
 var _offers: Array[int] = []
 static var _screenshot_taken: bool = false
 
@@ -23,7 +27,6 @@ func _ready() -> void:
 		(buttons[i] as Button).pressed.connect(_on_card_pressed.bind(i))
 	_reroll_button.pressed.connect(func() -> void: reroll_pressed.emit())
 	_ready_button.pressed.connect(func() -> void: ready_pressed.emit())
-	_reroll_button.text = "Reroll (%d coins)" % Relics.REROLL_PRICE
 
 
 func open(offers: Array[int]) -> void:
@@ -42,17 +45,29 @@ func open(offers: Array[int]) -> void:
 
 
 ## Updates prices/affordability and the status line (called every frame).
-func refresh(coins: int, owned: Array[int], is_ready: bool, status: String) -> void:
+func refresh(coins: int, owned: Array[int], is_ready: bool, status: String, reroll_price: int) -> void:
 	_coins_label.text = "Coins: %d" % coins
 	var buttons := _cards.get_children()
 	for i: int in mini(buttons.size(), _offers.size()):
 		var button := buttons[i] as Button
 		var relic := Relics.get_relic(_offers[i])
 		var owned_it := owned.has(_offers[i])
-		var price_text := "OWNED" if owned_it else "%d coins" % relic.price
-		button.text = "%s\n%s\n\n%s" % [relic.title, relic.description, price_text]
-		button.disabled = is_ready or owned_it or coins < relic.price
-	_reroll_button.disabled = is_ready or coins < Relics.REROLL_PRICE
+		var affordable := coins >= relic.price
+		(button.get_node("Lines/Title") as Label).text = relic.title
+		(button.get_node("Lines/Description") as Label).text = relic.description
+		var price := button.get_node("Lines/Price") as Label
+		if owned_it:
+			price.text = "Owned"
+			price.modulate = OWNED_COLOR
+		elif affordable:
+			price.text = "%d coins" % relic.price
+			price.modulate = PRICE_COLOR
+		else:
+			price.text = "%d coins (need %d more)" % [relic.price, relic.price - coins]
+			price.modulate = TOO_EXPENSIVE_COLOR
+		button.disabled = is_ready or owned_it or not affordable
+	_reroll_button.text = "Reroll (%d coins)" % reroll_price
+	_reroll_button.disabled = is_ready or coins < reroll_price
 	_ready_button.disabled = is_ready
 	_ready_button.text = "Ready!" if is_ready else "Ready"
 	_status.text = status
