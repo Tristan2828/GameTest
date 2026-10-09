@@ -6,9 +6,13 @@
 [ext_resource type="PackedScene" path="res://src/ui/hud.tscn" id="4_hud"]
 [ext_resource type="Script" path="res://src/progression/gem_manager.gd" id="5_gems"]
 [ext_resource type="Script" path="res://src/progression/level_up_controller.gd" id="6_levelup"]
+[ext_resource type="Script" path="res://src/arena/arena_floor.gd" id="7_floor"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
+
+[node name="Floor" type="Node2D" parent="."]
+script = ExtResource("7_floor")
 
 [node name="Gems" type="Node2D" parent="."]
 script = ExtResource("5_gems")

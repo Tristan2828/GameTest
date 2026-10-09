@@ -119,7 +119,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - XP gems with magnet pull, shared team level, networked level-up pause with 9 stat upgrades.
 - 5-minute timed stage, "Stage clear" / "Run over", host restart (R / Start).
 
-### Milestone 3: First stage + first boss (in progress)
+### Milestone 3: First stage + first boss (implemented in v0.4.0; awaiting playtest)
 Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
 - **Stage flow:** 4:00 of horde waves, then the boss arrives. The horde keeps trickling at 40% rate during the fight, with no pack surges. **Stage clear = boss defeated** (no longer a timer).
 - **First boss, "The Bone Warden":** a slow, huge undead that drifts toward the players and cycles attacks:

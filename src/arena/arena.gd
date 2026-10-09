@@ -40,10 +40,6 @@ const SPAWN_DISTANCE_MIN: float = 380.0
 const SPAWN_DISTANCE_MAX: float = 440.0
 const MIN_SPAWN_DISTANCE_FROM_ANY_PLAYER: float = 340.0
 const PACK_RADIUS: float = 28.0
-const GRID_SIZE: int = 32
-const FLOOR_COLOR: Color = Color(0.09, 0.08, 0.11)
-const GRID_COLOR: Color = Color(0.13, 0.12, 0.16)
-const WALL_COLOR: Color = Color(0.4, 0.33, 0.5)
 const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Q / RB bomb   Esc leave"
 const COPIED_FEEDBACK_SECONDS: float = 4.0
 ## In --autopilot test mode, the host restarts by itself this long after a stage ends.
@@ -166,15 +162,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
 	if event.is_action_pressed("restart") and multiplayer.is_server() and _is_stage_over():
 		restart_requested.emit()
-
-
-func _draw() -> void:
-	draw_rect(BOUNDS, FLOOR_COLOR)
-	for x: int in range(int(BOUNDS.position.x), int(BOUNDS.end.x), GRID_SIZE):
-		draw_line(Vector2(x, BOUNDS.position.y), Vector2(x, BOUNDS.end.y), GRID_COLOR)
-	for y: int in range(int(BOUNDS.position.y), int(BOUNDS.end.y), GRID_SIZE):
-		draw_line(Vector2(BOUNDS.position.x, y), Vector2(BOUNDS.end.x, y), GRID_COLOR)
-	draw_rect(BOUNDS, WALL_COLOR, false, 2.0)
 
 
 ## A text summary for headless smoke tests (see LaunchOptions --run-for).
