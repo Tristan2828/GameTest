@@ -25,7 +25,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Language | GDScript, **statically typed** throughout |
 | Development | AI-assisted coding. Keep everything text-editable and verifiable via `godot --headless` |
 | Networking | Godot built-in high-level multiplayer (ENet), host-authoritative |
-| Connection | Direct IP / LAN. Recommend Tailscale so friends can connect without port forwarding |
+| Connection | Direct IP. The **host** makes the game reachable: Host Game tries UPnP to open the router port automatically, otherwise the host forwards UDP 7777 once by hand. The host gets an invite (`public IP:port`) copied to the clipboard; **friends just paste it and click Join**, no extra apps. Doesn't work if the host is behind CGNAT; fallback is a host-side tunnel such as playit.gg (friend still just pastes an address) |
 | Input | Mouse + keyboard and gamepad, both fully supported |
 
 | Base resolution | **640x360**, integer-scaled (3x at 1080p, 4x at 1440p, 6x at 4K) |
@@ -131,4 +131,5 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 ## 9. Ideas for Later
 
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
+- **Join codes / no port forwarding at all:** a small relay or matchmaking server (short codes like `KQ7F`), or Steam invites via Steamworks ($100 app fee). Revisit if port forwarding becomes a hurdle or near release.
 - **Lobby + ready-up:** replace drop-in joining with a lobby screen (players gather, pick characters, host clicks Start). Likely needed by M5 (character select).

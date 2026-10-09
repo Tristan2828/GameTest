@@ -34,7 +34,8 @@ func _apply_launch_options() -> void:
 		LaunchOptions.Mode.HOST:
 			_start_host(LaunchOptions.port)
 		LaunchOptions.Mode.JOIN:
-			_start_join(LaunchOptions.address, LaunchOptions.port)
+			var invite: Dictionary = Net.parse_invite(LaunchOptions.address, LaunchOptions.port)
+			_start_join(invite["address"], invite["port"])
 	if LaunchOptions.run_for_seconds > 0.0:
 		get_tree().create_timer(LaunchOptions.run_for_seconds).timeout.connect(_report_and_quit)
 
@@ -45,7 +46,7 @@ func _start_solo() -> void:
 
 
 func _start_host(port: int) -> void:
-	var err: Error = Net.host_game(port)
+	var err: Error = Net.host_game(port, not LaunchOptions.local_only)
 	if err != OK:
 		_menu.show_menu("Could not host on port %d: %s" % [port, error_string(err)])
 		return

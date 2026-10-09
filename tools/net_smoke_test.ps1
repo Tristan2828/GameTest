@@ -26,17 +26,27 @@ function Start-Peer([string]$name, [string[]]$gameArgs) {
 		-RedirectStandardError (Join-Path $logDir "$name.err.log")
 }
 
-$hostProcess = Start-Peer "host" @("--host", "--port=$Port", "--autopilot", "--run-for=$($Seconds + 3)")
+# Refresh Godot's cache first: new `class_name` scripts aren't known until an import runs.
+& $godot --headless --path $project --import 2>&1 | Out-Null
+
+$hostProcess = Start-Peer "host" @("--host", "--port=$Port", "--local-only", "--autopilot", "--run-for=$($Seconds + 3)")
 Start-Sleep -Seconds 1
 $clientProcess = Start-Peer "client" @("--join=127.0.0.1", "--port=$Port", "--autopilot", "--run-for=$Seconds")
-$clientProcess.WaitForExit()
-$hostProcess.WaitForExit()
+# If a peer crashes before it can quit, don't wait forever.
+$timeoutMs = [int](($Seconds + 15) * 1000)
+foreach ($process in @($clientProcess, $hostProcess)) {
+	if (-not $process.WaitForExit($timeoutMs)) {
+		$process.Kill()
+		$timedOut = $true
+	}
+}
 
 $hostLog = (Get-Content (Join-Path $logDir "host.out.log"), (Join-Path $logDir "host.err.log")) -join "`n"
 $clientLog = (Get-Content (Join-Path $logDir "client.out.log"), (Join-Path $logDir "client.err.log")) -join "`n"
 Write-Output "===== HOST =====" $hostLog "===== CLIENT =====" $clientLog
 
 $failures = @()
+if ($timedOut) { $failures += "a process hung and was killed" }
 if ("$hostLog`n$clientLog" -match "SCRIPT ERROR|ERROR:") { $failures += "a process logged an error" }
 if ($clientLog -match "Connected as peer (\d+)") {
 	$clientId = $Matches[1]

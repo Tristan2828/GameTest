@@ -19,9 +19,13 @@ const GRID_COLOR: Color = Color(0.13, 0.12, 0.16)
 const WALL_COLOR: Color = Color(0.4, 0.33, 0.5)
 const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Esc leave"
 
+const COPIED_FEEDBACK_SECONDS: float = 4.0
+
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
+var _copied_feedback_left: float = 0.0
+var _announced_invite: bool = false
 
 @onready var _players: Node2D = $Players
 @onready var _player_spawner: MultiplayerSpawner = $PlayerSpawner
@@ -36,6 +40,8 @@ func _ready() -> void:
 	_player_spawner.spawn_function = _spawn_player
 	_projectiles.bounds = BOUNDS
 	if multiplayer.is_server():
+		Net.invite.changed.connect(_on_invite_changed)
+		_on_invite_changed()
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
 		_enemies.spawn_dummies(_dummy_spots())
@@ -60,11 +66,36 @@ func _physics_process(delta: float) -> void:
 			_send_snapshots()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_copied_feedback_left = maxf(_copied_feedback_left - delta, 0.0)
 	var role := "Solo"
 	if Net.is_online():
 		role = "Host" if multiplayer.is_server() else "Client  ping %d ms" % Net.ping_ms()
-	_hud_label.text = "%s   players %d\n%s" % [role, _player_nodes().size(), CONTROLS_HINT]
+	var text := "%s   players %d\n%s" % [role, _player_nodes().size(), CONTROLS_HINT]
+	if Net.is_online() and multiplayer.is_server():
+		text += "\n" + _invite_hud_text()
+	_hud_label.text = text
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("copy_invite") and Net.invite.copy_to_clipboard():
+		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
+
+
+func _invite_hud_text() -> String:
+	var invite := Net.invite
+	var line := "Invite: finding your public address..."
+	if not invite.address.is_empty():
+		var hint := "copied to clipboard!" if _copied_feedback_left > 0.0 else "F1 to copy"
+		line = "Invite: %s   (%s)" % [invite.address, hint]
+	return line + "\n" + invite.status
+
+
+func _on_invite_changed() -> void:
+	# The invite is copied automatically the moment the address is known.
+	if not Net.invite.address.is_empty() and not _announced_invite:
+		_announced_invite = true
+		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
 
 
 func _draw() -> void:
@@ -89,6 +120,7 @@ func debug_report() -> String:
 	lines.append("[report]   active enemies: %d" % _enemies.active_count())
 	if multiplayer.is_server():
 		lines.append("[report]   damage by peer: %s" % [_enemies.damage_by_peer])
+		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
 	lines.append("[report]   bullets alive: %d" % _projectiles.count())
 	return "\n".join(lines)
 

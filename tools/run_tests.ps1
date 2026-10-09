@@ -8,10 +8,8 @@
 $godot = if ($env:GODOT) { $env:GODOT } else { "C:\Code Tools\Godot\Godot_v4.7.2-stable_win64_console.exe" }
 $project = Split-Path -Parent $PSScriptRoot
 
-# A fresh clone has no .godot cache yet; class_name scripts aren't known until imported.
-if (-not (Test-Path (Join-Path $project ".godot"))) {
-	& $godot --headless --path $project --import 2>&1 | Out-Null
-}
+# Refresh Godot's cache first: new `class_name` scripts aren't known until an import runs.
+& $godot --headless --path $project --import 2>&1 | Out-Null
 
 $output = & $godot --headless --path $project -s addons/gut/gut_cmdln.gd 2>&1 | ForEach-Object { "$_" }
 $exitCode = $LASTEXITCODE

@@ -15,7 +15,8 @@ func _enter_tree() -> void:
 	_add_action("aim_right", [_axis(JOY_AXIS_RIGHT_X, 1.0)])
 	_add_action("aim_up", [_axis(JOY_AXIS_RIGHT_Y, -1.0)])
 	_add_action("aim_down", [_axis(JOY_AXIS_RIGHT_Y, 1.0)])
-	_add_action("fire", [_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
+	_add_action("copy_invite", [_key(KEY_F1)])
+	_add_action("fire",[_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
 	_add_action("dash", [
 		_key(KEY_SPACE),
 		_key(KEY_SHIFT),

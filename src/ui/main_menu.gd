@@ -21,6 +21,7 @@ func _ready() -> void:
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)
+	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
 
 
 func show_menu(message: String = "") -> void:
@@ -38,11 +39,12 @@ func show_busy(message: String) -> void:
 
 
 func _on_join_pressed() -> void:
-	var address := _address_edit.text.strip_edges()
+	var invite: Dictionary = Net.parse_invite(_address_edit.text, Net.DEFAULT_PORT)
+	var address: String = invite["address"]
 	if address.is_empty():
-		_status_label.text = "Enter the host's IP address."
+		_status_label.text = "Paste the invite your host sent you (looks like 203.0.113.5:7777)."
 		return
-	join_requested.emit(address, _port())
+	join_requested.emit(address, invite["port"])
 
 
 func _port() -> int:

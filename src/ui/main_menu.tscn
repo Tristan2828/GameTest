@@ -36,27 +36,27 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Play Solo"
 
-[node name="HostButton" type="Button" parent="Center/Panel"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Host Game"
-
-[node name="AddressRow" type="HBoxContainer" parent="Center/Panel"]
+[node name="HostRow" type="HBoxContainer" parent="Center/Panel"]
 layout_mode = 2
 
-[node name="AddressEdit" type="LineEdit" parent="Center/Panel/AddressRow"]
+[node name="HostButton" type="Button" parent="Center/Panel/HostRow"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "127.0.0.1"
-placeholder_text = "Host IP"
+text = "Host Game"
 
-[node name="PortEdit" type="LineEdit" parent="Center/Panel/AddressRow"]
+[node name="PortEdit" type="LineEdit" parent="Center/Panel/HostRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
+tooltip_text = "Port to host on (UDP)"
 text = "7777"
 placeholder_text = "Port"
+
+[node name="AddressEdit" type="LineEdit" parent="Center/Panel"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Paste invite (IP:port)"
 
 [node name="JoinButton" type="Button" parent="Center/Panel"]
 unique_name_in_owner = true

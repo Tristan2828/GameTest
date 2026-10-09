@@ -17,6 +17,7 @@ $version = if ($versionLine) { $versionLine.Matches[0].Groups[1].Value } else { 
 if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
 New-Item -ItemType Directory -Force $outDir | Out-Null
 
+& $godot --headless --path $project --import 2>&1 | Out-Null
 $output = & $godot --headless --path $project --export-release "Windows Desktop" $exe 2>&1 | ForEach-Object { "$_" }
 $exitCode = $LASTEXITCODE
 $output | Write-Output
@@ -25,6 +26,7 @@ if ($exitCode -ne 0 -or -not (Test-Path $exe) -or ($output | Select-String -Patt
 	exit 1
 }
 
+Copy-Item (Join-Path $PSScriptRoot "README-friends.txt") (Join-Path $outDir "README.txt")
 $zip = Join-Path $project "builds\GameTest-$version-windows.zip"
 Compress-Archive -Path (Join-Path $outDir "*") -DestinationPath $zip -Force
 Write-Host "OK: built $exe" -ForegroundColor Green
