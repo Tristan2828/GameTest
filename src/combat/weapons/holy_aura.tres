@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Holy Aura"
+description = "Pulses holy damage around you"
+kind = 2
+color = Color(1, 0.9, 0.5, 1)
+damage = 6
+damage_per_level = 3
+count = 1
+count_per_level = 0
+interval = 0.6
+interval_scale_per_level = 0.9
+radius = 40.0
+radius_per_level = 10.0
+speed = 0.0
+reach = 0.0

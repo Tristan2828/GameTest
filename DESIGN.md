@@ -134,7 +134,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
 - **Fair dodging online:** enemy bullet patterns are fast-forwarded on clients by the network delay, so what you dodge on your screen matches what the host checks.
 - **Arena look:** dark stone floor with seeded variation, plus decorative graves and bones (no collision yet).
 
-### Milestone 4: Multi-stage run, ghosts, coins & shop, relics, auto weapons (in progress)
+### Milestone 4: Multi-stage run, ghosts, coins & shop, relics, auto weapons (implemented in v0.5.0; awaiting playtest)
 Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
 - **Run = 3 stages** in the same crypt arena (distinct stages/themes come in M5). Each stage is harder:
   - Spawn rate +35% per stage.

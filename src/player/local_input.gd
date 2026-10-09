@@ -74,10 +74,17 @@ func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 		var to_enemy := nearest.global_position - player.global_position
 		input.aim = to_enemy.angle()
 		input.fire = true
+		# Weapon altars are worth pushing through a crowd for.
+		var weapons := player.get_tree().get_first_node_in_group("altars") as WeaponSystem
+		if weapons != null and to_enemy.length() > 50.0:
+			var altar := weapons.nearest_altar(player.global_position)
+			if altar.is_finite() and altar.distance_to(player.global_position) < 400.0:
+				input.move = (altar - player.global_position).normalized()
+				return input
 		if to_enemy.length() < 120.0:
 			input.move = (input.move - to_enemy.normalized()).limit_length(1.0)
 			return input
-	# Nothing close: go vacuum up XP.
+	# Nothing close: vacuum up XP.
 	var gems := player.get_tree().get_first_node_in_group("gems") as GemManager
 	if gems != null:
 		var gem := gems.nearest_gem(player.global_position)

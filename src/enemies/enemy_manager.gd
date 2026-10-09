@@ -50,6 +50,20 @@ func spawn(type_id: int, at: Vector2, hit_points: int = 0) -> Enemy:
 	return enemy
 
 
+## The closest active enemy within `max_distance`, or null.
+func find_nearest(point: Vector2, max_distance: float) -> Enemy:
+	var best: Enemy = null
+	var best_distance := max_distance * max_distance
+	for enemy: Enemy in _pool:
+		if not enemy.active:
+			continue
+		var distance := enemy.position.distance_squared_to(point)
+		if distance <= best_distance:
+			best = enemy
+			best_distance = distance
+	return best
+
+
 ## The active boss, or null.
 func find_boss() -> Enemy:
 	for enemy: Enemy in _pool:

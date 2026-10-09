@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Seeking Bolts"
+description = "Fires at the nearest enemy on its own"
+kind = 1
+color = Color(0.5, 0.85, 1, 1)
+damage = 14
+damage_per_level = 6
+count = 1
+count_per_level = 1
+interval = 1.2
+interval_scale_per_level = 0.85
+radius = 0.0
+radius_per_level = 0.0
+speed = 280.0
+reach = 260.0

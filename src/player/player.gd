@@ -33,6 +33,7 @@ const CORRECTION_SMOOTHING: float = 10.0
 const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
 const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
 const GHOST_EYE_COLOR: Color = Color(0.1, 0.08, 0.15, 0.8)
+const SKULL_EYE_COLOR: Color = Color(0.15, 0.1, 0.12)
 
 @export var stats: CharacterStats
 
@@ -48,6 +49,10 @@ var bombs_left: int = 0
 var upgrade_ids: Array[int] = []
 ## Relics owned, in purchase order (same on all peers).
 var relic_ids: Array[int] = []
+## Automatic weapons owned: weapon id -> level (same on all peers).
+var weapon_levels: Dictionary[int, int] = {}
+## The shared stage clock, set by the arena each frame (orbiting skulls use it).
+var weapon_clock: float = 0.0
 ## Coins in this player's pocket (host-owned, synced in snapshots).
 var coins: int = 0
 ## Host: kills since the last Vampire Fang heal.
@@ -139,6 +144,19 @@ func apply_relic(relic_id: int) -> void:
 	queue_redraw()
 
 
+## Runs on every peer when the host announces a weapon pickup.
+func gain_weapon(weapon_id: int) -> void:
+	weapon_levels[weapon_id] = mini(weapon_levels.get(weapon_id, 0) + 1, AutoWeapons.MAX_LEVEL)
+
+
+## e.g. "Skulls 2  Aura 1" for the HUD.
+func weapons_summary() -> String:
+	var parts := PackedStringArray()
+	for weapon_id: int in weapon_levels:
+		parts.append("%s %d" % [AutoWeapons.get_weapon(weapon_id).title, weapon_levels[weapon_id]])
+	return "   ".join(parts)
+
+
 ## Host: count a kill toward heal-on-kill relics.
 func register_kill() -> void:
 	if stats.heal_every_kills <= 0 or health.is_downed():
@@ -227,6 +245,7 @@ func _draw() -> void:
 	if health.is_downed():
 		_draw_ghost(color)
 		return
+	_draw_weapons()
 	# Blink while invulnerable after a hit.
 	if health.is_invulnerable() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
 		color = Color(color, 0.25)
@@ -246,6 +265,25 @@ func _draw_heart_pips() -> void:
 		var filled := i < health.hearts
 		draw_circle(Vector2(start_x + i * spacing, stats.body_radius + 5.0), 1.5,
 			HEART_COLOR if filled else HEART_EMPTY_COLOR)
+
+
+func _draw_weapons() -> void:
+	for weapon_id: int in weapon_levels:
+		var weapon := AutoWeapons.get_weapon(weapon_id)
+		var level: int = weapon_levels[weapon_id]
+		match weapon.kind:
+			AutoWeapon.Kind.AURA:
+				var pulse := 0.5 + 0.5 * sin(weapon_clock * TAU / weapon.interval_at(level))
+				var radius := weapon.radius_at(level)
+				draw_circle(Vector2.ZERO, radius, Color(weapon.color, 0.05 + 0.05 * pulse))
+				draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(weapon.color, 0.25 + 0.2 * pulse), 1.0)
+			AutoWeapon.Kind.ORBIT:
+				# Same math as the host's hit checks, relative to where we're drawn.
+				for skull: Vector2 in AutoWeapons.orbit_positions(Vector2.ZERO, level, weapon_clock):
+					var size := weapon.radius_at(level)
+					draw_circle(skull, size, weapon.color)
+					draw_rect(Rect2(skull + Vector2(-size * 0.5, -size * 0.3), Vector2(1, 1)), SKULL_EYE_COLOR)
+					draw_rect(Rect2(skull + Vector2(size * 0.5 - 1, -size * 0.3), Vector2(1, 1)), SKULL_EYE_COLOR)
 
 
 func _draw_ghost(color: Color) -> void:

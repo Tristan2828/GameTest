@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://src/progression/level_up_controller.gd" id="6_levelup"]
 [ext_resource type="Script" path="res://src/arena/arena_floor.gd" id="7_floor"]
 [ext_resource type="Script" path="res://src/progression/shop_controller.gd" id="8_shop"]
+[ext_resource type="Script" path="res://src/combat/weapon_system.gd" id="9_weapons"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -25,6 +26,9 @@ big_color = Color(1, 0.92, 0.55, 1)
 big_value = 2
 round_shape = true
 group_name = &"coins"
+
+[node name="Weapons" type="Node2D" parent="."]
+script = ExtResource("9_weapons")
 
 [node name="Enemies" type="Node2D" parent="."]
 script = ExtResource("2_enemies")

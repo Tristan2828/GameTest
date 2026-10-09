@@ -95,6 +95,7 @@ var _pattern_times: PackedFloat32Array = PackedFloat32Array()
 @onready var _gems: GemManager = $Gems
 @onready var _coins: GemManager = $Coins
 @onready var _shop: ShopController = $Shop
+@onready var _weapons: WeaponSystem = $Weapons
 @onready var _projectiles: ProjectileManager = $Projectiles
 @onready var _enemy_bullets: ProjectileManager = $EnemyProjectiles
 @onready var _level_up: LevelUpController = $LevelUp
@@ -112,6 +113,8 @@ func _ready() -> void:
 	_level_up.bind_panel(_hud.level_up_panel)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
 	_shop.relic_bought.connect(_on_relic_bought)
+	_weapons.bounds = BOUNDS
+	_weapons.weapon_gained.connect(_on_weapon_gained)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	if LaunchOptions.stage_seconds > 0.0:
 		_wave_duration = LaunchOptions.stage_seconds
@@ -123,6 +126,7 @@ func _ready() -> void:
 		_enemies.pattern_fired.connect(_fire_enemy_pattern)
 		_gems.collected.connect(_on_gem_collected)
 		_coins.collected.connect(_on_coin_collected)
+		_weapons.seeker_fired.connect(_fire_seeker)
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
 		_add_player(1)
@@ -142,6 +146,7 @@ func _physics_process(delta: float) -> void:
 			_spawn_enemies(delta)
 			_enemies.tick_host(delta, _alive_player_positions())
 			_tick_boss(delta)
+			_weapons.tick_host(delta, _elapsed, _player_nodes(), _enemies, _ready_peer_list())
 			_apply_contact_damage()
 		else:
 			_enemies.rebuild_grid()
@@ -181,6 +186,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	for player: Player in _player_nodes():
+		player.weapon_clock = _elapsed
 	_copied_feedback_left = maxf(_copied_feedback_left - delta, 0.0)
 	_boss_banner_left = maxf(_boss_banner_left - delta, 0.0)
 	_update_hud()
@@ -202,6 +209,7 @@ func debug_report() -> String:
 		var line := "[report]   player %d slot %d at %s  hearts %d/%d  bombs %d  coins %d  upgrades %s  relics %s" % [
 			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts,
 			player.bombs_left, player.coins, player.upgrade_ids, player.relic_ids]
+		line += "  weapons %s" % [player.weapon_levels]
 		if player.is_local() and not multiplayer.is_server():
 			line += "  corrections=%d largest=%.2fpx" % [player.correction_count, player.largest_correction]
 		lines.append(line)
@@ -211,7 +219,7 @@ func debug_report() -> String:
 		lines.append("[report]   damage by peer: %s" % [_enemies.damage_by_peer])
 		lines.append("[report]   kills by peer: %s" % [_kills_by_peer])
 		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
-	lines.append("[report]   enemy bullets alive: %d" % _enemy_bullets.count())
+	lines.append("[report]   enemy bullets alive: %d   altars: %d" % [_enemy_bullets.count(), _weapons.altar_count()])
 	var boss := _enemies.find_boss()
 	if boss != null:
 		lines.append("[report]   boss: %s hp %.0f%% phase %d" % [boss.type.display_name, boss.hp_ratio * 100.0, _boss_brain.phase])
@@ -248,6 +256,11 @@ func _alive_player_positions() -> Array[Vector2]:
 
 func _add_player(peer_id: int) -> void:
 	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot()})
+	if LaunchOptions.give_weapons:
+		# Test aid: same path as real pickups (new joiners also get it via history).
+		for weapon_id: int in AutoWeapons.ALL.size():
+			for level: int in 2:
+				_weapons.grant(peer_id, weapon_id, _ready_peer_list())
 
 
 func _remove_player(peer_id: int) -> void:
@@ -359,6 +372,7 @@ func _end_stage(phase: Phase) -> void:
 	_enemy_bullets.clear()
 	_gems.clear()
 	_coins.clear()
+	_weapons.clear_altars()
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
 
@@ -387,6 +401,7 @@ func _begin_next_stage() -> void:
 	_boss_defeated = false
 	_boss_brain = BossBrain.new()
 	_director = SpawnDirector.new(randi())
+	_weapons.reset_stage()
 	for player: Player in _player_nodes():
 		player.respawn(BOUNDS.get_center() + SPAWN_OFFSETS[player.slot])
 	_phase = Phase.PLAYING
@@ -450,6 +465,27 @@ func _on_coin_collected(value: int, collector_peer_id: int) -> void:
 	var player := _player_by_id(collector_peer_id)
 	if player != null:
 		player.coins += value
+
+
+func _on_weapon_gained(peer_id: int, weapon_id: int) -> void:
+	var player := _player_by_id(peer_id)
+	if player != null:
+		player.gain_weapon(weapon_id)
+
+
+## Host: a Seeking Bolts volley. Clients get a small event and spawn the same bolts.
+func _fire_seeker(shooter: Player, aim: float, level: int) -> void:
+	var origin := shooter.state.position
+	_spawn_seeker(shooter.peer_id, origin, aim, level)
+	for peer_id: int in _ready_peers:
+		_receive_seeker.rpc_id(peer_id, shooter.peer_id, origin, aim, level)
+
+
+func _spawn_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
+	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.SEEKING_BOLTS)
+	for angle: float in AutoWeapons.seeker_angles(level, aim):
+		_projectiles.spawn(origin, Vector2.from_angle(angle) * weapon.speed, weapon.damage_at(level),
+			weapon.reach / weapon.speed, shooter_id)
 
 
 func _on_relic_bought(peer_id: int, relic_id: int) -> void:
@@ -591,6 +627,7 @@ func _update_hud() -> void:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
 		_hud.set_bombs(local.bombs_left)
 		_hud.set_coins(local.coins)
+		_hud.set_weapons(local.weapons_summary())
 	var boss := _enemies.find_boss()
 	if boss == null and _elapsed < _wave_duration:
 		# New stage: the next boss gets its own intro banner.
@@ -713,6 +750,8 @@ func _notify_ready() -> void:
 		_ready_peers[peer_id] = true
 		_gems.send_full_state(peer_id)
 		_coins.send_full_state(peer_id)
+		_weapons.send_full_state(peer_id)
+		_weapons.send_history(peer_id, _player_nodes())
 		_level_up.host_send_history(peer_id, _player_nodes())
 		_shop.host_send_history(peer_id, _player_nodes())
 
@@ -747,6 +786,7 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			_enemy_bullets.clear()
 			_gems.clear()
 			_coins.clear()
+			_weapons.clear_altars()
 
 
 ## Client: keep our copy of the stage clock close to the host's *current* time.
@@ -769,6 +809,11 @@ func _receive_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2A
 	for i: int in patterns.size():
 		var age := clampf(dodge_time - fire_times[i], 0.0, MAX_PATTERN_FAST_FORWARD)
 		_spawn_enemy_pattern(patterns[i], origins[i], aims[i], seeds[i], age)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
+	_spawn_seeker(shooter_id, origin, aim, level)
 
 
 @rpc("authority", "call_remote", "reliable")

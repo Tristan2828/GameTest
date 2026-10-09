@@ -45,6 +45,17 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 10
 text = "0 coins"
 
+[node name="WeaponsLabel" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 8.0
+offset_top = 48.0
+offset_right = 308.0
+offset_bottom = 62.0
+theme_override_colors/font_color = Color(0.75, 0.9, 1, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 9
+
 [node name="Hearts" type="Control" parent="."]
 unique_name_in_owner = true
 layout_mode = 3

@@ -17,10 +17,15 @@ extends CanvasLayer
 @onready var level_up_panel: LevelUpPanel = %LevelUpPanel
 @onready var shop_panel: ShopPanel = %ShopPanel
 @onready var _coins_label: Label = %CoinsLabel
+@onready var _weapons_label: Label = %WeaponsLabel
 
 
 func set_hearts(current: int, maximum: int) -> void:
 	_hearts.set_hearts(current, maximum)
+
+
+func set_weapons(summary: String) -> void:
+	_weapons_label.text = summary
 
 
 func set_coins(count: int) -> void:

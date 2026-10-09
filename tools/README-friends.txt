@@ -24,3 +24,8 @@ your host's, then let them know. They may need to open a port on their router.
 
 Level-ups: everyone picks an upgrade card (click it, or use the gamepad and
 press A). Once someone has picked, the rest have 30 seconds.
+
+A run is 3 stages. Between stages there's a shop: spend coins on relics
+(click / A to buy), then press Ready. Glowing altars give automatic weapons;
+walk onto one to grab it. If you go down you become a ghost: you can still
+collect gems and coins, and you come back next stage.
