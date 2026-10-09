@@ -1,7 +1,7 @@
 # Playtest Review (v0.14.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (204 unit tests, plus online host+client runs).
+Automated tests prove it *works* (212 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -60,6 +60,8 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Lobby: portraits show **your** color (a friend in Red sees red heroes), and small color squares show who picked which hero.
 - [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
 - [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
+- [ ] Title menu: Compendium pages (Heroes, Weapons, Upgrades, Relics, Pickups, Enemies, Bosses). Useful? Anything missing or wrong?
+- [ ] Title menu: this Playtest Checklist. Ticks are remembered after restarting the game? "Copy what's left" works?
 
 ### 3.0 Changes from your first playtest (v0.12.0)
 - [ ] Gems: easy to spot now? Three tiers distinguishable?

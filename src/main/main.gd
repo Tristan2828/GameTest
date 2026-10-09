@@ -51,9 +51,28 @@ func _apply_launch_options() -> void:
 	if not LaunchOptions.screenshot_dir.is_empty():
 		if LaunchOptions.mode == LaunchOptions.Mode.MENU:
 			get_tree().create_timer(0.5).timeout.connect(func() -> void: save_screenshot(get_tree(), "title.png"))
+			get_tree().create_timer(0.8).timeout.connect(_screenshot_info_pages)
 		_take_screenshots_periodically()
 	if LaunchOptions.run_for_seconds > 0.0:
 		get_tree().create_timer(LaunchOptions.run_for_seconds).timeout.connect(_report_and_quit)
+
+
+## Screenshot mode on the title screen: a picture of each Compendium tab and the
+## Playtest Checklist, then back to the menu.
+func _screenshot_info_pages() -> void:
+	var compendium := _menu.compendium
+	compendium.open()
+	var tabs := compendium.find_children("*", "Button", true, false).filter(
+		func(button: Node) -> bool: return button.get_parent() != compendium.footer)
+	for i: int in tabs.size():
+		(tabs[i] as Button).pressed.emit()
+		await get_tree().create_timer(0.2).timeout
+		await save_screenshot(get_tree(), "compendium_%d.png" % i)
+	compendium.close()
+	_menu.checklist.open()
+	await get_tree().create_timer(0.2).timeout
+	await save_screenshot(get_tree(), "checklist.png")
+	_menu.checklist.close()
 
 
 func _apply_character_flag() -> void:

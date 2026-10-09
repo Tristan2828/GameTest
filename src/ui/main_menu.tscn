@@ -81,6 +81,21 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Join Game"
 
+[node name="InfoRow" type="HBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+
+[node name="CompendiumButton" type="Button" parent="Center/Panel/InfoRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Compendium"
+
+[node name="ChecklistButton" type="Button" parent="Center/Panel/InfoRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Playtest List"
+
 [node name="SettingsButton" type="Button" parent="Center/Panel"]
 unique_name_in_owner = true
 layout_mode = 2

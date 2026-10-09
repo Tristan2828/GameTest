@@ -1,6 +1,8 @@
 class_name MainMenu
 extends CanvasLayer
-## Title menu: play solo, host a game, or join a host by IP address.
+## Title menu: play solo, host a game, or join a host by IP address. Also opens
+## Settings, the Compendium (info on heroes, weapons, items, enemies) and the
+## Playtest Checklist (what still needs testing, from docs/PLAYTEST.md).
 
 signal solo_requested
 signal host_requested(port: int)
@@ -15,8 +17,12 @@ signal join_requested(address: String, port: int)
 @onready var _version_label: Label = %VersionLabel
 @onready var _settings_button: Button = %SettingsButton
 @onready var _settings: SettingsPanel = %Settings
+@onready var _compendium_button: Button = %CompendiumButton
+@onready var _checklist_button: Button = %ChecklistButton
 @onready var _panel: Control = $Center/Panel
 @onready var _backdrop: TextureRect = %Backdrop
+var compendium: Compendium = null
+var checklist: PlaytestChecklist = null
 
 
 func _ready() -> void:
@@ -34,6 +40,20 @@ func _ready() -> void:
 	_settings.closed.connect(func() -> void:
 		_panel.show()
 		_settings_button.grab_focus())
+	compendium = Compendium.new()
+	checklist = PlaytestChecklist.new()
+	for page: Array in [[compendium, _compendium_button], [checklist, _checklist_button]]:
+		var screen: ListScreen = page[0]
+		var button: Button = page[1]
+		add_child(screen)
+		button.pressed.connect(func() -> void:
+			_panel.hide()
+			_version_label.hide()
+			screen.open())
+		screen.closed.connect(func() -> void:
+			_panel.show()
+			_version_label.show()
+			button.grab_focus())
 	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
 
 
@@ -41,6 +61,8 @@ func show_menu(message: String = "") -> void:
 	show()
 	_panel.show()
 	_settings.hide()
+	compendium.hide()
+	checklist.hide()
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()

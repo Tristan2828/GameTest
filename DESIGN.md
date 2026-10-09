@@ -221,6 +221,7 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 7. Victory / Run over has a "Return to character select" button for the host (R / Select still works).
 8. New boss arrival sound: impact, tolling bell and a dissonant horn swell (the old low growl was hard to hear).
 9. Far fewer level-ups (see Progression, Pacing). Difficulty was judged good, so enemies are unchanged. **Watch:** with half the upgrades, players are weaker by stage 2–3; if it gets too hard, make upgrades stronger rather than more frequent.
+10. *(Added after the playtest list)* Title menu: **Compendium** (heroes, weapons, upgrades, relics, pickups, enemies, bosses; all numbers read from the game data) and **Playtest Checklist** (the items in `docs/PLAYTEST.md`, tick as you test, "Copy what's left" to paste to Claude).
 
 ### Where things stand (2026-10-09, v0.13.0, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.

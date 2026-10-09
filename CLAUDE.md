@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fantasy pixel art. **Read `DESIGN.md` before starting work.** It is the source of truth for game design decisions. Update it when a design decision changes or an open question gets answered. **`docs/PLAYTEST.md`** is the human playtest checklist; keep it current when adding features or changing what needs human judgment.
+Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fantasy pixel art. **Read `DESIGN.md` before starting work.** It is the source of truth for game design decisions. Update it when a design decision changes or an open question gets answered. **`docs/PLAYTEST.md`** is the human playtest checklist; keep it current when adding features or changing what needs human judgment. The game ships it and shows it as the title menu's Playtest Checklist (`PlaytestDoc`): only `### Heading` sections with `- [ ] question` lines are read, indented lines (Tune hints) are skipped, so keep that format.
 
 ## Context
 - The owner is new to Godot and game dev; AI writes most of the code. Explain engine concepts briefly when introducing them, and prefer simple, readable solutions.
@@ -48,7 +48,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/progression/`: `TeamProgress` (shared XP), `GemManager` (pickup pool; XP gems and coins), `LevelUpController` + `LevelUpSession`, `Upgrades` (`upgrades/*.tres`), `ShopController` + `ShopSession`, `Relics` (`relics/*.tres`, lists of `Upgrade` stat effects).
 - `src/art/pixel_art.gd`: **every sprite as text rows** (one character per pixel, shared `PALETTE`; `P`/`p` recolored per player), built into cached textures. Edit sprites directly in this file; keep rows equal length.
 - `src/audio/`: `Synth` (waveforms, envelopes, filter, vibrato, layering, echo), `Tracks` (music as text scores), `MusicComposer` (score -> seamless loop; rendered on background threads at startup).
-- `src/ui/`: main menu, `Hud` (hearts, XP bar, ability readout, weapon icons, minimap, teammate arrows, boss bar, banners, level-up and shop panels), `LevelPips`, `WeaponIcons`, `TeammateArrows`, `PauseMenu`, `SettingsPanel`, `Minimap`, `PixelFont` (**every glyph as text rows**; edit directly), `theme/game_theme.tres` (the one Theme for all UI).
+- `src/ui/`: main menu, `Hud` (hearts, XP bar, ability readout, weapon icons, minimap, teammate arrows, boss bar, banners, level-up and shop panels), `LevelPips`, `WeaponIcons`, `TeammateArrows`, `ListScreen` (full-screen menu page base) with `Compendium` (info pages built from the registries) and `PlaytestChecklist` (+ `PlaytestDoc` parser; ticks in user://playtest.cfg), `SpriteIcon`, `PauseMenu`, `SettingsPanel`, `Minimap`, `PixelFont` (**every glyph as text rows**; edit directly), `theme/game_theme.tres` (the one Theme for all UI).
 - `src/core/`: engine-agnostic helpers (`SpatialGrid`).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
 - `tools/`: `run_tests.ps1`, `net_smoke_test.ps1`, `build.ps1`, `README-friends.txt`.
