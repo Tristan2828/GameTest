@@ -63,6 +63,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Run summary: icons for weapons, upgrades and relics under "Build" (hover for names). Can you tell the icons apart?
 - [ ] Run summary: Weapons page (button at the bottom): damage, share, DPS and kills per weapon. Numbers believable? Anything else you want there?
 - [ ] Upgrade and relic icons on the level-up and shop cards. Do they help?
+- [ ] Compendium: Upgrades and Relics tabs show the icons; Pickups explains downed and revives. Anything out of date?
 - [ ] Records (title menu): your best runs per hero on this PC, with a score. Shows after a real run? Does the score feel fair (kills, damage, bosses, victory, difficulty)?
 - [ ] Custom Game: Soundtrack (Classic / Metal / Metal boss fights / Shuffle). Do the metal tracks fit? Which stage track is best or worst?
 
