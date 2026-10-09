@@ -16,7 +16,8 @@ extends RefCounted
 ##   --start-stage=<n>               host starts the run at stage n (1-3)
 ##   --give-weapons                  every player starts with all auto weapons at level 2
 ##   --weak-bosses                   bosses have 2% HP (test stage transitions quickly)
-##   --screenshot-dir=<folder>       save PNGs: gameplay every 10s, and the first level-up screen
+##   --screenshot-dir=<folder>       save PNGs: the title screen (when no mode flag), gameplay every 10s,
+##                                   and the first lobby, level-up, shop and run-end screens
 ##                                   (needs a real window, not --headless)
 
 enum Mode { MENU, SOLO, HOST, JOIN }

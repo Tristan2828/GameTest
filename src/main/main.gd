@@ -49,6 +49,8 @@ func _apply_launch_options() -> void:
 			var invite: Dictionary = Net.parse_invite(LaunchOptions.address, LaunchOptions.port)
 			_start_join(invite["address"], invite["port"])
 	if not LaunchOptions.screenshot_dir.is_empty():
+		if LaunchOptions.mode == LaunchOptions.Mode.MENU:
+			get_tree().create_timer(0.5).timeout.connect(func() -> void: save_screenshot(get_tree(), "title.png"))
 		_take_screenshots_periodically()
 	if LaunchOptions.run_for_seconds > 0.0:
 		get_tree().create_timer(LaunchOptions.run_for_seconds).timeout.connect(_report_and_quit)
