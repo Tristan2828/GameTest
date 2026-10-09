@@ -6,6 +6,7 @@
 script = ExtResource("1_weapon")
 title = "Seeking Bolts"
 description = "Fires at the nearest enemy on its own"
+icon = "icon_seeking_bolts"
 kind = 1
 color = Color(0.5, 0.85, 1, 1)
 damage = 14

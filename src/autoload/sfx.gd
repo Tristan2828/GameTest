@@ -80,10 +80,16 @@ func _build_sounds() -> void:
 	_add(&"bomb", Synth.echo(Synth.mix([
 		Synth.voice(W.NOISE, 360.0, 30.0, 0.8, 0.38, 0.002, 1.6, 0.25),
 		Synth.voice(W.SINE, 90.0, 30.0, 0.7, 0.42, 0.002, 1.4)]), 0.14, 0.3, 2))
-	# Boss arrival: a slow, wobbling growl over rumble.
+	# Boss arrival: a heavy impact and a tolling bell over a dissonant, swelling horn.
 	_add(&"boss", Synth.echo(Synth.mix([
-		Synth.voice(W.SAW, 72.0, 46.0, 1.4, 0.4, 0.05, 1.2, 0.18, 6.0, 0.04),
-		Synth.voice(W.NOISE, 200.0, 60.0, 1.4, 0.25, 0.1, 1.5, 0.12)]), 0.2, 0.3, 2))
+		Synth.voice(W.NOISE, 500.0, 40.0, 0.6, 0.25, 0.002, 1.8, 0.3),
+		Synth.voice(W.SINE, 120.0, 38.0, 0.9, 0.35, 0.002, 1.6),
+		Synth.voice(W.SINE, 196.0, 196.0, 2.4, 0.2, 0.003, 1.4),
+		Synth.voice(W.SINE, 392.0, 392.0, 2.0, 0.1, 0.003, 1.6),
+		Synth.voice(W.SINE, 541.0, 541.0, 1.6, 0.08, 0.003, 1.8),
+		Synth.voice(W.SINE, 1058.0, 1058.0, 0.9, 0.05, 0.003, 2.0),
+		Synth.voice(W.SAW, 98.0, 92.0, 2.2, 0.12, 0.25, 1.0, 0.25, 5.0, 0.015),
+		Synth.voice(W.SAW, 104.0, 97.0, 2.2, 0.12, 0.25, 1.0, 0.25, 5.0, 0.015)]), 0.28, 0.35, 3))
 	_add(&"dash", Synth.voice(W.NOISE, 4000.0, 700.0, 0.12, 0.16, 0.003, 1.5, 0.7))
 	# Hex Snare: an eerie falling whistle with a wobble, ringing out.
 	_add(&"hex", Synth.echo(Synth.mix([
@@ -96,6 +102,11 @@ func _build_sounds() -> void:
 		Synth.voice(W.SQUARE, 220.0, 140.0, 0.12, 0.16, 0.002, 2.0, 0.4)]))
 	_add(&"enemy_shot", Synth.voice(W.SQUARE, 330.0, 240.0, 0.08, 0.12, 0.002, 2.0, 0.4))
 	_add(&"ui", Synth.voice(W.SINE, 900.0, 900.0, 0.03, 0.2, 0.001, 2.0))
+	# "3, 2, 1" before play resumes, then a brighter "go".
+	_add(&"countdown", Synth.echo(Synth.voice(W.SQUARE, 523.0, 523.0, 0.12, 0.35, 0.002, 1.5, 0.4), 0.08, 0.25, 1))
+	_add(&"countdown_go", Synth.echo(Synth.mix([
+		Synth.voice(W.SQUARE, 1047.0, 1047.0, 0.3, 0.2, 0.002, 1.5, 0.45),
+		Synth.voice(W.TRIANGLE, 523.0, 523.0, 0.3, 0.25, 0.002, 1.5)]), 0.09, 0.3, 2))
 	_add(&"victory", Synth.echo(_arpeggio([67, 72, 76, 79, 84], 0.12, 0.25, W.SQUARE, 0.5), 0.12, 0.35, 3))
 	_add(&"defeat", Synth.echo(Synth.sequence([
 		Synth.voice(W.SAW, 330.0, 310.0, 0.28, 0.26, 0.005, 1.0, 0.35),

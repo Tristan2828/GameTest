@@ -3,6 +3,10 @@ extends Control
 ## The end-of-run screen (Run over / Victory): headline, run totals, and one card
 ## per player with their numbers, build and co-op awards. Built in code because
 ## the number of player cards changes. Numbers count up when it opens.
+## The host gets a button back to character select; clients see a waiting line.
+
+## Host: the "Return to character select" button was pressed.
+signal return_requested
 
 const DEFEAT_COLOR: Color = Color(0.95, 0.4, 0.38)
 const VICTORY_COLOR: Color = Color(0.95, 0.85, 0.55)
@@ -25,7 +29,9 @@ func _ready() -> void:
 
 
 ## Builds and shows the screen. `players` are the Player nodes still in the game.
-func open(stats: RunStats, players: Array[Player], stage_title: String, stage_count: int, hint: String) -> void:
+## `can_return` shows the return button (the host); `hint` is the line under it.
+func open(stats: RunStats, players: Array[Player], stage_title: String, stage_count: int, hint: String,
+		can_return: bool = false) -> void:
 	for child: Node in get_children():
 		child.queue_free()
 	_counters.clear()
@@ -61,10 +67,20 @@ func open(stats: RunStats, players: Array[Player], stage_title: String, stage_co
 	for player: Player in players:
 		cards.add_child(_player_card(player, stats, width, players.size()))
 
+	var return_button: Button = null
+	if can_return:
+		return_button = Button.new()
+		return_button.text = "Return to character select"
+		return_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		return_button.custom_minimum_size = Vector2(200, 20)
+		return_button.pressed.connect(func() -> void: return_requested.emit())
+		column.add_child(return_button)
 	var hint_label := _label(hint, 9, LABEL_COLOR, true)
 	column.add_child(hint_label)
 	show()
 	_animate_in(hint_label)
+	if return_button != null:
+		return_button.grab_focus()
 
 
 func _headline(stats: RunStats, stage_title: String, stage_count: int) -> String:
@@ -147,8 +163,9 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 		grid.add_child(value_label)
 		_count_up(value_label, stats.get_stat(player.peer_id, stat as RunStats.Stat), false)
 
-	# Build: weapons, upgrades, relics.
+	# Build: weapon icons, upgrades, relics.
 	lines.add_child(_divider())
+	lines.add_child(_weapons_row(player))
 	var detailed := player_count <= 2
 	for text: String in _build_lines(player, detailed):
 		var build_label := _label(text, 9, VALUE_COLOR, false)
@@ -161,14 +178,24 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 	return card
 
 
-## "Weapons: Orbiting Skulls 2", "Upgrades: Quick Hands x2, ..." (or just counts
-## when space is tight), "Relics: ...".
+## "Weapons" followed by each weapon's icon and level pips (or "none").
+func _weapons_row(player: Player) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.add_child(_label("Weapons:", 9, VALUE_COLOR, false))
+	if player.weapon_levels.is_empty():
+		row.add_child(_label("none", 9, VALUE_COLOR, false))
+	else:
+		var icons := WeaponIcons.new()
+		icons.icon_scale = 2.0
+		icons.set_weapons(player.weapon_levels)
+		row.add_child(icons)
+	return row
+
+
+## "Upgrades: Quick Hands x2, ..." (or just counts when space is tight), "Relics: ...".
 func _build_lines(player: Player, detailed: bool) -> Array[String]:
 	var result: Array[String] = []
-	var weapons := PackedStringArray()
-	for weapon_id: int in player.weapon_levels:
-		weapons.append("%s %d" % [AutoWeapons.get_weapon(weapon_id).title, player.weapon_levels[weapon_id]])
-	result.append("Weapons: " + (", ".join(weapons) if not weapons.is_empty() else "none"))
 	if detailed:
 		var counts: Dictionary[int, int] = {}
 		for id: int in player.upgrade_ids:

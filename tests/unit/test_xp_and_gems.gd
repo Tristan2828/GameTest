@@ -13,14 +13,22 @@ func before_each() -> void:
 # --- TeamProgress ---
 
 func test_xp_curve_grows_each_level() -> void:
-	assert_eq(TeamProgress.xp_to_next(1), 5)
-	assert_eq(TeamProgress.xp_to_next(2), 10)
+	assert_eq(TeamProgress.xp_to_next(1), 16)
+	assert_eq(TeamProgress.xp_to_next(2), 30)
 	assert_gt(TeamProgress.xp_to_next(10), TeamProgress.xp_to_next(9))
+
+
+func test_bigger_teams_need_more_xp_per_level() -> void:
+	assert_eq(TeamProgress.xp_to_next(1, 2), roundi(16 * 1.6))
+	assert_gt(TeamProgress.xp_to_next(5, 4), TeamProgress.xp_to_next(5, 2))
+	var team := TeamProgress.new()
+	team.player_count = 2
+	assert_eq(team.add_xp(TeamProgress.xp_to_next(1)), 0, "a solo level's worth isn't enough for two")
 
 
 func test_adding_xp_levels_up_and_keeps_leftover() -> void:
 	var team := TeamProgress.new()
-	assert_eq(team.add_xp(4), 0)
+	assert_eq(team.add_xp(15), 0)
 	assert_eq(team.add_xp(3), 1)
 	assert_eq(team.level, 2)
 	assert_eq(team.xp, 2)
@@ -28,7 +36,7 @@ func test_adding_xp_levels_up_and_keeps_leftover() -> void:
 
 func test_big_xp_gain_can_give_several_levels() -> void:
 	var team := TeamProgress.new()
-	assert_eq(team.add_xp(5 + 10 + 15), 3)
+	assert_eq(team.add_xp(16 + 30 + 44), 3)
 	assert_eq(team.level, 4)
 	assert_eq(team.xp, 0)
 

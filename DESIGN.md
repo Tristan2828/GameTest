@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-09
+> Last updated: 2026-10-09 (v0.14.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -76,7 +76,8 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 ## 4. Progression
 
 ### In-run
-- **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades. Each card shows its current level (and max) and the player's real stat before -> after taking it.
+- **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades. Each card shows its level as pips (owned / this pick / left to max) and the player's real stat before -> after taking it.
+  - **Pacing (v0.14.0):** level n costs 16 + 14·(n−1) XP, times the team-size factor (+60% per extra player, same as spawns), so a team levels about as often as a solo player. Target: roughly one level-up every 20s in stage 1 (~14 in stage 1, ~7–8 in each later stage). Before, a 2-player team got ~30 in stage 1.
   - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
 - **Weapon pickups:** new auto weapons found during stages.
 - **Passive items / relics:** stat boosts and synergies.
@@ -92,7 +93,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Players | 1–4 |
 | Friendly fire | Off |
 | XP | **Shared** team XP bar; each player picks their **own** upgrade |
-| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes early once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another |
+| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted. Play resumes after a **3-second "3, 2, 1" countdown** (also after the shop) |
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
 | Death | Player becomes a **ghost until the next stage** and then respawns. Ghosts can move and collect gems/coins but can't shoot or be hurt. Run ends if all players are dead |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
@@ -209,9 +210,22 @@ Owner played solo, beat stage 1. Requested and done:
 6. Title screen shows version, build commit and date.
 Also: lobby cards restyled.
 
+### Playtest 2 changes (v0.14.0)
+Owner played a co-op run with one friend ("awesome, a great start"). Requested and done:
+1. Your level-up pick stays highlighted (gold border, others dimmed) while others choose; status says "You chose X".
+2. Level pips on level-up cards (filled / blinking gold for this pick / hollow up to max).
+3. Auto weapons shown as pixel icons with level pips: HUD, run-end cards, and over altars.
+4. Arrows at the screen edge point to off-screen teammates (their color; faded for ghosts).
+5. Lobby portraits now show your real player color (they never redrew, so everyone saw Blue); color squares show who picked each hero.
+6. A 3-second "3, 2, 1" countdown with beeps before play resumes after level-ups and the shop (`Arena.Phase.COUNTDOWN`).
+7. Victory / Run over has a "Return to character select" button for the host (R / Select still works).
+8. New boss arrival sound: impact, tolling bell and a dissonant horn swell (the old low growl was hard to hear).
+9. Far fewer level-ups (see Progression, Pacing). Difficulty was judged good, so enemies are unchanged. **Watch:** with half the upgrades, players are weaker by stage 2–3; if it gets too hard, make upgrades stronger rather than more frequent.
+
 ### Where things stand (2026-10-09, v0.13.0, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
 - v0.13.0 added: level-up card previews (level + stat before -> after), the end-of-run summary screen (`RunStats` + `RunSummaryPanel`), the Necromancer (Bone Effigy) and the Witch's Hex Snare.
+- **v0.14.0 (built, not yet released):** the playtest 2 changes above. The 2026-10-09 co-op run (owner + one friend) was on v0.13.0.
 - **Not yet played by a human:** stages 2–3 and their bosses, Victory, Hex Snare, the Necromancer, the end-of-run screen, the shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
 - **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
 

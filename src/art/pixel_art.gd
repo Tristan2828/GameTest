@@ -1001,6 +1001,40 @@ const SPRITES: Dictionary[String, Array] = {
 		"...kVk...",
 		"....k....",
 	],
+	# Auto weapon icons (HUD, run summary, altars). Named in each weapon's .tres.
+	"icon_orbiting_skulls": [
+		"..kkkkk..",
+		".kbbbbbk.",
+		"kbbbbbbbk",
+		"kbkkbkkbk",
+		"kbkkbkkbk",
+		"kbbbkbbbk",
+		".kbbbbbk.",
+		"..kbwbk..",
+		"...kkk...",
+	],
+	"icon_seeking_bolts": [
+		"....kkkk.",
+		"...kttwwk",
+		"....kttwk",
+		"....ktttk",
+		"...ktTktk",
+		"..ktTk.k.",
+		".ktTk....",
+		"ktTk.....",
+		"kTk......",
+	],
+	"icon_holy_aura": [
+		"..kkkkk..",
+		".keyyyek.",
+		"keykkkyek",
+		"kyk...kyk",
+		"kyk...kyk",
+		"kyk...kyk",
+		"keykkkyek",
+		".keyyyek.",
+		"..kkkkk..",
+	],
 }
 
 const TINT_CHAR: String = "P"

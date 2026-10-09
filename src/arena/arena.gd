@@ -11,7 +11,8 @@ extends Node2D
 signal restart_requested
 
 ## Values are sent over the network: only add new phases at the end.
-enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP, SHOP, VICTORY }
+## COUNTDOWN: everyone has picked (level-up or shop); the game resumes in a few seconds.
+enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP, SHOP, VICTORY, COUNTDOWN }
 
 const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
@@ -31,6 +32,8 @@ const WAVE_DURATION: float = 240.0
 const BOSS_FIGHT_SPAWN_RATE: float = 0.4
 const BOSS_SPAWN_DISTANCE: float = 220.0
 const BOSS_BANNER_SECONDS: float = 3.0
+## "3, 2, 1" before play resumes after a level-up or the shop.
+const RESUME_COUNTDOWN_SECONDS: float = 3.0
 ## 60 physics ticks per second / 2 = 30 player snapshots per second.
 const PLAYER_SNAPSHOT_INTERVAL_TICKS: int = 2
 ## Enemies are smoothed on clients anyway, so 15 per second is plenty.
@@ -69,6 +72,8 @@ var _boss_defeated: bool = false
 ## Everyone: we've seen the boss (for the intro banner and "BOSS" timer).
 var _boss_seen: bool = false
 var _boss_banner_left: float = 0.0
+## Seconds until play resumes (Phase.COUNTDOWN; clients get it from snapshots).
+var _resume_left: float = 0.0
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
@@ -93,6 +98,7 @@ var _team: TeamProgress = TeamProgress.new()
 var _copied_feedback_left: float = 0.0
 var _announced_invite: bool = false
 var _time_since_stage_end: float = 0.0
+var _restart_requested: bool = false
 # Host: enemy pattern events fired this tick, sent once per tick.
 var _pattern_ids: PackedInt32Array = PackedInt32Array()
 var _pattern_origins: PackedVector2Array = PackedVector2Array()
@@ -143,6 +149,7 @@ func _ready() -> void:
 			Sfx.play(&"coin", -6.0))
 	_weapons.weapon_gained.connect(_on_weapon_gained)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
+	_hud.run_summary.return_requested.connect(_request_restart)
 	if LaunchOptions.stage_seconds > 0.0:
 		_wave_duration = LaunchOptions.stage_seconds
 	if multiplayer.is_server():
@@ -170,6 +177,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var is_host := multiplayer.is_server()
+	_team.player_count = maxi(_player_nodes().size(), 1)
 	if _phase == Phase.PLAYING:
 		_elapsed += delta
 		_run_stats.run_seconds += delta
@@ -198,6 +206,11 @@ func _physics_process(delta: float) -> void:
 			if _level_up.host_should_start():
 				_start_level_up()
 			else:
+				_start_resume_countdown()
+	elif _phase == Phase.COUNTDOWN:
+		if is_host:
+			_resume_left = maxf(_resume_left - delta, 0.0)
+			if _resume_left <= 0.0:
 				_phase = Phase.PLAYING
 	elif _phase == Phase.STAGE_CLEAR:
 		if is_host:
@@ -213,13 +226,15 @@ func _physics_process(delta: float) -> void:
 		_time_since_stage_end += delta
 		if _time_since_stage_end >= AUTOPILOT_RESTART_DELAY:
 			_time_since_stage_end = -INF
-			restart_requested.emit()
+			_request_restart()
 	if is_host:
 		_tick += 1
 		_send_snapshots()
 
 
 var _jingle_phase: Phase = Phase.PLAYING
+## The countdown number last beeped (0 = none yet).
+var _beeped_number: int = 0
 ## Everyone: the final numbers once the run ends (null before that).
 var _final_stats: RunStats = null
 
@@ -235,6 +250,7 @@ func _update_music() -> void:
 
 
 func _play_phase_jingle() -> void:
+	_play_countdown_beeps()
 	if _phase == _jingle_phase:
 		return
 	_jingle_phase = _phase
@@ -246,6 +262,21 @@ func _play_phase_jingle() -> void:
 	if _is_run_finished() and not LaunchOptions.screenshot_dir.is_empty():
 		await get_tree().create_timer(1.7).timeout  # After the summary's count-up.
 		Main.save_screenshot(get_tree(), "run_end.png")
+
+
+## A beep on each "3, 2, 1" and a higher one when play resumes.
+func _play_countdown_beeps() -> void:
+	if _phase == Phase.COUNTDOWN:
+		var number := maxi(ceili(_resume_left), 1)
+		if number != _beeped_number:
+			_beeped_number = number
+			Sfx.play(&"countdown", -4.0)
+			if number == 2 and not LaunchOptions.screenshot_dir.is_empty():
+				Main.save_screenshot(get_tree(), "countdown.png")
+	elif _beeped_number != 0:
+		_beeped_number = 0
+		if _phase == Phase.PLAYING:
+			Sfx.play(&"countdown_go", -4.0)
 
 
 func _process(delta: float) -> void:
@@ -261,7 +292,14 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("copy_invite") and Net.invite.copy_to_clipboard():
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
-	if event.is_action_pressed("restart") and multiplayer.is_server() and _is_run_finished():
+	if event.is_action_pressed("restart"):
+		_request_restart()
+
+
+## Host, once the run is over: everyone goes back to character select (once).
+func _request_restart() -> void:
+	if multiplayer.is_server() and _is_run_finished() and not _restart_requested:
+		_restart_requested = true
 		restart_requested.emit()
 
 
@@ -487,8 +525,10 @@ func _broadcast_run_stats(victory: bool) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_run_stats(data: Dictionary) -> void:
 	_final_stats = RunStats.decode(data)
-	var restart_hint := "Press R / Select to return to the lobby" if multiplayer.is_server() else "Waiting for the host to return to the lobby..."
-	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, STAGE_COUNT, restart_hint)
+	var is_host := multiplayer.is_server()
+	var restart_hint := "or press R / Select" if is_host else "Waiting for the host to return to character select..."
+	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, STAGE_COUNT,
+		restart_hint, is_host)
 
 
 func _settle_stage_rewards() -> void:
@@ -516,7 +556,11 @@ func _begin_next_stage() -> void:
 	_weapons.reset_stage()
 	for player: Player in _player_nodes():
 		player.respawn(BOUNDS.get_center() + SPAWN_OFFSETS[player.slot])
-	_phase = Phase.PLAYING
+	# Level-ups banked at the end of the last stage come first, then "3, 2, 1".
+	if _level_up.host_should_start():
+		_start_level_up()
+	else:
+		_start_resume_countdown()
 	print("Stage %d begins" % _stage)
 
 
@@ -635,6 +679,7 @@ func _on_gem_collected(value: int, collector_peer_id: int) -> void:
 	var levels_gained := _team.add_xp(value)
 	if levels_gained > 0:
 		_level_up.host_queue(levels_gained)
+		print("Team level %d at %.1fs (stage %d)" % [_team.level, _elapsed, _stage])
 
 
 func _start_level_up() -> void:
@@ -642,6 +687,12 @@ func _start_level_up() -> void:
 	# With several level-ups queued, show the level this particular choice is for.
 	var level := _team.level - _level_up.pending_levels + 1
 	_level_up.host_start(_player_nodes(), level, _ready_peer_list())
+
+
+## Host: everyone has chosen; play resumes after a short "3, 2, 1".
+func _start_resume_countdown() -> void:
+	_phase = Phase.COUNTDOWN
+	_resume_left = RESUME_COUNTDOWN_SECONDS
 
 
 func _on_upgrade_announced(peer_id: int, upgrade_id: int) -> void:
@@ -932,7 +983,7 @@ func _update_hud() -> void:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
 		_hud.set_ability(local.stats.ability_name, local.ability_ready_ratio(), local.state.ability_cooldown_left)
 		_hud.set_coins(local.coins)
-		_hud.set_weapons(local.weapons_summary())
+		_hud.set_weapons(local.weapon_levels)
 	var boss := _enemies.find_boss()
 	if boss == null and _elapsed < _wave_duration:
 		# New stage: the next boss gets its own intro banner.
@@ -977,6 +1028,8 @@ func _update_hud() -> void:
 				_hud.hide_banner()
 			else:
 				_hud.show_banner("Level up!", "Others are choosing.   " + _level_up.status_text(name_of))
+		Phase.COUNTDOWN:
+			_hud.show_banner(str(maxi(ceili(_resume_left), 1)), "Get ready!")
 		Phase.STAGE_CLEAR:
 			_hud.show_banner("Stage %d cleared!" % _stage, "Stage %d of %d is next. Everyone respawns." % [_stage + 1, STAGE_COUNT])
 		Phase.VICTORY, Phase.RUN_OVER:
@@ -992,15 +1045,21 @@ func _update_hud() -> void:
 
 func _update_minimap(local: Player, boss: Enemy) -> void:
 	_hud.minimap.visible = not _is_between_stages()
+	_hud.teammate_arrows.visible = _hud.minimap.visible
 	if not _hud.minimap.visible:
 		return
 	var markers: Array[Array] = []
+	var teammates: Array[Array] = []
 	for player: Player in _player_nodes():
-		markers.append([player.world_position(), Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()], player.is_local()])
+		var color := Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()]
+		markers.append([player.world_position(), color, player.is_local()])
+		if not player.is_local():
+			teammates.append([player.world_position(), color, player.is_downed()])
 	var view := Rect2()
 	if local != null:
 		var screen := get_viewport_rect().size
 		view = Rect2(local.view_center() - screen / 2.0, screen)
+	_hud.teammate_arrows.show_state(view, teammates)
 	_hud.minimap.show_state(view, markers, _enemies.active_positions(), _weapons.altar_positions(),
 		boss.position if boss != null else Vector2.INF, local.world_position() if local != null else Vector2.INF)
 
@@ -1052,6 +1111,8 @@ func _send_snapshots() -> void:
 		var in_shop := _phase == Phase.SHOP
 		var waiting := PackedInt32Array(_shop.waiting_ids if in_shop else _level_up.waiting_ids)
 		var countdown := _shop.countdown_left if in_shop else _level_up.countdown_left
+		if _phase == Phase.COUNTDOWN:
+			countdown = _resume_left
 		for peer_id: int in peers:
 			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins,
 				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown)
@@ -1091,6 +1152,8 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 	_team.xp = team_xp
 	if phase == Phase.SHOP:
 		_shop.apply_status(pause_waiting, pause_countdown)
+	elif phase == Phase.COUNTDOWN:
+		_resume_left = pause_countdown
 	else:
 		_level_up.apply_status(pause_waiting, pause_countdown)
 	if phase != _phase:

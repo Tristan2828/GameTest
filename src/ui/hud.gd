@@ -4,6 +4,7 @@ extends CanvasLayer
 
 @onready var _hearts: HeartsDisplay = %Hearts
 @onready var minimap: Minimap = %Minimap
+@onready var teammate_arrows: TeammateArrows = %TeammateArrows
 @onready var _hurt_flash: ColorRect = %HurtFlash
 @onready var _xp_bar: XpBar = %XpBar
 @onready var _level_label: Label = %LevelLabel
@@ -20,7 +21,7 @@ extends CanvasLayer
 @onready var shop_panel: ShopPanel = %ShopPanel
 @onready var run_summary: RunSummaryPanel = %RunSummary
 @onready var _coins_label: Label = %CoinsLabel
-@onready var _weapons_label: Label = %WeaponsLabel
+@onready var _weapon_icons: WeaponIcons = %WeaponIcons
 @onready var _ability_label: Label = %AbilityLabel
 
 
@@ -33,8 +34,9 @@ func set_hearts(current: int, maximum: int) -> void:
 	_hearts.set_hearts(current, maximum)
 
 
-func set_weapons(summary: String) -> void:
-	_weapons_label.text = summary
+## Auto weapon icons with level pips (weapon id -> level).
+func set_weapons(levels: Dictionary[int, int]) -> void:
+	_weapon_icons.set_weapons(levels)
 
 
 func set_coins(count: int) -> void:

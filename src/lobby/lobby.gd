@@ -93,7 +93,13 @@ func _refresh() -> void:
 	var mine: int = _state.characters.get(me, RunSetup.character_for(me))
 	for i: int in _cards.size():
 		_cards[i].button_pressed = i == mine
-		(_cards[i].get_node("Portrait") as CharacterPortrait).color = _color_for(me)
+		var portrait := _cards[i].get_node("Portrait") as CharacterPortrait
+		portrait.color = _color_for(me)
+		var pickers: Array[Color] = []
+		for peer_id: int in _state.order:
+			if _state.characters[peer_id] == i:
+				pickers.append(_color_for(peer_id))
+		portrait.pickers = pickers
 	var lines := PackedStringArray()
 	for peer_id: int in _state.order:
 		var role := "host" if peer_id == 1 else ("ready" if _state.ready.get(peer_id, false) else "not ready")

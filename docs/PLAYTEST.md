@@ -1,7 +1,7 @@
-# Playtest Review (v0.13.0)
+# Playtest Review (v0.14.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (198 unit tests, plus online host+client runs).
+Automated tests prove it *works* (204 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -48,7 +48,20 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
-### 3.0 Changes from your first playtest (check these first)
+### 3.0a Changes from the first co-op playtest (v0.14.0, check these first)
+- [ ] Level-up pacing: about half as many level-ups (a 2-player team: ~14 in stage 1 instead of ~30). Does the flow feel better? Is the difficulty still right with fewer upgrades?
+  - *Tune: `BASE_XP` / `XP_PER_LEVEL` in `src/progression/team_progress.gd`.*
+- [ ] After you pick, your card stays lit (gold border, others dimmed) with "You chose X. Waiting for ...". Clear?
+- [ ] Level pips on each card (filled = levels you have, blinking gold = this pick, hollow = left to max). Readable?
+- [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop. Long enough? Too long?
+  - *Tune: `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`.*
+- [ ] Weapon icons with level pips under the hearts (HUD), on the run-end cards, and floating over altars. Can you tell the three apart?
+- [ ] Arrows at the screen edge point to off-screen teammates, in their color (faded for ghosts). Helpful? Distracting?
+- [ ] Lobby: portraits show **your** color (a friend in Red sees red heroes), and small color squares show who picked which hero.
+- [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
+- [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
+
+### 3.0 Changes from your first playtest (v0.12.0)
 - [ ] Gems: easy to spot now? Three tiers distinguishable?
 - [ ] Minimap: helpful? Did you notice the red edge warning near walls?
 - [ ] Text: shop, level-up cards, lobby, HUD all readable now?
@@ -115,8 +128,8 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
   - *Tune: `src/player/characters/*.tres`.*
 
 ### 3.6 Level-ups and upgrades
-- [ ] How often do level-ups pause the game? Too often in co-op?
-- [ ] Level-up cards show "Lv X -> Y of max" and your real stat before -> after (e.g. "Damage 13 -> 16"). Useful, and are the numbers right after a few picks and relics?
+- [ ] How often do level-ups pause the game? Too often in co-op? (Rebalanced in v0.14.0, see 3.0a.)
+- [ ] Level-up cards show level pips and your real stat before -> after (e.g. "Damage 13 -> 16"). Useful, and are the numbers right after a few picks and relics?
 - [ ] Run over / Victory screen: headline (what killed you, which stage), run totals, a card per player with stats, build and co-op awards. Readable? Any stat you miss?
 - [ ] Are the 9 upgrades meaningfully different? Any always/never picked?
 - [ ] 30-second countdown after the first pick: right length?
@@ -172,7 +185,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In one place:
 
 - **Stage flow:** 4:00 horde then boss; horde at 40% during the boss; stage clear = boss dead.
-- **Run:** 3 stages, each harder; Victory after stage 3; R / Select returns to the lobby.
+- **Run:** 3 stages, each harder; Victory after stage 3; the host returns everyone to character select (button, or R / Select).
 - **Boss HP** scales with players (+75% each); regular enemies don't (more of them instead).
 - **Ghosts** collect gems/coins; respawn next stage.
 - **Coins** go to whoever picks them up; the boss bounty is paid to everyone.

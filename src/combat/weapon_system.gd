@@ -107,7 +107,7 @@ func _draw() -> void:
 		draw_circle(at, 16.0, Color(weapon.color, glow * 0.4))
 		draw_rect(Rect2(at + Vector2(-7, 2), Vector2(14, 6)), ALTAR_BASE_COLOR)
 		draw_rect(Rect2(at + Vector2(-5, -2), Vector2(10, 4)), ALTAR_TOP_COLOR)
-		draw_circle(at + Vector2(0, -7), 4.0, weapon.color)
+		PixelArt.draw(self, weapon.icon, at + Vector2(0, -9 + 1.5 * sin(Time.get_ticks_msec() / 300.0)).round())
 
 
 func _process(_delta: float) -> void:

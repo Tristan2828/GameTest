@@ -177,14 +177,6 @@ func gain_weapon(weapon_id: int) -> void:
 	weapon_levels[weapon_id] = mini(weapon_levels.get(weapon_id, 0) + 1, AutoWeapons.MAX_LEVEL)
 
 
-## e.g. "Skulls 2  Aura 1" for the HUD.
-func weapons_summary() -> String:
-	var parts := PackedStringArray()
-	for weapon_id: int in weapon_levels:
-		parts.append("%s %d" % [AutoWeapons.get_weapon(weapon_id).title, weapon_levels[weapon_id]])
-	return "   ".join(parts)
-
-
 ## Host: count a kill toward heal-on-kill relics.
 func register_kill() -> void:
 	if stats.heal_every_kills <= 0 or health.is_downed():

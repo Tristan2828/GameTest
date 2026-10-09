@@ -64,7 +64,7 @@ func test_settings_round_trip() -> void:
 
 func test_every_sound_is_synthesized() -> void:
 	for sound: StringName in [&"shoot", &"hit", &"death", &"hurt", &"gem", &"coin", &"level_up", &"pickup",
-			&"bomb", &"boss", &"dash", &"enemy_shot", &"victory", &"defeat"]:
+			&"bomb", &"boss", &"dash", &"enemy_shot", &"victory", &"defeat", &"countdown", &"countdown_go"]:
 		assert_true(Sfx.has_sound(sound), str(sound))
 
 
@@ -99,3 +99,47 @@ func test_minimap_accepts_state_and_warns_near_walls() -> void:
 		PackedVector2Array(), Vector2.INF, Vector2(20, 500))
 	assert_eq(minimap.players.size(), 1)
 	assert_lt(minimap.local_position.x, Minimap.EDGE_WARNING_DISTANCE, "left wall warning would show")
+
+
+func test_teammate_arrow_only_for_offscreen_players() -> void:
+	var view := Rect2(0, 0, 640, 360)
+	assert_eq(TeammateArrows.edge_point(view, Vector2(300, 200)), Vector2.INF, "on screen: no arrow")
+	var right := TeammateArrows.edge_point(view, Vector2(2000, 180))
+	assert_almost_eq(right.x, 640.0 - TeammateArrows.EDGE_MARGIN, 0.01, "pinned to the right edge")
+	assert_almost_eq(right.y, 180.0, 0.01)
+	var up_left := TeammateArrows.edge_point(view, Vector2(-1000, -1000))
+	assert_true(Rect2(Vector2.ZERO, view.size).has_point(up_left), "stays on screen")
+	assert_lt(up_left.x, 320.0)
+	assert_lt(up_left.y, 180.0)
+
+
+func test_level_pips_count_owned_next_and_empty() -> void:
+	var pips := LevelPips.new()
+	add_child_autofree(pips)
+	pips.owned = 2
+	pips.maximum = 5
+	assert_eq(pips.pip_count(), 5)
+	pips.maximum = 0
+	assert_eq(pips.pip_count(), 3, "no limit: owned plus the new one")
+	pips.owned = 30
+	assert_eq(pips.pip_count(), LevelPips.MAX_DRAWN)
+
+
+func test_weapon_icons_exist_and_size_the_row() -> void:
+	for weapon: AutoWeapon in AutoWeapons.ALL:
+		assert_true(PixelArt.has_sprite(weapon.icon), weapon.title)
+	var icons := WeaponIcons.new()
+	add_child_autofree(icons)
+	var levels: Dictionary[int, int] = {0: 1, 2: 3}
+	icons.set_weapons(levels)
+	assert_gt(icons.custom_minimum_size.x, 18.0, "two icons wide")
+
+
+func test_lobby_portrait_redraws_with_new_color_and_pickers() -> void:
+	var portrait := CharacterPortrait.new()
+	add_child_autofree(portrait)
+	portrait.color = Player.SLOT_COLORS[1]
+	assert_eq(portrait.color, Player.SLOT_COLORS[1])
+	var pickers: Array[Color] = [Player.SLOT_COLORS[0], Player.SLOT_COLORS[1]]
+	portrait.pickers = pickers
+	assert_eq(portrait.pickers.size(), 2)

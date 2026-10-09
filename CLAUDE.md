@@ -5,7 +5,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 ## Context
 - The owner is new to Godot and game dev; AI writes most of the code. Explain engine concepts briefly when introducing them, and prefer simple, readable solutions.
 - Target: Windows PC only. Input: mouse + keyboard and gamepad, both first-class.
-- Current state (v0.13.0): Milestones 1–5 plus polish, art, audio, UI and animation passes are done, the first solo playtest's requests are implemented, and v0.13.0 added a 4th character, unique abilities and the end-of-run summary. See `DESIGN.md` §7 for what's been playtested and what hasn't.
+- Current state (v0.14.0): Milestones 1–5 plus polish, art, audio, UI and animation passes are done; v0.13.0 added a 4th character, unique abilities and the end-of-run summary; v0.14.0 implements the first co-op playtest's requests (level-up pacing, resume countdown, weapon icons, teammate arrows). See `DESIGN.md` §7 for what's been playtested and what hasn't.
 
 ## Engine & language rules
 - **Godot 4.x only.** Never use Godot 3 syntax or APIs (e.g. use `@export`, `@onready`, `super()`, `CharacterBody2D`, `velocity` property + `move_and_slide()` with no args, `signal.connect(callable)`, `@rpc`, `FileAccess`, `Tween` via `create_tween()`).
@@ -48,7 +48,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/progression/`: `TeamProgress` (shared XP), `GemManager` (pickup pool; XP gems and coins), `LevelUpController` + `LevelUpSession`, `Upgrades` (`upgrades/*.tres`), `ShopController` + `ShopSession`, `Relics` (`relics/*.tres`, lists of `Upgrade` stat effects).
 - `src/art/pixel_art.gd`: **every sprite as text rows** (one character per pixel, shared `PALETTE`; `P`/`p` recolored per player), built into cached textures. Edit sprites directly in this file; keep rows equal length.
 - `src/audio/`: `Synth` (waveforms, envelopes, filter, vibrato, layering, echo), `Tracks` (music as text scores), `MusicComposer` (score -> seamless loop; rendered on background threads at startup).
-- `src/ui/`: main menu, `Hud` (hearts, XP bar, ability readout, minimap, boss bar, banners, level-up and shop panels), `PauseMenu`, `SettingsPanel`, `Minimap`, `PixelFont` (**every glyph as text rows**; edit directly), `theme/game_theme.tres` (the one Theme for all UI).
+- `src/ui/`: main menu, `Hud` (hearts, XP bar, ability readout, weapon icons, minimap, teammate arrows, boss bar, banners, level-up and shop panels), `LevelPips`, `WeaponIcons`, `TeammateArrows`, `PauseMenu`, `SettingsPanel`, `Minimap`, `PixelFont` (**every glyph as text rows**; edit directly), `theme/game_theme.tres` (the one Theme for all UI).
 - `src/core/`: engine-agnostic helpers (`SpatialGrid`).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
 - `tools/`: `run_tests.ps1`, `net_smoke_test.ps1`, `build.ps1`, `README-friends.txt`.

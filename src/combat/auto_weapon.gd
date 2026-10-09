@@ -10,6 +10,8 @@ enum Kind { ORBIT, SEEKER, AURA }
 @export_multiline var description: String = ""
 @export var kind: Kind = Kind.ORBIT
 @export var color: Color = Color.WHITE
+## PixelArt sprite shown in the HUD, the run summary and on altars.
+@export var icon: String = ""
 
 @export var damage: int = 8
 @export var damage_per_level: int = 0

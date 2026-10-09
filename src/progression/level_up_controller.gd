@@ -30,6 +30,8 @@ var _local_player: Callable = func() -> Player: return null
 ## This machine's open choices (empty = nothing to pick right now).
 var _my_choices: Array[int] = []
 var _my_pick_sent: bool = false
+## What this machine picked this round (for the status line).
+var _my_pick: int = -1
 
 
 func _ready() -> void:
@@ -143,8 +145,13 @@ func status_text(name_of: Callable) -> String:
 	elif not waiting_ids.is_empty():
 		var names := PackedStringArray()
 		for peer_id: int in waiting_ids:
-			names.append(name_of.call(peer_id))
-		parts.append("Waiting for %s" % ", ".join(names))
+			# The host's list can lag our own pick by a snapshot.
+			if not (_my_pick_sent and peer_id == multiplayer.get_unique_id()):
+				names.append(name_of.call(peer_id))
+		if _my_pick_sent and Upgrades.is_valid_id(_my_pick):
+			parts.append("You chose %s." % Upgrades.get_upgrade(_my_pick).title)
+		if not names.is_empty():
+			parts.append("Waiting for %s" % ", ".join(names))
 	if countdown_left >= 0.0:
 		parts.append("%ds left" % ceili(countdown_left))
 	return "   ".join(parts)
@@ -171,6 +178,9 @@ func _pick_locally(upgrade_id: int) -> void:
 	if _my_pick_sent or not _my_choices.has(upgrade_id):
 		return
 	_my_pick_sent = true
+	_my_pick = upgrade_id
+	if _panel != null:
+		_panel.mark_picked(upgrade_id)
 	if multiplayer.is_server():
 		_session.pick(multiplayer.get_unique_id(), upgrade_id)
 		_refresh_host_status()

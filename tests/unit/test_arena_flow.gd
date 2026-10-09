@@ -64,8 +64,14 @@ func test_level_up_pauses_until_pick_then_applies_upgrade() -> void:
 	var choice: int = _arena._level_up._my_choices[0]
 	_arena._level_up._pick_locally(choice)
 	await wait_physics_frames(2)
-	assert_eq(_arena._phase, Arena.Phase.PLAYING)
+	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before play resumes")
 	assert_eq(_local_player().upgrade_ids, [choice])
+	clock = _arena._elapsed
+	await wait_seconds(Arena.RESUME_COUNTDOWN_SECONDS - 0.5)
+	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN)
+	assert_eq(_arena._elapsed, clock, "still frozen during the countdown")
+	await wait_seconds(0.8)
+	assert_eq(_arena._phase, Arena.Phase.PLAYING)
 
 
 func _ability_input(count: int) -> PlayerInput:
@@ -105,7 +111,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
 	_arena._shop._ready_locally()
 	await wait_physics_frames(2)
-	assert_eq(_arena._phase, Arena.Phase.PLAYING)
+	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before the next stage")
 	assert_eq(_arena._stage, 2)
 	assert_false(player.is_downed(), "ghosts come back")
 	assert_eq(player.health.hearts, player.health.max_hearts)
@@ -169,7 +175,7 @@ func test_stage_clear_opens_shop_then_next_stage() -> void:
 	assert_true(_arena._shop.is_open_locally())
 	_arena._shop._ready_locally()
 	await wait_physics_frames(2)
-	assert_eq(_arena._phase, Arena.Phase.PLAYING)
+	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before the next stage")
 	assert_eq(_arena._stage, 2)
 
 
@@ -217,6 +223,17 @@ func test_run_end_shows_stats_table() -> void:
 	assert_false(stats.victory)
 	assert_eq(stats.stage_reached, 1)
 	assert_true(_arena._hud.run_summary.visible, "run summary screen is shown")
+
+
+func test_run_summary_button_returns_to_character_select_once() -> void:
+	_local_player().take_hit(99)
+	_arena._update_phase()
+	var buttons := _arena._hud.run_summary.find_children("*", "Button", true, false)
+	assert_eq(buttons.size(), 1, "the host gets a return button")
+	watch_signals(_arena)
+	(buttons[0] as Button).pressed.emit()
+	(buttons[0] as Button).pressed.emit()
+	assert_signal_emit_count(_arena, "restart_requested", 1)
 
 
 func test_run_end_names_the_boss_that_won() -> void:
