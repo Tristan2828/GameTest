@@ -55,6 +55,11 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
   
   Discord understands GitHub's format at that `/github` address, so no code is needed.
 
+## Future automation
+
+Releases are manual on purpose for now. Planned next steps (CI tests on every PR, then building in CI
+on a version tag) are in `DESIGN.md` §9, "Release automation".
+
 ## Troubleshooting
 
 - **No post in `#builds`:** open the repo's **Actions** tab -> "Announce release in Discord".
