@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-08
+> Last updated: 2026-10-09
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -118,7 +118,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - XP gems with magnet pull, shared team level, networked level-up pause with 9 stat upgrades.
 - 5-minute timed stage, "Stage clear" / "Run over", host restart (R / Start).
 
-### Milestone 3: First stage + first boss (implemented in v0.4.0; awaiting playtest)
+### Milestone 3: First stage + first boss ✅ (stage 1 and its boss playtested solo 2026-10-09; stages 2–3 not yet)
 Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
 - **Stage flow:** 4:00 of horde waves, then the boss arrives. The horde keeps trickling at 40% rate during the fight, with no pack surges. **Stage clear = boss defeated** (no longer a timer).
 - **First boss, "The Bone Warden":** a slow, huge undead that drifts toward the players and cycles attacks:
@@ -133,7 +133,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
 - **Fair dodging online:** enemy bullet patterns are fast-forwarded on clients by the network delay, so what you dodge on your screen matches what the host checks.
 - **Arena look:** dark stone floor with seeded variation, plus decorative graves and bones (no collision yet).
 
-### Milestone 4: Multi-stage run, ghosts, coins & shop, relics, auto weapons (implemented in v0.5.0; awaiting playtest)
+### Milestone 4: Multi-stage run, ghosts, coins & shop, relics, auto weapons ✅ (shop seen in the solo playtest: too many coins, fixed in v0.12.0; the rest not yet playtested)
 Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
 - **Run = 3 stages** in the same crypt arena (distinct stages/themes come in M5). Each stage is harder:
   - Spawn rate +35% per stage.
@@ -155,7 +155,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
   - Found as **weapon altars** that appear twice per stage (~1:20 and ~2:40). First player to touch one takes it. Taking a weapon you already own levels it up (max level 3).
   - Three weapons to start: **Orbiting Skulls** (circle you, hurt on touch), **Seeking Bolts** (auto-fire at the nearest enemy), and **Holy Aura** (pulses damage around you).
 
-### Milestone 5: Characters, lobby, three themed stages (implemented in v0.6.0; awaiting playtest)
+### Milestone 5: Characters, lobby, three themed stages ✅ (implemented; characters reworked around abilities in v0.12.0; not yet fully playtested)
 The owner approved the plan; details below are Claude's defaults. **Revisit in the next playtest.**
 - **Lobby:**
   - Solo/Host/Join leads to a lobby: pick a character, press Ready, and the host starts (solo starts right away).
@@ -207,18 +207,24 @@ Owner played solo, beat stage 1. Requested and done:
 6. Title screen shows version, build commit and date.
 Also: lobby cards restyled.
 
-### Future milestones (rough)
-- M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
-- M3 (above): First arena stage + first boss with bullet patterns.
-- M4 (above): Shop, relics, weapon pickups, ghost/respawn.
-- M5: Multiple characters, multiple stages, full 15–20 min run.
+### Where things stand (2026-10-09, v0.12.0)
+- Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
+- **Not yet played by a human:** stages 2–3 and their bosses, Victory, the reworked abilities and shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
+
+### Next (proposed, in rough priority)
+1. Full co-op playtest of v0.12.0 (everything above), then tune numbers.
+2. Working title (replace "GameTest" in the title, window, and build file names).
+3. Content depth: more upgrades/relics/weapons with synergies, more enemy variety per stage, boss attack variety.
+4. Meta/feel: hero portraits, records/stats screen, more animation.
+5. Release prep later: real audio direction, Steam or a relay for joining without port forwarding (see Ideas for Later).
 
 ## 8. Open questions
 
 - Working title?
-- Enemy roster and boss designs.
-- Weapon, auto-weapon, and relic lists; synergy rules.
-- Shop economy: how coins are earned, what's sold.
+- Do the three character abilities feel distinct and balanced (Dash / Grave Blast / Blink)? More characters later?
+- Enemy roster and boss designs beyond the first set (one boss per stage so far).
+- Weapon, auto-weapon, and relic lists; synergy rules (none yet).
+- Shop economy: first rebalance done in v0.12.0; needs a playtest.
 
 ## 9. Ideas for Later
 

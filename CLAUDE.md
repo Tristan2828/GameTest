@@ -1,74 +1,71 @@
 # CLAUDE.md
 
-Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fantasy pixel art. **Read `DESIGN.md` before starting work.** It is the source of truth for game design decisions. Update it when a design decision changes or an open question gets answered.
+Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fantasy pixel art. **Read `DESIGN.md` before starting work.** It is the source of truth for game design decisions. Update it when a design decision changes or an open question gets answered. **`docs/PLAYTEST.md`** is the human playtest checklist; keep it current when adding features or changing what needs human judgment.
 
 ## Context
 - The owner is new to Godot and game dev; AI writes most of the code. Explain engine concepts briefly when introducing them, and prefer simple, readable solutions.
 - Target: Windows PC only. Input: mouse + keyboard and gamepad, both first-class.
+- Current state (v0.12.0): Milestones 1–5 plus polish, art, audio, UI and animation passes are done, and the first solo playtest's requests are implemented. See `DESIGN.md` §7 for what's been playtested and what hasn't.
 
 ## Engine & language rules
 - **Godot 4.x only.** Never use Godot 3 syntax or APIs (e.g. use `@export`, `@onready`, `super()`, `CharacterBody2D`, `velocity` property + `move_and_slide()` with no args, `signal.connect(callable)`, `@rpc`, `FileAccess`, `Tween` via `create_tween()`).
 - When unsure about a Godot API, look up current Godot 4 docs rather than guessing.
-- **Statically typed GDScript everywhere:** typed variables, parameters, and return types (`func take_damage(amount: int) -> void:`).
-- Keep the project fully text-editable: build scenes in `.tscn` files and data in `.tres` resources so they can be edited without the editor GUI. If a step truly requires the editor, say so explicitly.
-- Pixel art: nearest-neighbor texture filtering, integer scaling.
+- **Statically typed GDScript everywhere:** typed variables, parameters, and return types (`func take_damage(amount: int) -> void:`). `untyped_declaration` is an error in project settings, so type `for` loop variables too (`for i: int in n:`).
+- Keep the project fully text-editable: scenes in `.tscn`, data in `.tres`, and art, fonts and audio as text (see below). If a step truly requires the editor, say so explicitly.
+- Pixel art: nearest-neighbor texture filtering, integer scaling (640x360 base resolution).
 
 ## Multiplayer rules
-- Godot built-in high-level multiplayer (ENet), direct IP / LAN. **Host-authoritative.**
-- Clients send input; the host simulates and syncs state.
-- Never sync bullets individually: send pattern events (pattern id, origin, time, seed) and simulate deterministically on each peer.
+- Godot built-in high-level multiplayer (ENet), direct IP. **Host-authoritative.** The host forwards UDP 7777 (UPnP is tried automatically); friends paste an `IP:port` invite.
+- Clients send input; the host simulates and syncs state. Your own movement (including Dash/Blink) is client-predicted by running the same `PlayerMotor` code.
+- Never sync bullets individually: send pattern events (pattern id, origin, aim, seed, host time) and simulate deterministically on each peer.
 - Pool enemies, bullets, and pickups.
 - Every gameplay feature must work in solo **and** online co-op. Design for networking from the start; don't bolt it on later.
+- RPC channels: 0 = reliable events, 1 = host snapshots, 2 = client inputs. The host only sends to peers in `_ready_peers` (scene loaded).
+- Registries whose index is a network id are **append only**: `EnemyTypes.ALL`, `ShotPatterns.Id`, `Upgrades.ALL`, `Relics.ALL`, `AutoWeapons.ALL`, `Characters.ALL`, `Arena.Phase`, `CharacterStats.Ability`, `Upgrade.Stat` (also stored as numbers in `.tres` files).
 
 ## Verification
-- Godot 4.7.2 is **not on PATH**. Use the full path to the console build for command-line work:
+- Godot 4.7.2 is **not on PATH**. Use the full path to the console build:
   `& "C:\Code Tools\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path . <args>`
   (`Godot_v4.7.2-stable_win64.exe` in the same folder is the GUI editor.)
-- Run it headless to check scripts and run tests after changes. Report failures honestly.
-
-- Tests use **GUT** (`addons/gut`, v9.7.1). Run them with `pwsh tools/run_tests.ps1`. Don't call GUT directly: GUT silently skips test files that fail to parse and still says "All tests passed", and the wrapper catches that.
-- Online smoke test: `pwsh tools/net_smoke_test.ps1` starts a headless host and client on autopilot and checks that they connected and that the client's shots damaged dummies on the host. Run it after any networking change.
-- Build the Windows exe: `pwsh tools/build.ps1`. It writes `builds/windows/GameTest.exe` (one file, game data embedded) and `builds/GameTest-<version>-windows.zip`. The export preset is `export_presets.cfg` (excludes GUT, tests and tools). Bump `config/version` in `project.godot` for each build you send to friends; the menu shows it. Needs the 4.7.2 export templates in `%APPDATA%\Godot\export_templates\4.7.2.stable\`.
-- Game launch flags (after `--`): `--solo | --host | --join=<ip>`, `--port=<n>`, `--autopilot`, `--run-for=<seconds>`, `--local-only`, `--stage-seconds=<n>` (horde wave length before the boss, default 240), `--start-at=<seconds>` (host starts the stage clock there, to test late-stage content quickly), `--weak-bosses` (2% boss HP, to test stage transitions), `--give-weapons` (all auto weapons at level 2), `--start-stage=<n>` (begin the run at stage n), `--character=<n>` (host's character before the lobby exists), `--screenshot-dir=<folder>` (needs a real window: run without `--headless`; saves gameplay every 10s plus the first level-up screen, so you can check visuals by reading the PNGs). With `--autopilot`, the host also restarts automatically 2s after a stage ends. See `src/main/launch_options.gd`. Automated tests must host with `--local-only` so they don't touch the router (UPnP) or call the public-IP web service.
-- After adding a new `class_name` script, run `--import` before running scripts headless. Godot only learns about new global classes during an import, and without it you get "Could not find type" parse errors. The tools scripts already do this.
-- Test helpers must not reuse Node callback names (`_input`, `_process`, `_ready`...): `GutTest` is a Node.
-
-## Playtesting
-- `docs/PLAYTEST.md` is the human playtest checklist (what to test, where each number is tuned). Keep it current when adding features or changing what needs human judgment.
+- **Tests:** `pwsh tools/run_tests.ps1` (GUT 9.7.1 in `addons/gut`). Don't call GUT directly: it silently skips test files that fail to parse and still says "All tests passed"; the wrapper catches that. It also runs `--import` first, which is needed after adding a `class_name` script.
+- **Online smoke test:** `pwsh tools/net_smoke_test.ps1` starts a headless host and client on autopilot (through the lobby) and checks they connected and the client's shots damaged enemies on the host. Run it after any networking change.
+- **Build:** `pwsh tools/build.ps1` writes `builds/windows/GameTest.exe` (one file) and `builds/GameTest-<version>-windows.zip` (with `tools/README-friends.txt`). It stamps `build_info.cfg` (version, commit, date; git-ignored, included in the export) so the title screen shows the exact build. Bump `config/version` in `project.godot` for each build you send to friends. Needs the 4.7.2 export templates in `%APPDATA%\Godot\export_templates\4.7.2.stable\` (Windows x86_64 only are installed).
+- **Seeing visuals:** headless runs can't render. Launch the real game in a window with `--screenshot-dir=<folder>` and read the PNGs. `-s some_script.gd` runs do NOT get autoloads, so game scenes can't run that way (pure classes like `PixelArt` and `PixelFont` can).
+- **Launch flags** (after `--`; see `src/main/launch_options.gd`): `--solo | --host | --join=<ip[:port]>`, `--port=<n>`, `--autopilot` (plays itself; the host auto-starts the lobby and restarts runs), `--run-for=<s>` (print a report and quit), `--local-only` (no UPnP / public-IP lookup; **automated tests must use it**), `--stage-seconds=<n>` (wave length before the boss, default 240), `--start-at=<s>`, `--start-stage=<n>`, `--weak-bosses` (2% boss HP), `--give-weapons`, `--character=<0-2>`, `--screenshot-dir=<folder>`.
+- Report failures honestly.
 
 ## Project layout
 Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
-- `src/autoload/`: global singletons. `Sfx` (sound effects synthesized in code at startup; `Sfx.play(&"name")`; rate-limited; "SFX" bus), `Music` (background tracks; `Music.play(&"crypt")`; "Music" bus), `Settings` (volume, fullscreen, screen shake; saved to user://settings.cfg), `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
-- `src/main/`: root scene `main.tscn` (menu plus `Level` slot plus `LevelSpawner`) and `LaunchOptions`.
-- `src/lobby/`: `Lobby` scene (character select + ready-up, host-owned state broadcast on change; spawned by `LevelSpawner` like the arena) with pure `LobbyState` rules and `CharacterPortrait`. `RunSetup` (in `src/main/`) carries choices and join order into the arena.
-- `src/ui/theme/game_theme.tres`: the one Theme for all UI (set in project settings; fonts render without antialiasing for crisp pixels). Style new controls through it rather than per-node overrides where possible.
-- `src/ui/`: main menu, `Hud` scene (hearts, timer, banners), and HUD widgets.
-- `src/audio/`: `Synth` (renders waveforms with envelopes, low-pass, vibrato, layering, echo into float buffers), `Tracks` (music as text scores: chords per bar, 16-step bass/arp/drum strings, melody lines) and `MusicComposer` (score -> seamless loop). The `Music` autoload renders tracks on WorkerThreadPool threads at startup (skipped when headless) and crossfades; `Sfx` designs every effect with `Synth`.
-- `src/art/`: `PixelArt`: every sprite as text rows (one character per pixel, colors from one shared `PALETTE`; `P`/`p` are recolored per player), built into cached textures at runtime. Edit sprites there; keep rows equal length and mostly left/right symmetric. `PixelArt.draw()` draws one centered (flip, scale, hit-flash white). Bullets stay code-drawn glowing circles for readability, and the player hitbox dot is always drawn on top.
-- `src/stages/`: `StageDef` resources (one `.tres` per stage: spawn table of `SpawnEntry`, pack type, boss type, boss attack script of `BossStep`s, floor palette and prop style) registered in `Stages.ALL`. New stage content is mostly data here.
-- `src/arena/`: arena scene, `FloorBaker` (paints a stage's whole floor, props, walls and candle light into one image from a seed; ~70 ms) + `ArenaFloor` (draws it), and `SpawnDirector` (spawn pacing; enemy mix from the stage table). The arena owns the fixed tick order (players, then spawning, then enemies, then contact damage, then bullets, then hits, then the phase check), the stage timer and end states, and host snapshots.
-- `src/player/`: `Player` node, pure `PlayerMotor` sim, `ClientPredictor`, `PlayerHealth`, `LocalInput`, `CharacterStats` resource. Characters are `.tres` files in `characters/`, registered in `Characters.ALL` (index = network id, append only); the character id travels in the player spawn data, and each player duplicates its character's stats so upgrades stay per-player. All damage to players goes through `Player.take_hit()` (handles Second Wind).
-- `src/combat/`: `WeaponSystem` (auto weapons + altars; host deals all weapon damage; orbit skulls/aura are drawn from the shared stage clock, so they need no sync), `AutoWeapons` registry (`weapons/*.tres`, index = network id, append only), `ProjectileManager` (flat-array bullet pool; two instances: player bullets and enemy bullets; negative age = delayed bullet) and `ShotPatterns` (seeded, deterministic patterns; `build()` returns 5 floats per bullet: angle, speed, delay, offset x, offset y; ids are network ids, append only). Enemy patterns travel as batched reliable events (id, origin, aim, seed, host fire time), and clients fast-forward them by about one round trip.
-- `src/enemies/`: `EnemyManager` (pool of 300, separation, byte-packed snapshots; bosses live in the same pool), `BossBrain` (pure interpreter of a stage's boss script), `Enemy`, `EnemyType` resources in `types/` registered in `EnemyTypes.ALL` (index = network id; append only).
+- `src/autoload/`: global singletons. `Net` (ENet/offline session, invite parsing; owns `HostInvite`: UPnP, public IP, invite text), `GameInput` (all input bindings, registered in code), `Settings` (volumes, fullscreen, screen shake; user://settings.cfg; installs the pixel font), `Sfx` (`Sfx.play(&"name")`), `Music` (`Music.play(&"crypt")`).
+- `src/main/`: root scene `main.tscn` (menu, pause menu, `Level` slot + `LevelSpawner`), `LaunchOptions`, `RunSetup` (lobby choices into the arena), `BuildInfo` (title-screen build text).
+- `src/lobby/`: `Lobby` scene (character select + ready-up; host-owned state; spawned by `LevelSpawner` like the arena), pure `LobbyState`, `CharacterPortrait`.
+- `src/arena/`: arena scene (fixed tick order: players, spawning, enemies, contact damage, bullets, hits, gems, phase check; stage timer, end states, snapshots, ability resolution), `SpawnDirector` (spawn pacing from the stage table), `FloorBaker` (paints a stage's whole floor, props, walls and candle light into one image from a seed) + `ArenaFloor`.
+- `src/stages/`: `StageDef` resources (spawn table, pack type, boss, boss attack script of `BossStep`s, floor palette, prop style, music track) in `Stages.ALL`. New stage content is mostly data.
+- `src/player/`: `Player` node, pure `PlayerMotor` (movement, Dash/Blink, firing; returns FIRED/ABILITY_USED bits), `ClientPredictor`, `PlayerHealth`, `LocalInput`, `CharacterStats` + `characters/*.tres` in `Characters.ALL`. Each player duplicates its character's stats so upgrades stay per-player. All damage to players goes through `Player.take_hit()`.
+- `src/enemies/`: `EnemyManager` (pool of 300 incl. bosses, separation, byte-packed snapshots), `Enemy`, `BossBrain` (interprets a stage's boss script), `EnemyType` + `types/*.tres` in `EnemyTypes.ALL`.
+- `src/combat/`: `ProjectileManager` (flat-array bullet pool; player and enemy instances; negative age = delayed bullet), `ShotPatterns` (`build()` returns 5 floats per bullet: angle, speed, delay, offset x/y), `WeaponSystem` + `AutoWeapons` (`weapons/*.tres`; altars; host deals weapon damage), `EffectsLayer` (particles + death animations), `BombBlast` (blast ring visual).
+- `src/progression/`: `TeamProgress` (shared XP), `GemManager` (pickup pool; XP gems and coins), `LevelUpController` + `LevelUpSession`, `Upgrades` (`upgrades/*.tres`), `ShopController` + `ShopSession`, `Relics` (`relics/*.tres`, lists of `Upgrade` stat effects).
+- `src/art/pixel_art.gd`: **every sprite as text rows** (one character per pixel, shared `PALETTE`; `P`/`p` recolored per player), built into cached textures. Edit sprites directly in this file; keep rows equal length.
+- `src/audio/`: `Synth` (waveforms, envelopes, filter, vibrato, layering, echo), `Tracks` (music as text scores), `MusicComposer` (score -> seamless loop; rendered on background threads at startup).
+- `src/ui/`: main menu, `Hud` (hearts, XP bar, ability readout, minimap, boss bar, banners, level-up and shop panels), `PauseMenu`, `SettingsPanel`, `Minimap`, `PixelFont` (**every glyph as text rows**; edit directly), `theme/game_theme.tres` (the one Theme for all UI).
 - `src/core/`: engine-agnostic helpers (`SpatialGrid`).
-- `src/progression/`: `ShopController` + pure `ShopSession` (between-stage shop: per-player offers, buy/reroll/ready validated by the host), `Relics` registry (`relics/*.tres`, each a list of `Upgrade` stat effects; index = network id, append only), `TeamProgress` (shared XP/level curve), `LevelUpController` (networked level-up pause: choices, picks, announcements) with pure `LevelUpSession` rules, `Upgrades` registry (`upgrades/*.tres`, index = network id, append only; `Upgrades.apply` runs on every peer so stats match for prediction), and `GemManager` (flat-array pickup pool, two instances: XP gems for the team and coins for whoever grabs them; reliable batched spawn/collect events; clients animate the magnet pull, and only host pickups count).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
-- `tools/`: PowerShell helper scripts.
+- `tools/`: `run_tests.ps1`, `net_smoke_test.ps1`, `build.ps1`, `README-friends.txt`.
 
 ## Code conventions
-- Gameplay simulation that must match across peers goes in **pure static functions or RefCounted classes** (e.g. `PlayerMotor`, `ShotPatterns`) so it's deterministic and unit-testable. Nodes call into it.
+- Gameplay simulation that must match across peers goes in **pure static functions or RefCounted classes** (e.g. `PlayerMotor`, `ShotPatterns`, `BossBrain`) so it's deterministic and unit-testable. Nodes call into it.
 - Nodes don't run their own `_physics_process` for gameplay; the arena calls `tick()` in a fixed order. `_process` is for visuals only.
-- RPC channels: 0 = reliable events, 1 = host snapshots, 2 = client inputs. Host only sends to peers in `_ready_peers` (arena loaded).
-- `untyped_declaration` is an error in project settings, so type every declaration, including `for` loop variables (`for i: int in n:`).
-- Sprites come from `PixelArt` (text grids). Effects, bullets, floors and UI bars are still drawn with `_draw()`.
-- RPC gotcha: an **empty** `PackedByteArray` sent as an RPC's only argument arrives as "no arguments" and the call fails. Always send a count or another argument alongside packed data.
-- Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).
-- `-s some_script.gd` runs do NOT get autoloads (`Net`, `GameInput`), so game scenes can't run that way. To check visuals, launch the real game with `--screenshot-dir`.
-- Gamepad must work in every menu. Esc / Start opens the pause menu (`pause` action); R / Select (`restart`) returns to the lobby after a run.
 - Character abilities: one `ability` action; `CharacterStats.ability` picks Dash / Grave Blast / Blink. Movement abilities run in `PlayerMotor` (predicted); the host resolves the rest in `Arena._on_player_ability_used` and broadcasts effects.
-- Text uses `PixelFont` (glyphs as text grids, built at startup): only use font sizes 9 / 18 / 27 (1x/2x/3x). Labels get a 1px drop shadow from the theme; outlines don't work with the bitmap font.
-- Visual effects (`EffectsLayer` particles, screen shake, hurt flash) are spawned locally on every peer from events they already see (`enemy_vanished`, `hit_at`, `hurt`); never send effects over the network.
-- Mirroring sprites: a negative width in `draw_texture_rect` does NOT flip in Godot 4; it just shifts the image a full width sideways. Use `PixelArt.draw()` / `PixelArt.draw_rect_flipped()` (mirror transform).
-- Animation frames are extra sprites named `<sprite>_walk_1/_walk_2` (walk cycle), `<sprite>_attack` (shown briefly when an enemy fires; triggered on every peer by the pattern event), `<sprite>_1` (flap/flicker/spin). Frames must be the same size as the base sprite (tested).
+- Visual effects (particles, death animations, screen shake, hurt flash, attack poses) are spawned locally on every peer from events they already see (`enemy_vanished`, `hit_at`, `hurt`, pattern events); never send effects over the network.
+- Text: `PixelFont` is the default font. Only use font sizes 9 / 18 / 27 (1x/2x/3x). Labels get a 1px drop shadow from the theme; outlines don't work with the bitmap font. Style controls through `game_theme.tres`.
+- Animation frames are extra sprites named `<sprite>_walk_1/_walk_2`, `<sprite>_attack`, `<sprite>_1`; same size as the base sprite (tested).
+- Gamepad must work in every menu. Godot's default `ui_accept` has no gamepad button, so `GameInput` adds A to it; `tests/unit/test_input_bindings.gd` guards this. Esc / Start opens the pause menu (`pause`); R / Select (`restart`) returns to the lobby after a run.
+- Test helpers must not reuse Node callback names (`_input`, `_process`, `_ready`...): `GutTest` is a Node.
+
+## Gotchas (learned the hard way)
+- An **empty** `PackedByteArray` sent as an RPC's only argument arrives as "no arguments" and the call fails. Always send a count or another argument alongside packed data.
+- Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).
+- A negative width in `draw_texture_rect` does NOT mirror in Godot 4; it shifts the image a full width sideways. Use `PixelArt.draw()` / `PixelArt.draw_rect_flipped()`.
 - Packed arrays are values: putting them in an Array and calling `resize()` in a loop only resizes copies. Resize each one directly.
-- Gamepad must work in every menu. Godot's default `ui_accept` has no gamepad button, so `GameInput` adds A to it. `tests/unit/test_input_bindings.gd` guards this; extend it when adding new UI.
+- Constants can't call constructors (e.g. `PackedStringArray([...])` in a `const`); use plain arrays.
+- When editing with scripts, replace exact text and verify the result: large regex or slice edits have deleted neighbouring functions before. Review `git diff` after big edits.
