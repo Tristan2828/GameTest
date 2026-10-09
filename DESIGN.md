@@ -209,6 +209,7 @@ Also: lobby cards restyled.
 
 ### Where things stand (2026-10-09, v0.12.0)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
+- Distribution: public GitHub repo with Releases, announced in the playtest Discord (`#builds`, `#dev-log`); see `docs/RELEASING.md`. v0.12.0 was the first GitHub release.
 - **Not yet played by a human:** stages 2–3 and their bosses, Victory, the reworked abilities and shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
 
 ### Next (proposed, in rough priority)
@@ -230,3 +231,7 @@ Also: lobby cards restyled.
 
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
 - **Join codes / no port forwarding at all:** a small relay or matchmaking server (short codes like `KQ7F`), or Steam invites via Steamworks ($100 app fee). Revisit if port forwarding becomes a hurdle or near release.
+- **Release automation (decided 2026-10-09: releases stay manual for now).** Publishing stays a deliberate `pwsh tools/release.ps1` because every release reaches friends, and builds should be played by the owner first. Planned steps, in order:
+  1. **CI tests on every PR (do first):** a GitHub Actions job runs `tools/run_tests.ps1` (and maybe `tools/net_smoke_test.ps1`) so each PR shows pass/fail before merging. Needs Godot 4.7.2 headless on the runner. Free on a public repo.
+  2. **Build in CI on a version tag (later):** pushing a tag like `v0.13.0` makes GitHub build the Windows zip (Godot + 4.7.2 export templates on the runner), create the release, and trigger the existing Discord announcement, so releasing doesn't need the owner's PC. Worth it once the project is stable or releases get frequent.
+  - Not planned: auto-publishing on every merge, since untested builds would go straight to playtesters.
