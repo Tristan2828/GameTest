@@ -1,9 +1,22 @@
 class_name CharacterStats
 extends Resource
 ## Tunable numbers for one playable character. Each character gets a `.tres` file
-## in `src/player/characters/` so values can be tweaked without touching code.
+## in `src/player/characters/`, registered in Characters.ALL (index = network id).
+## Each player duplicates their character's stats, and upgrades/relics change the copy.
+
+enum Look { HOOD, WIDE_HAT, WITCH_HAT }
 
 @export var display_name: String = "Wanderer"
+@export_multiline var blurb: String = ""
+@export var look: Look = Look.HOOD
+
+@export_group("Ability")
+@export var ability_name: String = ""
+@export_multiline var ability_description: String = ""
+## Second Wind: the first lethal hit each stage leaves you at 1 heart instead.
+@export var second_wind: bool = false
+## Grave Ward: hearts healed by each of your bombs.
+@export var bomb_heal: int = 0
 
 @export_group("Movement")
 @export var move_speed: float = 110.0

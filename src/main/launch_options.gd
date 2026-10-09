@@ -11,6 +11,7 @@ extends RefCounted
 ##   --local-only                    host without touching the router or looking up the public IP
 ##   --stage-seconds=<n>             shorter/longer stage (default 300) for testing
 ##   --start-at=<seconds>            host starts the stage clock here (test late-stage content)
+##   --character=<n>                 the host plays this character (0 Wanderer, 1 Gravekeeper, 2 Witch)
 ##   --start-stage=<n>               host starts the run at stage n (1-3)
 ##   --give-weapons                  every player starts with all auto weapons at level 2
 ##   --weak-bosses                   bosses have 2% HP (test stage transitions quickly)
@@ -33,6 +34,7 @@ static var start_at_seconds: float = 0.0
 static var weak_bosses: bool = false
 static var give_weapons: bool = false
 static var start_stage: int = 1
+static var character: int = -1
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -52,6 +54,8 @@ static func parse(args: PackedStringArray) -> void:
 			run_for_seconds = arg.trim_prefix("--run-for=").to_float()
 		elif arg == "--local-only":
 			local_only = true
+		elif arg.begins_with("--character="):
+			character = arg.trim_prefix("--character=").to_int()
 		elif arg.begins_with("--start-stage="):
 			start_stage = clampi(arg.trim_prefix("--start-stage=").to_int(), 1, 3)
 		elif arg == "--give-weapons":

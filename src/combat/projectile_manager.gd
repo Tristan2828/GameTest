@@ -136,7 +136,7 @@ func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
 			i += 1
 			continue
 		if is_host:
-			hit_player.health.take_hit(_damages[i], hit_player.stats.hit_invulnerability)
+			hit_player.take_hit(_damages[i])
 		_remove(i)
 
 

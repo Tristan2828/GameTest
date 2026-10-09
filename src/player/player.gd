@@ -33,12 +33,15 @@ const CORRECTION_SMOOTHING: float = 10.0
 const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
 const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
 const GHOST_EYE_COLOR: Color = Color(0.1, 0.08, 0.15, 0.8)
+const SECOND_WIND_INVULNERABILITY: float = 2.0
 const SKULL_EYE_COLOR: Color = Color(0.15, 0.1, 0.12)
 
 @export var stats: CharacterStats
 
 var peer_id: int = 1
 var slot: int = 0
+## Characters id (same on all peers; comes with the spawn data).
+var character_id: int = 0
 var bounds: Rect2 = Rect2()
 var state: PlayerState = PlayerState.new()
 ## Host-owned; clients get copies from snapshots.
@@ -57,6 +60,8 @@ var weapon_clock: float = 0.0
 var coins: int = 0
 ## Host: kills since the last Vampire Fang heal.
 var kills_toward_heal: int = 0
+## Host: Second Wind already saved this player this stage.
+var second_wind_used: bool = false
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -79,13 +84,15 @@ var _remote_dashing: bool = false
 
 
 ## Called by the arena's spawn function, before the node enters the tree.
-func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_bounds: Rect2) -> void:
+func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_bounds: Rect2,
+		character: int = Characters.Id.WANDERER) -> void:
 	peer_id = owner_peer_id
 	slot = player_slot
 	bounds = arena_bounds
+	character_id = character
 	name = str(owner_peer_id)
 	# Each player gets its own copy so upgrades only change this player.
-	stats = stats.duplicate()
+	stats = Characters.get_character(character).duplicate()
 	health.reset(stats.max_hearts)
 	bombs_left = stats.bombs_per_stage
 	state.position = spawn_position
@@ -126,8 +133,21 @@ func apply_upgrade(upgrade_id: int) -> void:
 	queue_redraw()
 
 
+## Host: an enemy or enemy bullet hit this player. Returns true if it landed.
+## Second Wind (Wanderer) turns the first lethal hit each stage into 1 heart left.
+func take_hit(amount: int) -> bool:
+	if stats.second_wind and not second_wind_used and health.hearts > 0 and health.hearts <= amount \
+			and not health.is_invulnerable():
+		second_wind_used = true
+		health.hearts = 1
+		health.invulnerable_left = SECOND_WIND_INVULNERABILITY
+		return true
+	return health.take_hit(amount, stats.hit_invulnerability)
+
+
 ## Host: back to full strength at a new spot (start of a stage).
 func respawn(at: Vector2) -> void:
+	second_wind_used = false
 	health.reset(stats.max_hearts)
 	bombs_left = stats.bombs_per_stage
 	state.position = at
@@ -253,6 +273,7 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, stats.body_radius + 3.0, Color(color, 0.35))
 		color = color.lightened(0.4)
 	draw_circle(Vector2.ZERO, stats.body_radius, color)
+	_draw_look(color)
 	var aim_direction := Vector2.from_angle(state.aim)
 	draw_line(aim_direction * 4.0, aim_direction * MUZZLE_DISTANCE, Color(0.92, 0.92, 0.98), 2.0)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
@@ -265,6 +286,24 @@ func _draw_heart_pips() -> void:
 		var filled := i < health.hearts
 		draw_circle(Vector2(start_x + i * spacing, stats.body_radius + 5.0), 1.5,
 			HEART_COLOR if filled else HEART_EMPTY_COLOR)
+
+
+## Character silhouette details, drawn over the body in a darker shade.
+func _draw_look(color: Color) -> void:
+	var r := stats.body_radius
+	var dark := color.darkened(0.45)
+	match stats.look:
+		CharacterStats.Look.HOOD:
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(-r, -r * 0.1), Vector2(-r * 0.6, -r * 1.0), Vector2(0, -r * 1.35),
+				Vector2(r * 0.6, -r * 1.0), Vector2(r, -r * 0.1), Vector2(r * 0.55, -r * 0.55), Vector2(-r * 0.55, -r * 0.55)]), dark)
+		CharacterStats.Look.WIDE_HAT:
+			draw_rect(Rect2(-r * 1.4, -r * 0.75, r * 2.8, 2.0), dark)
+			draw_rect(Rect2(-r * 0.7, -r * 1.45, r * 1.4, r * 0.75), dark)
+		CharacterStats.Look.WITCH_HAT:
+			draw_rect(Rect2(-r * 1.3, -r * 0.7, r * 2.6, 1.5), dark)
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(-r * 0.7, -r * 0.65), Vector2(r * 0.7, -r * 0.65), Vector2(r * 0.9, -r * 2.2)]), dark)
 
 
 func _draw_weapons() -> void:

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="CharacterStats" format=3]
+
+[ext_resource type="Script" path="res://src/player/character_stats.gd" id="1_stats"]
+
+[resource]
+script = ExtResource("1_stats")
+display_name = "Hexblade Witch"
+blurb = "Fast and fragile. Rapid hexes that pierce through enemies."
+look = 2
+ability_name = "Blink"
+ability_description = "A longer, faster-recharging dash."
+second_wind = false
+bomb_heal = 0
+move_speed = 130.0
+dash_speed = 460.0
+dash_duration = 0.18
+dash_cooldown = 0.6
+max_hearts = 2
+bombs_per_stage = 2
+body_radius = 5.0
+shot_pattern = 0
+fire_interval = 0.1
+bullet_speed = 380.0
+bullet_damage = 7
+bullet_lifetime = 1.0
+pierce = 1
+hit_invulnerability = 1.0
+hitbox_radius = 2.0
+pickup_radius = 40.0
+bomb_damage_multiplier = 1.0
+heal_every_kills = 0
+projectile_count = 1

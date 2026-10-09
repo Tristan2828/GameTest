@@ -212,8 +212,8 @@ func debug_report() -> String:
 	var role := "host" if multiplayer.is_server() else "client"
 	lines.append("[report] peer %d (%s)  stage %d  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, _stage, Phase.keys()[_phase], _elapsed])
 	for player: Player in _player_nodes():
-		var line := "[report]   player %d slot %d at %s  hearts %d/%d  bombs %d  coins %d  upgrades %s  relics %s" % [
-			player.peer_id, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts,
+		var line := "[report]   player %d (%s) slot %d at %s  hearts %d/%d  bombs %d  coins %d  upgrades %s  relics %s" % [
+			player.peer_id, player.stats.display_name, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts,
 			player.bombs_left, player.coins, player.upgrade_ids, player.relic_ids]
 		line += "  weapons %s" % [player.weapon_levels]
 		if player.is_local() and not multiplayer.is_server():
@@ -261,7 +261,7 @@ func _alive_player_positions() -> Array[Vector2]:
 
 
 func _add_player(peer_id: int) -> void:
-	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot()})
+	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id)})
 	if LaunchOptions.give_weapons:
 		# Test aid: same path as real pickups (new joiners also get it via history).
 		for weapon_id: int in AutoWeapons.ALL.size():
@@ -282,8 +282,11 @@ func _spawn_player(data: Variant) -> Node:
 	var info: Dictionary = data
 	var peer_id: int = info["peer_id"]
 	var slot: int = info["slot"]
+	var character: int = info.get("character", Characters.Id.WANDERER)
+	if not Characters.is_valid_id(character):
+		character = Characters.Id.WANDERER
 	var player: Player = PLAYER_SCENE.instantiate()
-	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS)
+	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character)
 	player.shot_requested.connect(_on_player_shot_requested)
 	player.bomb_requested.connect(_on_player_bomb_requested)
 	return player
@@ -351,7 +354,7 @@ func _apply_contact_damage() -> void:
 			continue
 		var enemy := _enemies.find_hit(player.state.position, player.stats.hitbox_radius)
 		if enemy != null:
-			player.health.take_hit(enemy.type.contact_damage, player.stats.hit_invulnerability)
+			player.take_hit(enemy.type.contact_damage)
 
 
 func _update_phase() -> void:
@@ -598,6 +601,8 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 func _on_player_bomb_requested(bomber: Player) -> void:
 	var at := bomber.state.position
 	bomber.health.invulnerable_left = maxf(bomber.health.invulnerable_left, BOMB_INVULNERABILITY)
+	if bomber.stats.bomb_heal > 0:
+		bomber.health.heal(bomber.stats.bomb_heal)
 	var damage := roundi(BOMB_DAMAGE * bomber.stats.bomb_damage_multiplier)
 	_enemies.damage_in_radius(at, BOMB_DAMAGE_RADIUS, damage, bomber.peer_id)
 	_detonate_bomb(at)

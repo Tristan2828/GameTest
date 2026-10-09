@@ -43,6 +43,11 @@ func _apply_launch_options() -> void:
 		get_tree().create_timer(LaunchOptions.run_for_seconds).timeout.connect(_report_and_quit)
 
 
+func _apply_character_flag() -> void:
+	if Characters.is_valid_id(LaunchOptions.character):
+		RunSetup.characters[1] = LaunchOptions.character
+
+
 ## Saves the screen to the --screenshot-dir folder (debug aid).
 static func save_screenshot(tree: SceneTree, file_name: String) -> void:
 	if LaunchOptions.screenshot_dir.is_empty() or DisplayServer.get_name() == "headless":
@@ -63,6 +68,7 @@ func _take_screenshots_periodically() -> void:
 
 func _start_solo() -> void:
 	Net.start_solo()
+	_apply_character_flag()
 	_load_arena()
 
 
@@ -72,6 +78,7 @@ func _start_host(port: int) -> void:
 		_menu.show_menu("Could not host on port %d: %s" % [port, error_string(err)])
 		return
 	print("Hosting on port %d" % port)
+	_apply_character_flag()
 	_load_arena()
 
 
