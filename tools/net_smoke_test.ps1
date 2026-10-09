@@ -6,12 +6,15 @@
 #   - the host credited damage to the client's peer id (client input -> host sim works),
 #   - neither process logged a script error.
 #
-# Usage:  pwsh tools/net_smoke_test.ps1 [-Port 7810] [-Seconds 6]
+# Usage:  pwsh tools/net_smoke_test.ps1 [-Port 7810] [-Seconds 6] [-ClientCharacter 0-3]
+# The client plays the Wanderer by default: the Gravekeeper's short-range shotgun
+# often hits nothing in a short run. -ClientCharacter -1 lets autopilot pick at random.
 # Set $env:GODOT to override the Godot console executable path.
 
 param(
 	[int]$Port = 7810,
-	[double]$Seconds = 12
+	[double]$Seconds = 12,
+	[int]$ClientCharacter = 0
 )
 
 $godot = if ($env:GODOT) { $env:GODOT } else { "C:\Code Tools\Godot\Godot_v4.7.2-stable_win64_console.exe" }
@@ -31,7 +34,9 @@ function Start-Peer([string]$name, [string[]]$gameArgs) {
 
 $hostProcess = Start-Peer "host" @("--host", "--port=$Port", "--local-only", "--autopilot", "--run-for=$($Seconds + 3)")
 Start-Sleep -Seconds 1
-$clientProcess = Start-Peer "client" @("--join=127.0.0.1", "--port=$Port", "--autopilot", "--run-for=$Seconds")
+$clientArgs = @("--join=127.0.0.1", "--port=$Port", "--autopilot", "--run-for=$Seconds")
+if ($ClientCharacter -ge 0) { $clientArgs += "--character=$ClientCharacter" }
+$clientProcess = Start-Peer "client" $clientArgs
 # If a peer crashes before it can quit, don't wait forever.
 $timeoutMs = [int](($Seconds + 15) * 1000)
 foreach ($process in @($clientProcess, $hostProcess)) {

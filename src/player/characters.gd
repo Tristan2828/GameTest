@@ -3,12 +3,13 @@ extends RefCounted
 ## Registry of playable characters. The index in ALL is the network id: only add
 ## new characters at the end.
 
-enum Id { WANDERER, GRAVEKEEPER, HEXBLADE_WITCH }
+enum Id { WANDERER, GRAVEKEEPER, HEXBLADE_WITCH, NECROMANCER }
 
 const ALL: Array[CharacterStats] = [
 	preload("res://src/player/characters/wanderer.tres"),
 	preload("res://src/player/characters/gravekeeper.tres"),
 	preload("res://src/player/characters/hexblade_witch.tres"),
+	preload("res://src/player/characters/necromancer.tres"),
 ]
 
 

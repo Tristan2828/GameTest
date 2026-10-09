@@ -21,6 +21,7 @@ const SEPARATION_STRENGTH: float = 40.0
 ## Each enemy in a snapshot: u16 index, u8 type, u8 flags, s16 x, s16 y, u8 hp.
 const SNAPSHOT_STRIDE: int = 9
 const FLAG_HIT: int = 1
+const FLAG_HEXED: int = 2
 
 ## Host: total damage dealt by each peer id. Handy for tests and debugging.
 var damage_by_peer: Dictionary[int, int] = {}
@@ -94,14 +95,29 @@ func active_count() -> int:
 
 
 ## Host: move every enemy toward the nearest target, pushing apart overlaps.
-func tick_host(delta: float, targets: Array[Vector2]) -> void:
+## `lures` are decoys (Bone Effigy): regular enemies within `lure_radius` of
+## one chase it instead of the players.
+func tick_host(delta: float, targets: Array[Vector2], lures: Array[Vector2] = [], lure_radius: float = 0.0) -> void:
 	rebuild_grid()
 	for enemy: Enemy in _pool:
 		if not enemy.active:
 			continue
 		var velocity := Vector2.ZERO
-		if not targets.is_empty():
-			var to_target := _nearest(targets, enemy.position) - enemy.position
+		var rooted := false
+		if enemy.hexed_left > 0.0:
+			enemy.hexed_left = maxf(enemy.hexed_left - delta, 0.0)
+			enemy.set_hexed(enemy.hexed_left > 0.0)
+			if not enemy.hexed:
+				enemy.hex_multiplier = 1.0
+			# Bound in place: no moving or attacking (bosses only take extra damage).
+			rooted = enemy.hexed and not enemy.type.is_boss
+		var target_list := targets
+		if not enemy.type.is_boss and not lures.is_empty():
+			var lure := _nearest(lures, enemy.position)
+			if lure.distance_squared_to(enemy.position) <= lure_radius * lure_radius:
+				target_list = [lure]
+		if not target_list.is_empty() and not rooted:
+			var to_target := _nearest(target_list, enemy.position) - enemy.position
 			velocity = _desired_velocity(enemy, to_target, delta)
 			_try_fire(enemy, to_target, delta)
 		velocity += _separation(enemy) * SEPARATION_STRENGTH
@@ -132,6 +148,22 @@ func find_hit(point: Vector2, hit_radius: float) -> Enemy:
 	return null
 
 
+## Host: hex every active enemy within `radius` (Hex Snare).
+func hex_in_radius(center: Vector2, radius: float, seconds: float, multiplier: float) -> int:
+	var count := 0
+	_nearby.clear()
+	_grid.query(center, radius + MAX_ENEMY_RADIUS, _nearby)
+	for index: int in _nearby:
+		var enemy := _pool[index]
+		var reach := radius + enemy.type.radius
+		if enemy.active and enemy.position.distance_squared_to(center) <= reach * reach:
+			enemy.hexed_left = maxf(enemy.hexed_left, seconds)
+			enemy.hex_multiplier = maxf(enemy.hex_multiplier, multiplier)
+			enemy.set_hexed(true)
+			count += 1
+	return count
+
+
 ## Host: damage every active enemy within `radius` (Grave Blast).
 func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int) -> void:
 	var targets: Array[Enemy] = []
@@ -149,6 +181,8 @@ func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id:
 
 ## Host only.
 func damage(enemy: Enemy, amount: int, from_peer_id: int) -> void:
+	if enemy.hexed:
+		amount = roundi(amount * enemy.hex_multiplier)
 	var dealt := mini(amount, enemy.hp)
 	var died := enemy.apply_damage(amount)
 	damage_by_peer[from_peer_id] = damage_by_peer.get(from_peer_id, 0) + dealt
@@ -178,7 +212,7 @@ func send_snapshot(peer_ids: Array[int]) -> void:
 			continue
 		data.encode_u16(offset, enemy.pool_index)
 		data.encode_u8(offset + 2, enemy.type_id)
-		data.encode_u8(offset + 3, FLAG_HIT if enemy.hit_since_snapshot else 0)
+		data.encode_u8(offset + 3, (FLAG_HIT if enemy.hit_since_snapshot else 0) | (FLAG_HEXED if enemy.hexed else 0))
 		data.encode_s16(offset + 4, clampi(roundi(enemy.position.x), -32768, 32767))
 		data.encode_s16(offset + 6, clampi(roundi(enemy.position.y), -32768, 32767))
 		data.encode_u8(offset + 8, roundi(enemy.hp_ratio * 255.0))
@@ -205,8 +239,10 @@ func _receive_snapshot(count: int, data: PackedByteArray) -> void:
 		var at := Vector2(data.decode_s16(offset + 4), data.decode_s16(offset + 6))
 		if not enemy.active or enemy.type_id != type_id:
 			enemy.activate(type_id, at)
-		if data.decode_u8(offset + 3) & FLAG_HIT:
+		var flags := data.decode_u8(offset + 3)
+		if flags & FLAG_HIT:
 			enemy.flash()
+		enemy.set_hexed((flags & FLAG_HEXED) != 0)
 		enemy.target_position = at
 		var ratio := data.decode_u8(offset + 8) / 255.0
 		if not is_equal_approx(ratio, enemy.hp_ratio):

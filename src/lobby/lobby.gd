@@ -21,7 +21,7 @@ var _open_seconds: float = 0.0
 var _copied_feedback_left: float = 0.0
 var _autopilot_readied: bool = false
 
-@onready var _cards: Array[Button] = [%Card0, %Card1, %Card2]
+@onready var _cards: Array[Button] = [%Card0, %Card1, %Card2, %Card3]
 @onready var _players_label: Label = %PlayersLabel
 @onready var _ready_button: Button = %ReadyButton
 @onready var _start_button: Button = %StartButton

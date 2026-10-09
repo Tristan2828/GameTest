@@ -76,6 +76,18 @@ var _director: SpawnDirector = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Host: kills, coins, XP... per player for the end-of-run screen.
 var _run_stats: RunStats = RunStats.new()
+## Host: Bone Effigies standing in the arena.
+var _effigies: Array[Effigy] = []
+
+
+## Host: one Bone Effigy (a decoy that bursts when its time runs out).
+class Effigy:
+	var position: Vector2
+	var time_left: float
+	var lure_radius: float
+	var burst_radius: float
+	var burst_damage: int
+	var owner_peer_id: int
 ## Shared team XP and level (host-owned, copied to clients in snapshots).
 var _team: TeamProgress = TeamProgress.new()
 var _copied_feedback_left: float = 0.0
@@ -165,7 +177,8 @@ func _physics_process(delta: float) -> void:
 			player.tick(delta)
 		if is_host:
 			_spawn_enemies(delta)
-			_enemies.tick_host(delta, _alive_player_positions())
+			_tick_effigies(delta)
+			_enemies.tick_host(delta, _alive_player_positions(), _effigy_positions(), _effigy_lure_radius())
 			_tick_boss(delta)
 			_weapons.tick_host(delta, _elapsed, _player_nodes(), _enemies, _ready_peer_list())
 			_apply_contact_damage()
@@ -442,6 +455,8 @@ func _end_stage(phase: Phase) -> void:
 	_gems.clear()
 	_coins.clear()
 	_weapons.clear_altars()
+	_effigies.clear()
+	_clear_ability_markers()
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
 
@@ -714,8 +729,110 @@ func _on_player_ability_used(user: Player) -> void:
 			_blink_effect(user.state.position, user.slot)
 			for peer_id: int in _ready_peers:
 				_receive_blink.rpc_id(peer_id, user.state.position, user.slot)
+		CharacterStats.Ability.HEX_SNARE:
+			var at := _ability_target(user, stats.hex_range)
+			var radius := stats.hex_radius * sqrt(stats.ability_power)
+			var seconds := stats.hex_duration * stats.ability_power
+			_enemies.hex_in_radius(at, radius, seconds, stats.hex_damage_multiplier)
+			_show_hex(at, radius, seconds)
+			for peer_id: int in _ready_peers:
+				_receive_hex.rpc_id(peer_id, at, radius, seconds)
+		CharacterStats.Ability.BONE_EFFIGY:
+			var effigy := Effigy.new()
+			effigy.position = _ability_target(user, stats.effigy_range)
+			effigy.time_left = stats.effigy_duration * stats.ability_power
+			effigy.lure_radius = stats.effigy_lure_radius * sqrt(stats.ability_power)
+			effigy.burst_radius = stats.effigy_burst_radius * sqrt(stats.ability_power)
+			effigy.burst_damage = roundi(stats.effigy_burst_damage * stats.ability_power)
+			effigy.owner_peer_id = user.peer_id
+			_effigies.append(effigy)
+			_show_effigy(effigy.position, effigy.time_left, effigy.lure_radius, user.slot)
+			for peer_id: int in _ready_peers:
+				_receive_effigy.rpc_id(peer_id, effigy.position, effigy.time_left, effigy.lure_radius, user.slot)
 		_:
 			pass  # Dash needs nothing extra: dashing players can't be hit.
+
+
+## Where a thrown ability lands: `distance` ahead in the aim direction, inside the arena.
+func _ability_target(user: Player, distance: float) -> Vector2:
+	var target := user.state.position + Vector2.from_angle(user.state.aim) * distance
+	var inner := BOUNDS.grow(-8.0)
+	return target.clamp(inner.position, inner.end)
+
+
+## Host: count down effigies; an expired one bursts, damaging enemies around it.
+func _tick_effigies(delta: float) -> void:
+	for i: int in range(_effigies.size() - 1, -1, -1):
+		var effigy := _effigies[i]
+		effigy.time_left -= delta
+		if effigy.time_left > 0.0:
+			continue
+		_effigies.remove_at(i)
+		_enemies.damage_in_radius(effigy.position, effigy.burst_radius, effigy.burst_damage, effigy.owner_peer_id)
+		_effigy_burst(effigy.position, effigy.burst_radius)
+		for peer_id: int in _ready_peers:
+			_receive_effigy_burst.rpc_id(peer_id, effigy.position, effigy.burst_radius)
+
+
+func _effigy_positions() -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	for effigy: Effigy in _effigies:
+		positions.append(effigy.position)
+	return positions
+
+
+func _effigy_lure_radius() -> float:
+	var radius := 0.0
+	for effigy: Effigy in _effigies:
+		radius = maxf(radius, effigy.lure_radius)
+	return radius
+
+
+## Everyone: the hex sigil on the ground.
+func _show_hex(at: Vector2, radius: float, seconds: float) -> void:
+	var marker := AbilityMarker.new()
+	marker.kind = AbilityMarker.Kind.HEX
+	marker.radius = radius
+	marker.duration = seconds
+	marker.position = at
+	marker.add_to_group(&"ability_markers")
+	add_child(marker)
+	_effects.burst(at, AbilityMarker.HEX_COLOR, 16, 90.0, 0.4, 1.5)
+	if _near_local_player(at):
+		Sfx.play(&"hex", -4.0)
+
+
+## Everyone: the effigy rises (it lives as long as the host's copy).
+func _show_effigy(at: Vector2, seconds: float, lure_radius: float, slot: int) -> void:
+	var marker := AbilityMarker.new()
+	marker.kind = AbilityMarker.Kind.EFFIGY
+	marker.radius = lure_radius
+	marker.duration = seconds
+	marker.color = Player.SLOT_COLORS[slot % Player.SLOT_COLORS.size()]
+	marker.position = at
+	marker.add_to_group(&"ability_markers")
+	add_child(marker)
+	_effects.burst(at, Color(0.84, 0.8, 0.68), 10, 50.0, 0.35, 1.0)
+	if _near_local_player(at):
+		Sfx.play(&"effigy", -3.0)
+
+
+## Everyone: the effigy bursts.
+func _effigy_burst(at: Vector2, radius: float) -> void:
+	var blast := BombBlast.new()
+	blast.radius = radius
+	blast.color = Color(0.84, 0.8, 0.68)
+	blast.position = at
+	add_child(blast)
+	_effects.burst(at, Color(0.84, 0.8, 0.68), 18, 120.0, 0.45, 1.5)
+	if _near_local_player(at):
+		_shake_local(3.0)
+		Sfx.play(&"bomb", -8.0, 1.4)
+
+
+func _clear_ability_markers() -> void:
+	for marker: Node in get_tree().get_nodes_in_group(&"ability_markers"):
+		marker.queue_free()
 
 
 ## True if `at` is close enough to this machine's player to be worth hearing.
@@ -988,6 +1105,7 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			_gems.clear()
 			_coins.clear()
 			_weapons.clear_altars()
+			_clear_ability_markers()
 
 
 ## Client: keep our copy of the stage clock close to the host's *current* time.
@@ -1025,6 +1143,21 @@ func _receive_blast(at: Vector2, radius: float) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_blink(at: Vector2, slot: int) -> void:
 	_blink_effect(at, slot)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_hex(at: Vector2, radius: float, seconds: float) -> void:
+	_show_hex(at, radius, seconds)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_effigy(at: Vector2, seconds: float, lure_radius: float, slot: int) -> void:
+	_show_effigy(at, seconds, lure_radius, slot)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_effigy_burst(at: Vector2, radius: float) -> void:
+	_effigy_burst(at, radius)
 
 
 @rpc("authority", "call_remote", "reliable")

@@ -6,7 +6,8 @@ extends Resource
 
 ## Each character has one ability on the ability button. Stored as numbers in
 ## .tres files: only add new abilities at the end.
-enum Ability { DASH, GRAVE_BLAST, BLINK }
+## (BLINK is no longer used by anyone; kept so the numbers stay stable.)
+enum Ability { DASH, GRAVE_BLAST, BLINK, HEX_SNARE, BONE_EFFIGY }
 
 @export var display_name: String = "Wanderer"
 @export_multiline var blurb: String = ""
@@ -34,6 +35,20 @@ enum Ability { DASH, GRAVE_BLAST, BLINK }
 @export var blast_damage: int = 60
 @export var blast_heal: int = 1
 @export var blast_invulnerability: float = 1.5
+## Hex Snare: a hex lands this far ahead (in the aim direction). Enemies inside
+## can't move or attack and take extra damage. Bosses aren't rooted.
+@export var hex_range: float = 80.0
+@export var hex_radius: float = 55.0
+@export var hex_duration: float = 3.0
+## Damage multiplier on hexed enemies (1.5 = +50%).
+@export var hex_damage_multiplier: float = 1.5
+## Bone Effigy: a decoy raised this far ahead. Enemies within the lure radius
+## chase it instead of players; it bursts when it expires.
+@export var effigy_range: float = 40.0
+@export var effigy_duration: float = 4.0
+@export var effigy_lure_radius: float = 150.0
+@export var effigy_burst_radius: float = 70.0
+@export var effigy_burst_damage: int = 45
 
 @export_group("Movement")
 @export var move_speed: float = 110.0

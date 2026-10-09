@@ -164,7 +164,9 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
 - **Characters (one passive ability each):**
   - **Wanderer:** balanced. Ability **Dash** (0.8s): quick dash, can't be hit while dashing.
   - **Gravekeeper:** slow, 5 hearts, short-range shotgun. Ability **Grave Blast** (14s): clears nearby enemy bullets, damages enemies around you, heals 1 heart.
-  - **Hexblade Witch:** fast, 2 hearts, rapid piercing bolts. Ability **Blink** (2.5s): instant short teleport, briefly untouchable.
+  - **Hexblade Witch:** fast, 2 hearts, rapid piercing bolts. Ability **Hex Snare** (7s): hurls a hex ~80px ahead; enemies inside (55px) are bound for 3s (can't move or attack) and take +50% damage. Bosses aren't bound but still take the extra damage. *(v0.13.0, replaced Blink: the owner felt it was just another dash.)*
+  - **Necromancer** *(v0.13.0, 4th character for 4-player games)*: medium speed, 3 hearts, a fan of 3 bone shards (Extra Bolt adds 2). Ability **Bone Effigy** (10s): raises a decoy ~40px ahead for 4s; regular enemies within 150px chase it instead of players, then it bursts (70px, 45 damage). Bosses ignore it.
+  - *Decisions made by Claude while the owner was away (v0.13.0): the two new abilities, the Necromancer's look and stats. Revisit in the next playtest.*
   - (v0.12.0: the old passives Second Wind and Grave Ward were removed when abilities replaced dash/bomb.)
 - **Stages** (each has its own floor, enemy mix and boss; data-driven `StageDef` resources):
   1. **The Crypt:** Shamblers, Bats, Ghouls, Cultists. Boss: the Bone Warden.
@@ -221,7 +223,7 @@ Also: lobby cards restyled.
 ## 8. Open questions
 
 - Working title?
-- Do the three character abilities feel distinct and balanced (Dash / Grave Blast / Blink)? More characters later?
+- Do the four character abilities feel distinct and balanced (Dash / Grave Blast / Hex Snare / Bone Effigy)?
 - Enemy roster and boss designs beyond the first set (one boss per stage so far).
 - Weapon, auto-weapon, and relic lists; synergy rules (none yet).
 - Shop economy: first rebalance done in v0.12.0; needs a playtest.

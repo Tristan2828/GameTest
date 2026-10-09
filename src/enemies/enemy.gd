@@ -13,6 +13,8 @@ const ANIMATION_MS: float = 140.0
 ## Steps per second of the walk cycle, and how long the attack pose shows.
 const WALK_STEPS_PER_SECOND: float = 5.0
 const ATTACK_POSE_SECONDS: float = 0.35
+## Purple tint while hexed (Hex Snare).
+const HEXED_TINT: Color = Color(0.78, 0.55, 1.0)
 
 var pool_index: int = -1
 var type_id: int = 0
@@ -29,6 +31,12 @@ var fire_cooldown: float = 0.0
 var hit_since_snapshot: bool = false
 ## Clients: latest position from the host, approached smoothly.
 var target_position: Vector2 = Vector2.ZERO
+## Host: seconds of Hex Snare left (rooted unless a boss; takes extra damage).
+var hexed_left: float = 0.0
+## Host: damage multiplier while hexed.
+var hex_multiplier: float = 1.0
+## Everyone: shown tinted while hexed (clients learn it from snapshots).
+var hexed: bool = false
 
 var _flash_left: float = 0.0
 var facing_left: bool = false
@@ -60,6 +68,9 @@ func activate(enemy_type_id: int, at: Vector2, hit_points: int = 0) -> void:
 	# Stagger first volleys so a group doesn't fire in perfect sync.
 	fire_cooldown = type.fire_interval * randf_range(0.5, 1.0)
 	hit_since_snapshot = false
+	hexed_left = 0.0
+	hex_multiplier = 1.0
+	hexed = false
 	_flash_left = 0.0
 	_attack_left = 0.0
 	_last_position = at
@@ -74,6 +85,13 @@ func play_attack() -> void:
 func deactivate() -> void:
 	active = false
 	visible = false
+
+
+## Everyone: show or hide the hexed tint.
+func set_hexed(value: bool) -> void:
+	if hexed != value:
+		hexed = value
+		queue_redraw()
 
 
 ## Host only. Returns true if this hit killed the enemy.
@@ -128,7 +146,8 @@ func _current_sprite() -> String:
 func _draw() -> void:
 	if not type.sprite.is_empty():
 		_shown_sprite = _current_sprite()
-		PixelArt.draw(self, _shown_sprite, Vector2.ZERO, Color.WHITE, _flash_left > 0.0, facing_left, type.sprite_scale)
+		var tint := HEXED_TINT if hexed else Color.WHITE
+		PixelArt.draw(self, _shown_sprite, Vector2.ZERO, Color.WHITE, _flash_left > 0.0, facing_left, type.sprite_scale, tint)
 	else:
 		draw_circle(Vector2.ZERO, type.radius, Color.WHITE if _flash_left > 0.0 else type.color)
 	if type.show_hp_bar and hp_ratio < 1.0:

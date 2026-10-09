@@ -1,4 +1,4 @@
-# Playtest Review (v0.12.0)
+# Playtest Review (v0.13.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (159 unit tests, plus online host+client runs).
@@ -23,7 +23,7 @@ $g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
 & $g -- --solo --start-stage=2                     # A full stage 2 from the start
 & $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (tests the flow, not balance)
 & $g -- --solo --give-weapons                      # Start with all 3 auto weapons at level 2
-& $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch
+& $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
 ```
 
 Flags combine. `--start-at` and `--start-stage` skip upgrades, so jumped-to fights are **harder** than in a real run.
@@ -53,7 +53,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Minimap: helpful? Did you notice the red edge warning near walls?
 - [ ] Text: shop, level-up cards, lobby, HUD all readable now?
 - [ ] Shop: about one relic per shop now? Too stingy? (*Tune: coin_chance in enemy `.tres`, relic `price`, `BOSS_BOUNTY` in `src/arena/arena.gd`*)
-- [ ] Abilities: Dash / Grave Blast / Blink each feel good? Cooldowns right? (*Tune: `ability_cooldown` etc. in `src/player/characters/*.tres`*)
+- [ ] Abilities: Dash / Grave Blast / Hex Snare / Bone Effigy each feel good and different? Cooldowns right? Is the hex sigil and the effigy's lure ring readable? (*Tune: `ability_cooldown` etc. in `src/player/characters/*.tres`*)
 - [ ] Version shown on the title screen.
 
 ### 3.1 Moment-to-moment feel
@@ -107,7 +107,8 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 |---|---|---|---|
 | Wanderer (Dash) | | | |
 | Gravekeeper (shotgun, 5 hearts, Grave Blast) | | | |
-| Hexblade Witch (fast, 2 hearts, piercing hexes, Blink) | | | |
+| Hexblade Witch (fast, 2 hearts, piercing hexes, Hex Snare) | | | |
+| Necromancer (3 hearts, bone-shard fan, Bone Effigy decoy) | | | |
 
 - [ ] Gravekeeper's shotgun range (short). Fun or frustrating?
 - [ ] Witch with 2 hearts. Too fragile?
@@ -178,7 +179,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
-- **Abilities:** one per character on a cooldown (Dash / Grave Blast / Blink), replacing dash and bombs.
+- **Abilities:** one per character on a cooldown (Dash / Grave Blast / Hex Snare / Bone Effigy), replacing dash and bombs.
 - **Characters / abilities**, as listed in 3.5.
 - **Mid-run joiners** play the Wanderer.
 - **Sound** is synthesized placeholder; no music yet.

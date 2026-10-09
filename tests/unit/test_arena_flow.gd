@@ -224,3 +224,54 @@ func test_run_end_names_the_boss_that_won() -> void:
 	_local_player().take_hit(99)
 	_arena._update_phase()
 	assert_eq(_arena._final_stats.fell_to, EnemyTypes.get_type(Stages.get_stage(1).boss_type).display_name)
+
+
+# --- Character abilities ---
+
+func _use_ability_as(character: int) -> Player:
+	var player := _local_player()
+	player.stats = Characters.get_character(character).duplicate()
+	player.state.aim = 0.0  # Aim right.
+	_arena._on_player_ability_used(player)
+	return player
+
+
+func test_hex_snare_roots_enemies_and_they_take_extra_damage() -> void:
+	var player := _local_player()
+	var witch := Characters.get_character(Characters.Id.HEXBLADE_WITCH)
+	var at := player.state.position + Vector2(witch.hex_range, 0.0)
+	var enemy := _arena._enemies.spawn(0, at)
+	var far := _arena._enemies.spawn(0, at + Vector2(400.0, 0.0))
+	_arena._enemies.rebuild_grid()
+	_use_ability_as(Characters.Id.HEXBLADE_WITCH)
+	assert_true(enemy.hexed, "enemy in the sigil is hexed")
+	assert_false(far.hexed, "enemy outside is not")
+	var targets: Array[Vector2] = [player.state.position]
+	_arena._enemies.tick_host(0.5, targets)
+	assert_almost_eq(enemy.position.x, at.x, 0.5, "rooted enemies don't move")
+	var hp_before := enemy.hp
+	_arena._enemies.damage(enemy, 4, 1)
+	assert_eq(hp_before - enemy.hp, roundi(4 * witch.hex_damage_multiplier))
+	_arena._enemies.tick_host(witch.hex_duration, targets)
+	assert_false(enemy.hexed, "the hex wears off")
+
+
+func test_bone_effigy_lures_enemies_then_bursts() -> void:
+	var player := _local_player()
+	var necro := Characters.get_character(Characters.Id.NECROMANCER)
+	_use_ability_as(Characters.Id.NECROMANCER)
+	assert_eq(_arena._effigies.size(), 1)
+	var effigy_at: Vector2 = _arena._effigies[0].position
+	# An enemy on the far side of the effigy walks toward it, away from the player.
+	var enemy := _arena._enemies.spawn(0, effigy_at + Vector2(60.0, 0.0))
+	_arena._enemies.rebuild_grid()
+	var start := enemy.position
+	_arena._enemies.tick_host(0.2, [player.state.position] as Array[Vector2], _arena._effigy_positions(), _arena._effigy_lure_radius())
+	assert_lt(enemy.position.distance_to(effigy_at), start.distance_to(effigy_at), "lured toward the effigy")
+	var hp_before := enemy.hp
+	enemy.position = effigy_at + Vector2(10.0, 0.0)
+	_arena._enemies.rebuild_grid()
+	_arena._tick_effigies(necro.effigy_duration + 0.1)
+	assert_eq(_arena._effigies.size(), 0, "effigy is gone after bursting")
+	assert_true(not enemy.active or enemy.hp < hp_before, "the burst hurt the enemy")
+

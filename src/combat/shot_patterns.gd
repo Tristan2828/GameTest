@@ -13,7 +13,7 @@ extends RefCounted
 
 enum Id {
 	BASIC, AIMED_FAN_3, RING_24, SPIRAL, DOUBLE_SPIRAL, AIMED_FAN_7,
-	RING_8, WALL, RANDOM_SPRAY, CROSS, AIMED_LINE_5, BURST_12, SHOTGUN,
+	RING_8, WALL, RANDOM_SPRAY, CROSS, AIMED_LINE_5, BURST_12, SHOTGUN, BONE_FAN,
 }
 
 const STRIDE: int = 5
@@ -28,6 +28,7 @@ const WALL_BULLETS: int = 22
 const WALL_SPACING: float = 12.0
 const WALL_GAP: int = 3
 const SHOTGUN_SPACING_DEGREES: float = 7.0
+const BONE_FAN_SPACING_DEGREES: float = 11.0
 
 
 ## A seed both the host and the shooting client can compute on their own.
@@ -99,6 +100,10 @@ static func build(pattern: Id, aim: float, seed_value: int, count: int = 1, base
 				var spread := (i - (pellets - 1) / 2.0) * SHOTGUN_SPACING_DEGREES
 				var jitter := rng.randf_range(-2.0, 2.0)
 				_add(out, aim + deg_to_rad(spread + jitter), base_speed * rng.randf_range(0.85, 1.1), 0.0)
+		Id.BONE_FAN:
+			# Player shards: a tidy 3-way fan. Extra Bolt adds 2 shards.
+			var shards := 3 + (maxi(count, 1) - 1) * 2
+			_fan(out, aim, shards, deg_to_rad(BONE_FAN_SPACING_DEGREES), base_speed)
 	return out
 
 

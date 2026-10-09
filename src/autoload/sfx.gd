@@ -85,6 +85,15 @@ func _build_sounds() -> void:
 		Synth.voice(W.SAW, 72.0, 46.0, 1.4, 0.4, 0.05, 1.2, 0.18, 6.0, 0.04),
 		Synth.voice(W.NOISE, 200.0, 60.0, 1.4, 0.25, 0.1, 1.5, 0.12)]), 0.2, 0.3, 2))
 	_add(&"dash", Synth.voice(W.NOISE, 4000.0, 700.0, 0.12, 0.16, 0.003, 1.5, 0.7))
+	# Hex Snare: an eerie falling whistle with a wobble, ringing out.
+	_add(&"hex", Synth.echo(Synth.mix([
+		Synth.voice(W.SINE, 1400.0, 420.0, 0.45, 0.3, 0.01, 1.3, 1.0, 9.0, 0.05),
+		Synth.voice(W.TRIANGLE, 700.0, 210.0, 0.45, 0.18, 0.01, 1.3, 1.0, 9.0, 0.05)]), 0.11, 0.35, 3))
+	# Bone Effigy rising: a dry clatter of bones.
+	_add(&"effigy", Synth.sequence([
+		Synth.voice(W.NOISE, 2400.0, 1800.0, 0.04, 0.22, 0.001, 2.0, 0.6),
+		Synth.voice(W.NOISE, 1900.0, 1400.0, 0.05, 0.18, 0.001, 2.0, 0.6),
+		Synth.voice(W.SQUARE, 220.0, 140.0, 0.12, 0.16, 0.002, 2.0, 0.4)]))
 	_add(&"enemy_shot", Synth.voice(W.SQUARE, 330.0, 240.0, 0.08, 0.12, 0.002, 2.0, 0.4))
 	_add(&"ui", Synth.voice(W.SINE, 900.0, 900.0, 0.03, 0.2, 0.001, 2.0))
 	_add(&"victory", Synth.echo(_arpeggio([67, 72, 76, 79, 84], 0.12, 0.25, W.SQUARE, 0.5), 0.12, 0.35, 3))

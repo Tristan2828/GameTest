@@ -10,13 +10,13 @@ func _player(character: int) -> Player:
 	return player
 
 
-func test_three_distinct_characters() -> void:
-	assert_eq(Characters.ALL.size(), 3)
+func test_four_distinct_characters() -> void:
+	assert_eq(Characters.ALL.size(), 4)
 	var names: Dictionary[String, bool] = {}
 	for stats: CharacterStats in Characters.ALL:
 		names[stats.display_name] = true
 		assert_false(stats.ability_name.is_empty(), stats.display_name)
-	assert_eq(names.size(), 3)
+	assert_eq(names.size(), 4)
 
 
 func test_players_get_their_own_copy_of_character_stats() -> void:
@@ -37,7 +37,16 @@ func test_character_trade_offs() -> void:
 	assert_gt(witch.move_speed, wanderer.move_speed)
 	assert_eq(wanderer.ability, CharacterStats.Ability.DASH)
 	assert_eq(keeper.ability, CharacterStats.Ability.GRAVE_BLAST)
-	assert_eq(witch.ability, CharacterStats.Ability.BLINK)
+	assert_eq(witch.ability, CharacterStats.Ability.HEX_SNARE)
+	assert_eq(Characters.get_character(Characters.Id.NECROMANCER).ability, CharacterStats.Ability.BONE_EFFIGY)
+
+
+func test_necromancer_fires_a_bone_fan_and_extra_bolt_adds_shards() -> void:
+	var necro := Characters.get_character(Characters.Id.NECROMANCER)
+	var pattern := necro.shot_pattern as ShotPatterns.Id
+	assert_eq(pattern, ShotPatterns.Id.BONE_FAN)
+	assert_eq(ShotPatterns.angles(pattern, 0.0, 7, 1).size(), 3)
+	assert_eq(ShotPatterns.angles(pattern, 0.0, 7, 2).size(), 5)
 
 
 func test_gravekeeper_shotgun_fires_a_wide_fan_and_extra_bolt_adds_pellets() -> void:

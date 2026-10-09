@@ -35,11 +35,11 @@ horizontal_alignment = 1
 [node name="Cards" type="HBoxContainer" parent="Center/Box"]
 layout_mode = 2
 alignment = 1
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
 [node name="Card0" type="Button" parent="Center/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 160)
+custom_minimum_size = Vector2(148, 172)
 layout_mode = 2
 toggle_mode = true
 
@@ -93,7 +93,7 @@ horizontal_alignment = 1
 
 [node name="Card1" type="Button" parent="Center/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 160)
+custom_minimum_size = Vector2(148, 172)
 layout_mode = 2
 toggle_mode = true
 
@@ -147,7 +147,7 @@ horizontal_alignment = 1
 
 [node name="Card2" type="Button" parent="Center/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 160)
+custom_minimum_size = Vector2(148, 172)
 layout_mode = 2
 toggle_mode = true
 
@@ -195,6 +195,60 @@ horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="Hearts" type="Label" parent="Center/Box/Cards/Card2/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
+horizontal_alignment = 1
+
+[node name="Card3" type="Button" parent="Center/Box/Cards"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(148, 172)
+layout_mode = 2
+toggle_mode = true
+
+[node name="Portrait" type="Control" parent="Center/Box/Cards/Card3"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_top = 6.0
+offset_right = 20.0
+offset_bottom = 40.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("2_portrait")
+
+
+[node name="Lines" type="VBoxContainer" parent="Center/Box/Cards/Card3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 44.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Name" type="Label" parent="Center/Box/Cards/Card3/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Blurb" type="Label" parent="Center/Box/Cards/Card3/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Ability" type="Label" parent="Center/Box/Cards/Card3/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Hearts" type="Label" parent="Center/Box/Cards/Card3/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
 horizontal_alignment = 1
