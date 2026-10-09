@@ -113,6 +113,8 @@ func _ready() -> void:
 	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_rng.randomize()
+	if multiplayer.is_server():
+		_stage = LaunchOptions.start_stage
 	_setup_stage()
 	_level_up.bind_panel(_hud.level_up_panel)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
@@ -587,7 +589,8 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 	var stats := shooter.stats
 	var bullets := ShotPatterns.build(pattern, aim, seed_value, stats.projectile_count, stats.bullet_speed)
 	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
-		_projectiles.spawn(origin, Vector2.from_angle(bullets[i]) * bullets[i + 1], stats.bullet_damage,
+		var offset := Vector2(bullets[i + 3], bullets[i + 4])
+		_projectiles.spawn(origin + offset, Vector2.from_angle(bullets[i]) * bullets[i + 1], stats.bullet_damage,
 			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2])
 
 
@@ -626,7 +629,8 @@ func _fire_enemy_pattern(pattern: int, origin: Vector2, aim: float) -> void:
 func _spawn_enemy_pattern(pattern: int, origin: Vector2, aim: float, seed_value: int, age: float) -> void:
 	var bullets := ShotPatterns.build(pattern as ShotPatterns.Id, aim, seed_value)
 	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
-		_enemy_bullets.spawn(origin, Vector2.from_angle(bullets[i]) * bullets[i + 1], ENEMY_BULLET_DAMAGE,
+		var offset := Vector2(bullets[i + 3], bullets[i + 4])
+		_enemy_bullets.spawn(origin + offset, Vector2.from_angle(bullets[i]) * bullets[i + 1], ENEMY_BULLET_DAMAGE,
 			ENEMY_BULLET_LIFETIME, 0, 0, age - bullets[i + 2])
 
 

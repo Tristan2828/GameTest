@@ -4,15 +4,15 @@
 
 [resource]
 script = ExtResource("1_type")
-display_name = "Bat"
-max_hp = 10
-move_speed = 85.0
+display_name = "Flame Imp"
+max_hp = 16
+move_speed = 95.0
 radius = 4.0
 contact_damage = 1
+xp_value = 1
 coin_chance = 0.1
 coin_value = 1
-xp_value = 1
-color = Color(0.6, 0.38, 0.75, 1)
-look = 4
-wobble = 0.9
+color = Color(0.95, 0.45, 0.15, 1)
+wobble = 1.1
 show_hp_bar = false
+look = 4

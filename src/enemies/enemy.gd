@@ -11,6 +11,11 @@ const HP_FILL_COLOR: Color = Color(0.85, 0.2, 0.28)
 const EYE_COLOR: Color = Color(1.0, 0.85, 0.4)
 const BOSS_HORN_COLOR: Color = Color(0.35, 0.3, 0.28)
 const BOSS_MOUTH_COLOR: Color = Color(0.2, 0.08, 0.1)
+const HAT_COLOR: Color = Color(0.12, 0.1, 0.14)
+const MITRE_COLOR: Color = Color(0.55, 0.12, 0.12)
+const MITRE_TRIM_COLOR: Color = Color(0.95, 0.75, 0.35)
+const HELMET_COLOR: Color = Color(0.32, 0.35, 0.42)
+const HELMET_SLIT_COLOR: Color = Color(0.95, 0.4, 0.2)
 
 var pool_index: int = -1
 var type_id: int = 0
@@ -88,9 +93,10 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var body := Color.WHITE if _flash_left > 0.0 else type.color
-	if type.is_boss:
-		_draw_boss_crown()
+	if type.look == EnemyType.Look.HORNS or type.look == EnemyType.Look.WINGS:
+		_draw_horns_or_wings()
 	draw_circle(Vector2.ZERO, type.radius, body)
+	_draw_headwear()
 	draw_circle(Vector2(-type.radius * 0.35, -type.radius * 0.2), maxf(type.radius * 0.18, 1.0), EYE_COLOR)
 	draw_circle(Vector2(type.radius * 0.35, -type.radius * 0.2), maxf(type.radius * 0.18, 1.0), EYE_COLOR)
 	if type.is_boss:
@@ -102,9 +108,34 @@ func _draw() -> void:
 		draw_rect(bar, HP_FILL_COLOR)
 
 
-func _draw_boss_crown() -> void:
+## Drawn behind the body.
+func _draw_horns_or_wings() -> void:
 	var r := type.radius
 	for side: float in [-1.0, 1.0]:
-		draw_colored_polygon(PackedVector2Array([
-			Vector2(side * r * 0.45, -r * 0.7), Vector2(side * r * 1.15, -r * 1.45), Vector2(side * r * 0.85, -r * 0.35)]),
-			BOSS_HORN_COLOR)
+		if type.look == EnemyType.Look.HORNS:
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(side * r * 0.45, -r * 0.7), Vector2(side * r * 1.15, -r * 1.45), Vector2(side * r * 0.85, -r * 0.35)]),
+				BOSS_HORN_COLOR)
+		else:
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(side * r * 0.6, -r * 0.3), Vector2(side * r * 2.0, -r * 0.9), Vector2(side * r * 1.6, r * 0.3),
+				Vector2(side * r * 0.7, r * 0.3)]), type.color.darkened(0.35))
+
+
+## Drawn on top of the body.
+func _draw_headwear() -> void:
+	var r := type.radius
+	match type.look:
+		EnemyType.Look.WITCH_HAT:
+			draw_rect(Rect2(-r * 1.1, -r * 0.85, r * 2.2, r * 0.25), HAT_COLOR)
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(-r * 0.6, -r * 0.8), Vector2(r * 0.6, -r * 0.8), Vector2(r * 0.2, -r * 2.0)]), HAT_COLOR)
+		EnemyType.Look.MITRE:
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(-r * 0.55, -r * 0.7), Vector2(r * 0.55, -r * 0.7), Vector2(r * 0.4, -r * 1.7),
+				Vector2(0, -r * 2.0), Vector2(-r * 0.4, -r * 1.7)]), MITRE_COLOR)
+			draw_rect(Rect2(-1, -r * 1.75, 2, r * 0.8), MITRE_TRIM_COLOR)
+			draw_rect(Rect2(-r * 0.25, -r * 1.4, r * 0.5, 2), MITRE_TRIM_COLOR)
+		EnemyType.Look.HELMET:
+			draw_rect(Rect2(-r * 0.9, -r * 0.95, r * 1.8, r * 0.75), HELMET_COLOR)
+			draw_rect(Rect2(-r * 0.6, -r * 0.45, r * 1.2, 1.5), HELMET_SLIT_COLOR)

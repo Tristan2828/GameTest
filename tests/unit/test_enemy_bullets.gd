@@ -22,7 +22,8 @@ func _bullets() -> ProjectileManager:
 
 func test_every_enemy_pattern_is_deterministic() -> void:
 	for pattern: int in [ShotPatterns.Id.AIMED_FAN_3, ShotPatterns.Id.RING_24, ShotPatterns.Id.SPIRAL,
-			ShotPatterns.Id.DOUBLE_SPIRAL, ShotPatterns.Id.AIMED_FAN_7]:
+			ShotPatterns.Id.DOUBLE_SPIRAL, ShotPatterns.Id.AIMED_FAN_7, ShotPatterns.Id.RING_8, ShotPatterns.Id.WALL,
+			ShotPatterns.Id.RANDOM_SPRAY, ShotPatterns.Id.CROSS, ShotPatterns.Id.AIMED_LINE_5, ShotPatterns.Id.BURST_12]:
 		var a := ShotPatterns.build(pattern as ShotPatterns.Id, 1.0, 999)
 		var b := ShotPatterns.build(pattern as ShotPatterns.Id, 1.0, 999)
 		assert_eq(a, b, "pattern %d" % pattern)
@@ -37,7 +38,7 @@ func test_ring_covers_full_circle() -> void:
 
 func test_spiral_bullets_are_staggered_in_time() -> void:
 	var bullets := ShotPatterns.build(ShotPatterns.Id.SPIRAL, 0.0, 5)
-	var last_delay := bullets[bullets.size() - 1]
+	var last_delay := bullets[bullets.size() - ShotPatterns.STRIDE + 2]
 	assert_almost_eq(last_delay, (ShotPatterns.SPIRAL_BULLETS - 1) * ShotPatterns.SPIRAL_INTERVAL, 0.0001)
 	assert_eq(ShotPatterns.build(ShotPatterns.Id.DOUBLE_SPIRAL, 0.0, 5).size(), bullets.size() * 2)
 
@@ -148,3 +149,20 @@ func test_cultist_backs_away_when_too_close() -> void:
 	var target: Array[Vector2] = [Vector2(150, 100)]
 	enemies.tick_host(0.5, target)
 	assert_lt(cultist.position.x, 100.0)
+
+
+func test_wall_has_a_gap_and_marches_forward() -> void:
+	var bullets := ShotPatterns.build(ShotPatterns.Id.WALL, 0.0, 42)
+	var count := bullets.size() / ShotPatterns.STRIDE
+	assert_eq(count, ShotPatterns.WALL_BULLETS - ShotPatterns.WALL_GAP)
+	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
+		assert_almost_eq(bullets[i], 0.0, 0.0001, "all move along the aim")
+		assert_almost_eq(bullets[i + 3], 0.0, 0.001, "spread across, not along")
+
+
+func test_cross_has_four_arms() -> void:
+	var angles := ShotPatterns.angles(ShotPatterns.Id.CROSS, 0.3, 1)
+	var arms: Dictionary[int, bool] = {}
+	for angle: float in angles:
+		arms[roundi(wrapf(angle - 0.3, 0.0, TAU) / (PI / 2.0)) % 4] = true
+	assert_eq(arms.size(), 4)

@@ -4,6 +4,8 @@ extends RefCounted
 
 const ALL: Array[StageDef] = [
 	preload("res://src/stages/crypt.tres"),
+	preload("res://src/stages/bone_marsh.tres"),
+	preload("res://src/stages/burning_cathedral.tres"),
 ]
 
 

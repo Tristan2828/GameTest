@@ -13,6 +13,15 @@ const BONE_COLOR: Color = Color(0.32, 0.3, 0.27)
 const CANDLE_COLOR: Color = Color(0.45, 0.4, 0.33)
 const FLAME_COLOR: Color = Color(1.0, 0.7, 0.3)
 const GLOW_COLOR: Color = Color(1.0, 0.6, 0.25, 0.06)
+const PUDDLE_COLOR: Color = Color(0.05, 0.09, 0.08)
+const PUDDLE_SHINE_COLOR: Color = Color(0.2, 0.3, 0.28)
+const REED_COLOR: Color = Color(0.25, 0.3, 0.15)
+const PEW_COLOR: Color = Color(0.2, 0.11, 0.07)
+const PEW_TOP_COLOR: Color = Color(0.28, 0.16, 0.1)
+const PILLAR_COLOR: Color = Color(0.3, 0.24, 0.22)
+const PILLAR_SHADE_COLOR: Color = Color(0.18, 0.13, 0.12)
+const EMBER_COLOR: Color = Color(1.0, 0.55, 0.2)
+const EMBER_GLOW_COLOR: Color = Color(1.0, 0.35, 0.1, 0.07)
 
 @export var bounds: Rect2 = Rect2(0, 0, 1600, 1000)
 @export var seed_value: int = 1337
@@ -38,6 +47,22 @@ func _draw() -> void:
 	rng.seed = seed_value
 	_draw_tiles(rng)
 	match _stage.prop_style:
+		StageDef.PropStyle.MARSH:
+			for i: int in grave_count:
+				_draw_puddle(_prop_spot(rng), rng)
+			for i: int in bone_count:
+				_draw_reeds(_prop_spot(rng), rng)
+			for i: int in bone_count / 2:
+				_draw_bones(_prop_spot(rng), rng)
+		StageDef.PropStyle.CATHEDRAL:
+			for i: int in grave_count / 2:
+				_draw_pew(_prop_spot(rng), rng)
+			for i: int in grave_count / 3:
+				_draw_pillar_stump(_prop_spot(rng))
+			for i: int in bone_count:
+				_draw_ember(_prop_spot(rng))
+			for i: int in candle_count:
+				_draw_candle(_prop_spot(rng))
 		_:
 			for i: int in bone_count:
 				_draw_bones(_prop_spot(rng), rng)
@@ -100,6 +125,35 @@ func _draw_candle(at: Vector2) -> void:
 	draw_circle(at, 14.0, GLOW_COLOR)
 	draw_rect(Rect2(at + Vector2(-1, -4), Vector2(2, 4)), CANDLE_COLOR)
 	draw_rect(Rect2(at + Vector2(-0.5, -6), Vector2(1, 2)), FLAME_COLOR)
+
+
+func _draw_puddle(at: Vector2, rng: RandomNumberGenerator) -> void:
+	var size := Vector2(rng.randi_range(10, 22), rng.randi_range(5, 10))
+	draw_rect(Rect2(at - size / 2.0, size), PUDDLE_COLOR)
+	draw_rect(Rect2(at - size / 2.0 + Vector2(2, 1), Vector2(size.x * 0.4, 1)), PUDDLE_SHINE_COLOR)
+
+
+func _draw_reeds(at: Vector2, rng: RandomNumberGenerator) -> void:
+	for i: int in rng.randi_range(2, 4):
+		var base := at + Vector2(i * 2 - 3, 0)
+		draw_line(base, base + Vector2(rng.randi_range(-2, 2), -rng.randi_range(5, 9)), REED_COLOR)
+
+
+func _draw_pew(at: Vector2, rng: RandomNumberGenerator) -> void:
+	var width := rng.randi_range(18, 30)
+	draw_rect(Rect2(at + Vector2(-width / 2.0, -3), Vector2(width, 5)), PEW_COLOR)
+	draw_rect(Rect2(at + Vector2(-width / 2.0, -5), Vector2(width, 2)), PEW_TOP_COLOR)
+
+
+func _draw_pillar_stump(at: Vector2) -> void:
+	draw_circle(at + Vector2(1, 1), 7.0, PILLAR_SHADE_COLOR)
+	draw_circle(at, 7.0, PILLAR_COLOR)
+	draw_circle(at, 4.0, PILLAR_SHADE_COLOR)
+
+
+func _draw_ember(at: Vector2) -> void:
+	draw_circle(at, 6.0, EMBER_GLOW_COLOR)
+	draw_rect(Rect2(at, Vector2(1, 1)), EMBER_COLOR)
 
 
 func _draw_walls() -> void:

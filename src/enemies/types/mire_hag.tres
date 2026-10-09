@@ -4,19 +4,18 @@
 
 [resource]
 script = ExtResource("1_type")
-display_name = "The Bone Warden"
+display_name = "The Mire Hag"
 max_hp = 6000
-move_speed = 22.0
-radius = 22.0
+move_speed = 26.0
+radius = 20.0
 contact_damage = 1
+xp_value = 50
 coin_chance = 0.0
 coin_value = 1
-xp_value = 50
-color = Color(0.82, 0.78, 0.66, 1)
-look = 1
+color = Color(0.42, 0.6, 0.38, 1)
 wobble = 0.0
 show_hp_bar = false
+look = 2
 is_boss = true
 hp_per_extra_player = 0.75
-shot_pattern = -1
-preferred_distance = 110.0
+preferred_distance = 120.0

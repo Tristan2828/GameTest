@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyType" format=3]
+
+[ext_resource type="Script" path="res://src/enemies/enemy_type.gd" id="1_type"]
+
+[resource]
+script = ExtResource("1_type")
+display_name = "Fallen Paladin"
+max_hp = 150
+move_speed = 26.0
+radius = 9.0
+contact_damage = 1
+xp_value = 5
+coin_chance = 0.5
+coin_value = 2
+color = Color(0.45, 0.5, 0.62, 1)
+wobble = 0.0
+show_hp_bar = true
+look = 5
+shot_pattern = 10
+fire_interval = 3.0
+fire_range = 220.0
+preferred_distance = 0.0

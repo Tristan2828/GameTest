@@ -1,0 +1,196 @@
+[gd_resource type="Resource" script_class="StageDef" format=3]
+
+[ext_resource type="Script" path="res://src/stages/stage_def.gd" id="1_stage"]
+[ext_resource type="Script" path="res://src/stages/spawn_entry.gd" id="2_spawn"]
+[ext_resource type="Script" path="res://src/stages/boss_step.gd" id="3_step"]
+
+[sub_resource type="Resource" id="spawn_0"]
+script = ExtResource("2_spawn")
+enemy_type = 7
+unlock_time = 0.0
+weight = 8.0
+weight_per_minute = 0.0
+
+[sub_resource type="Resource" id="spawn_1"]
+script = ExtResource("2_spawn")
+enemy_type = 0
+unlock_time = 0.0
+weight = 3.0
+weight_per_minute = 0.0
+
+[sub_resource type="Resource" id="spawn_2"]
+script = ExtResource("2_spawn")
+enemy_type = 3
+unlock_time = 30.0
+weight = 2.5
+weight_per_minute = 0.0
+
+[sub_resource type="Resource" id="spawn_3"]
+script = ExtResource("2_spawn")
+enemy_type = 8
+unlock_time = 90.0
+weight = 1.5
+weight_per_minute = 1.0
+
+[sub_resource type="Resource" id="p1_0"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.35
+wait = 0.45
+
+[sub_resource type="Resource" id="p1_1"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.35
+wait = 0.45
+
+[sub_resource type="Resource" id="p1_2"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.35
+wait = 0.45
+
+[sub_resource type="Resource" id="p1_3"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.35
+wait = 0.45
+
+[sub_resource type="Resource" id="p1_4"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.35
+wait = 0.45
+
+[sub_resource type="Resource" id="p1_5"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.35
+wait = 1.0
+
+[sub_resource type="Resource" id="p1_6"]
+script = ExtResource("3_step")
+pattern = 11
+aim = 2
+angle = 0.0
+wait = 1.6
+
+[sub_resource type="Resource" id="p1_7"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 1.0
+
+[sub_resource type="Resource" id="p1_8"]
+script = ExtResource("3_step")
+pattern = 5
+aim = 1
+angle = 0.0
+wait = 1.8
+
+[sub_resource type="Resource" id="p2_0"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_1"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_2"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_3"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_4"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_5"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_6"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.3
+
+[sub_resource type="Resource" id="p2_7"]
+script = ExtResource("3_step")
+pattern = 9
+aim = 3
+angle = 0.3
+wait = 0.8
+
+[sub_resource type="Resource" id="p2_8"]
+script = ExtResource("3_step")
+pattern = 11
+aim = 2
+angle = 0.0
+wait = 1.0
+
+[sub_resource type="Resource" id="p2_9"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 0.5
+
+[sub_resource type="Resource" id="p2_10"]
+script = ExtResource("3_step")
+pattern = 2
+aim = 0
+angle = 0.0
+wait = 1.2
+
+[sub_resource type="Resource" id="p2_11"]
+script = ExtResource("3_step")
+pattern = 4
+aim = 0
+angle = 0.0
+wait = 2.6
+
+[resource]
+script = ExtResource("1_stage")
+title = "The Burning Cathedral"
+spawns = Array[ExtResource("2_spawn")]([SubResource("spawn_0"), SubResource("spawn_1"), SubResource("spawn_2"), SubResource("spawn_3")])
+pack_type = 7
+boss_type = 10
+boss_phase_one = Array[ExtResource("3_step")]([SubResource("p1_0"), SubResource("p1_1"), SubResource("p1_2"), SubResource("p1_3"), SubResource("p1_4"), SubResource("p1_5"), SubResource("p1_6"), SubResource("p1_7"), SubResource("p1_8")])
+boss_phase_two = Array[ExtResource("3_step")]([SubResource("p2_0"), SubResource("p2_1"), SubResource("p2_2"), SubResource("p2_3"), SubResource("p2_4"), SubResource("p2_5"), SubResource("p2_6"), SubResource("p2_7"), SubResource("p2_8"), SubResource("p2_9"), SubResource("p2_10"), SubResource("p2_11")])
+stone_colors = Array[Color]([Color(0.14, 0.08, 0.08, 1), Color(0.15, 0.09, 0.085, 1), Color(0.13, 0.075, 0.075, 1), Color(0.16, 0.095, 0.09, 1)])
+grout_color = Color(0.08, 0.04, 0.04, 1)
+crack_color = Color(0.06, 0.03, 0.03, 1)
+moss_color = Color(0.45, 0.17, 0.05, 1)
+wall_color = Color(0.25, 0.1, 0.08, 1)
+wall_edge_color = Color(0.62, 0.3, 0.15, 1)
+prop_style = 2

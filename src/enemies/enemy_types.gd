@@ -3,7 +3,10 @@ extends RefCounted
 ## Registry of every enemy type. The index in ALL is the type id used in network
 ## messages, so only ever add new types at the end.
 
-enum Id { SHAMBLER, BAT, GHOUL, CULTIST, BONE_WARDEN }
+enum Id {
+	SHAMBLER, BAT, GHOUL, CULTIST, BONE_WARDEN,
+	MIRE_CRAWLER, PLAGUE_SPITTER, FLAME_IMP, FALLEN_PALADIN, MIRE_HAG, ASHEN_BISHOP,
+}
 
 const ALL: Array[EnemyType] = [
 	preload("res://src/enemies/types/shambler.tres"),
@@ -11,6 +14,12 @@ const ALL: Array[EnemyType] = [
 	preload("res://src/enemies/types/ghoul.tres"),
 	preload("res://src/enemies/types/cultist.tres"),
 	preload("res://src/enemies/types/bone_warden.tres"),
+	preload("res://src/enemies/types/mire_crawler.tres"),
+	preload("res://src/enemies/types/plague_spitter.tres"),
+	preload("res://src/enemies/types/flame_imp.tres"),
+	preload("res://src/enemies/types/fallen_paladin.tres"),
+	preload("res://src/enemies/types/mire_hag.tres"),
+	preload("res://src/enemies/types/ashen_bishop.tres"),
 ]
 
 

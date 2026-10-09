@@ -21,6 +21,10 @@ extends Resource
 ## Show an HP bar once damaged (for tanky enemies).
 @export var show_hp_bar: bool = false
 
+## Extra decoration drawn on the body.
+enum Look { PLAIN, HORNS, WITCH_HAT, MITRE, WINGS, HELMET }
+@export var look: Look = Look.PLAIN
+
 ## Bosses get the big HUD health bar and end the stage when they die.
 @export var is_boss: bool = false
 ## Extra max HP per player beyond the first (0.75 = +75%). Regular enemies use 0.
