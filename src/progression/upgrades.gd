@@ -71,15 +71,13 @@ static func apply_effect(upgrade: Upgrade, stats: CharacterStats, health: Player
 			stats.pierce += int(upgrade.amount)
 		Upgrade.Stat.PICKUP_RADIUS:
 			stats.pickup_radius *= 1.0 + upgrade.amount
-		Upgrade.Stat.DASH_COOLDOWN:
-			stats.dash_cooldown *= 1.0 - upgrade.amount
+		Upgrade.Stat.ABILITY_COOLDOWN:
+			stats.ability_cooldown *= 1.0 - upgrade.amount
 		Upgrade.Stat.HEAL:
 			health.heal(int(upgrade.amount))
-		Upgrade.Stat.BOMBS:
-			stats.bombs_per_stage = maxi(stats.bombs_per_stage + int(upgrade.amount), 0)
+		Upgrade.Stat.ABILITY_POWER:
+			stats.ability_power *= 1.0 + upgrade.amount
 		Upgrade.Stat.BULLET_SPEED:
 			stats.bullet_speed *= 1.0 + upgrade.amount
 		Upgrade.Stat.KILL_HEAL:
 			stats.heal_every_kills = int(upgrade.amount)
-		Upgrade.Stat.BOMB_DAMAGE:
-			stats.bomb_damage_multiplier += upgrade.amount

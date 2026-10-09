@@ -14,8 +14,8 @@ extends Node2D
 signal shot_requested(shooter: Player, input_seq: int)
 ## Every peer: this player just lost hearts (for effects).
 signal hurt(victim: Player)
-## Host: this player used a bomb (already paid for).
-signal bomb_requested(bomber: Player)
+## Host: this player used their ability (the movement part already happened).
+signal ability_used(user: Player)
 
 const SLOT_COLORS: Array[Color] = [
 	Color(0.36, 0.78, 0.95),
@@ -37,7 +37,9 @@ const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
 const HITBOX_OUTLINE_COLOR: Color = Color(0.1, 0.05, 0.12)
 ## Steps per second of the walk cycle (matches the bob).
 const WALK_STEPS_PER_SECOND: float = 7.6
-const SECOND_WIND_INVULNERABILITY: float = 2.0
+## Remote players further than this from their new snapshot position jump there
+## (blinks, respawns) instead of sliding.
+const REMOTE_SNAP_DISTANCE: float = 48.0
 
 @export var stats: CharacterStats
 
@@ -49,8 +51,6 @@ var bounds: Rect2 = Rect2()
 var state: PlayerState = PlayerState.new()
 ## Host-owned; clients get copies from snapshots.
 var health: PlayerHealth = PlayerHealth.new()
-## Bombs left this stage (host-owned, synced in snapshots).
-var bombs_left: int = 0
 ## Every upgrade this player has taken, in order (same on all peers).
 var upgrade_ids: Array[int] = []
 ## Relics owned, in purchase order (same on all peers).
@@ -65,8 +65,6 @@ var coins: int = 0
 var kills_toward_heal: int = 0
 ## Host: how many times this player went down this run.
 var times_downed: int = 0
-## Host: Second Wind already saved this player this stage.
-var second_wind_used: bool = false
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -77,8 +75,6 @@ var _local_input: LocalInput = null
 var _next_input_seq: int = 0
 var _input_queue: Array[PlayerInput] = []
 var _newest_received_seq: int = -1
-## Host: last bomb_count seen from this player's input.
-var _last_bomb_count: int = 0
 var _predictor: ClientPredictor = ClientPredictor.new()
 ## Drawn offset from the simulated position; shrinks to zero so corrections look smooth.
 var _visual_offset: Vector2 = Vector2.ZERO
@@ -108,7 +104,6 @@ func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_
 	# Each player gets its own copy so upgrades only change this player.
 	stats = Characters.get_character(character).duplicate()
 	health.reset(stats.max_hearts)
-	bombs_left = stats.bombs_per_stage
 	state.position = spawn_position
 	position = spawn_position
 	_remote_target = spawn_position
@@ -148,14 +143,7 @@ func apply_upgrade(upgrade_id: int) -> void:
 
 
 ## Host: an enemy or enemy bullet hit this player. Returns true if it landed.
-## Second Wind (Wanderer) turns the first lethal hit each stage into 1 heart left.
 func take_hit(amount: int) -> bool:
-	if stats.second_wind and not second_wind_used and health.hearts > 0 and health.hearts <= amount \
-			and not health.is_invulnerable():
-		second_wind_used = true
-		health.hearts = 1
-		health.invulnerable_left = SECOND_WIND_INVULNERABILITY
-		return true
 	var landed := health.take_hit(amount, stats.hit_invulnerability)
 	if landed and health.is_downed():
 		times_downed += 1
@@ -164,12 +152,10 @@ func take_hit(amount: int) -> bool:
 
 ## Host: back to full strength at a new spot (start of a stage).
 func respawn(at: Vector2) -> void:
-	second_wind_used = false
 	health.reset(stats.max_hearts)
-	bombs_left = stats.bombs_per_stage
 	state.position = at
 	state.dash_time_left = 0.0
-	state.dash_cooldown_left = 0.0
+	state.ability_cooldown_left = 0.0
 	state.fire_cooldown_left = 0.0
 	position = at
 
@@ -202,6 +188,13 @@ func register_kill() -> void:
 	if kills_toward_heal >= stats.heal_every_kills:
 		kills_toward_heal = 0
 		health.heal(1)
+
+
+## 0 = just used, 1 = ready (for the HUD).
+func ability_ready_ratio() -> float:
+	if stats.ability_cooldown <= 0.0:
+		return 1.0
+	return 1.0 - clampf(state.ability_cooldown_left / stats.ability_cooldown, 0.0, 1.0)
 
 
 func is_downed() -> bool:
@@ -240,7 +233,7 @@ func tick(delta: float) -> void:
 			_simulate_queued_inputs(delta)
 	elif is_local():
 		var input := _read_local_input()
-		_submit_input.rpc_id(1, input.seq, input.move, input.aim, input.fire, input.dash_count, input.bomb_count)
+		_submit_input.rpc_id(1, input.seq, input.move, input.aim, input.fire, input.ability_count)
 		_simulate(input, delta)
 		_predictor.record(input.seq, state.position)
 
@@ -265,6 +258,8 @@ func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack
 			# Keep drawing where we were, then glide to the corrected spot.
 			_visual_offset -= error
 	else:
+		if position.distance_to(server_position) > REMOTE_SNAP_DISTANCE:
+			position = server_position
 		_remote_target = server_position
 		state.aim = aim
 		_remote_dashing = dashing
@@ -383,20 +378,22 @@ func _simulate_queued_inputs(delta: float) -> void:
 func _simulate(input: PlayerInput, delta: float) -> void:
 	last_processed_seq = input.seq
 	if health.is_downed():
-		# Ghosts float around but can't shoot or bomb.
+		# Ghosts float around but can't shoot or use their ability.
 		input.fire = false
-	if multiplayer.is_server() and input.bomb_count != _last_bomb_count:
-		_last_bomb_count = input.bomb_count
-		if bombs_left > 0 and not health.is_downed():
-			bombs_left -= 1
-			bomb_requested.emit(self)
-	if PlayerMotor.step(state, input, stats, bounds, delta):
+		state.last_ability_count = input.ability_count
+	var result := PlayerMotor.step(state, input, stats, bounds, delta)
+	if result & PlayerMotor.FIRED:
 		shot_requested.emit(self, input.seq)
+	if result & PlayerMotor.ABILITY_USED:
+		if multiplayer.is_server():
+			ability_used.emit(self)
+		if is_local() and stats.ability == CharacterStats.Ability.BLINK:
+			Sfx.play(&"dash", -4.0, 1.6)
 
 
 ## Client -> host, every tick. Unreliable: a lost packet is cheaper than a delay.
 @rpc("any_peer", "call_remote", "unreliable_ordered", 2)
-func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, dash_count: int, bomb_count: int) -> void:
+func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, ability_count: int) -> void:
 	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != peer_id:
 		return
 	if seq <= _newest_received_seq:
@@ -407,8 +404,7 @@ func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, dash_count: 
 	input.move = move.limit_length(1.0)
 	input.aim = aim
 	input.fire = fire
-	input.dash_count = dash_count
-	input.bomb_count = bomb_count
+	input.ability_count = ability_count
 	_input_queue.append(input)
 	while _input_queue.size() > MAX_QUEUED_INPUTS:
 		_input_queue.pop_front()

@@ -70,7 +70,7 @@ func test_same_upgrades_give_identical_stats_on_every_peer() -> void:
 		Upgrades.apply(id, client_stats, health)
 	assert_eq(host_stats.move_speed, client_stats.move_speed)
 	assert_eq(host_stats.fire_interval, client_stats.fire_interval)
-	assert_eq(host_stats.dash_cooldown, client_stats.dash_cooldown)
+	assert_eq(host_stats.ability_cooldown, client_stats.ability_cooldown)
 
 
 # --- LevelUpSession ---

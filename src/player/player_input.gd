@@ -10,8 +10,6 @@ var move: Vector2 = Vector2.ZERO
 ## Aim angle in radians.
 var aim: float = 0.0
 var fire: bool = false
-## Total dash presses so far. A counter (not a "pressed this tick" flag) means a
-## lost network packet can never swallow a dash press.
-var dash_count: int = 0
-## Total bomb presses so far (a counter, like dash_count).
-var bomb_count: int = 0
+## Total ability presses so far. A counter (not a "pressed this tick" flag) means
+## a lost network packet can never swallow a press.
+var ability_count: int = 0

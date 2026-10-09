@@ -20,6 +20,7 @@ extends CanvasLayer
 @onready var shop_panel: ShopPanel = %ShopPanel
 @onready var _coins_label: Label = %CoinsLabel
 @onready var _weapons_label: Label = %WeaponsLabel
+@onready var _ability_label: Label = %AbilityLabel
 
 
 func flash_hurt() -> void:
@@ -39,8 +40,18 @@ func set_coins(count: int) -> void:
 	_coins_label.text = "%d coins" % count
 
 
-func set_bombs(count: int) -> void:
-	_hearts.set_bombs(count)
+const ABILITY_READY_COLOR: Color = Color(0.95, 0.78, 0.4)
+const ABILITY_WAITING_COLOR: Color = Color(0.6, 0.57, 0.68)
+
+
+## "Dash: READY" in gold, or "Dash 1.2s" greyed while recharging.
+func set_ability(ability_name: String, ready_ratio: float, seconds_left: float) -> void:
+	if ready_ratio >= 1.0:
+		_ability_label.text = "%s: READY" % ability_name
+		_ability_label.modulate = ABILITY_READY_COLOR
+	else:
+		_ability_label.text = "%s: %.1fs" % [ability_name, seconds_left]
+		_ability_label.modulate = ABILITY_WAITING_COLOR
 
 
 func set_progress(level: int, ratio: float) -> void:

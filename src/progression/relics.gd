@@ -13,7 +13,7 @@ const ALL: Array[Relic] = [
 	preload("res://src/progression/relics/iron_boots.tres"),
 	preload("res://src/progression/relics/hourglass.tres"),
 	preload("res://src/progression/relics/grave_lantern.tres"),
-	preload("res://src/progression/relics/bomb_satchel.tres"),
+	preload("res://src/progression/relics/bone_charm.tres"),
 	preload("res://src/progression/relics/hunters_eye.tres"),
 	preload("res://src/progression/relics/vampire_fang.tres"),
 	preload("res://src/progression/relics/holy_water.tres"),

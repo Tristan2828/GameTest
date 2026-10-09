@@ -130,7 +130,7 @@ func find_hit(point: Vector2, hit_radius: float) -> Enemy:
 	return null
 
 
-## Host: damage every active enemy within `radius` (bombs).
+## Host: damage every active enemy within `radius` (Grave Blast).
 func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int) -> void:
 	var targets: Array[Enemy] = []
 	_nearby.clear()

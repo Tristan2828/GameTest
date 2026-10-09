@@ -45,13 +45,13 @@ func test_cursed_skull_trades_a_heart_for_damage() -> void:
 	assert_eq(health.hearts, 2, "current hearts are capped to the new max")
 
 
-func test_bomb_satchel_and_holy_water() -> void:
+func test_bone_charm_and_holy_water() -> void:
 	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	Relics.apply(_relic_id("Bomb Satchel"), stats, health)
+	Relics.apply(_relic_id("Bone Charm"), stats, health)
 	Relics.apply(_relic_id("Holy Water"), stats, health)
-	assert_eq(stats.bombs_per_stage, 3)
-	assert_eq(stats.bomb_damage_multiplier, 3.0)
+	assert_eq(stats.pierce, 1)
+	assert_almost_eq(stats.ability_power, 1.4, 0.0001)
 
 
 func test_max_hearts_never_drops_below_one() -> void:

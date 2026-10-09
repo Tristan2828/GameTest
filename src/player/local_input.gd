@@ -6,8 +6,7 @@ extends Node
 
 const AIM_STICK_DEADZONE: float = 0.35
 const STICK_AUTOFIRE_THRESHOLD: float = 0.6
-const AUTOPILOT_DASH_INTERVAL: float = 2.0
-const AUTOPILOT_BOMB_INTERVAL: float = 20.0
+const AUTOPILOT_ABILITY_INTERVAL: float = 2.0
 
 ## True while a menu (pause) is open: the player stands still and holds fire.
 static var blocked: bool = false
@@ -15,8 +14,7 @@ static var blocked: bool = false
 var _using_mouse: bool = true
 var _last_stick_aim: float = 0.0
 var _last_aim: float = 0.0
-var _dash_count: int = 0
-var _bomb_count: int = 0
+var _ability_count: int = 0
 var _autopilot_time: float = 0.0
 
 
@@ -31,8 +29,7 @@ func sample(player: Player, delta: float) -> PlayerInput:
 		return _sample_autopilot(player, delta)
 
 	var input := PlayerInput.new()
-	input.dash_count = _dash_count
-	input.bomb_count = _bomb_count
+	input.ability_count = _ability_count
 	if blocked:
 		input.aim = _last_aim
 		return input
@@ -51,24 +48,20 @@ func sample(player: Player, delta: float) -> PlayerInput:
 	var stick_autofire := not _using_mouse and stick.length() > STICK_AUTOFIRE_THRESHOLD
 	input.fire = Input.is_action_pressed("fire") or stick_autofire
 
-	if Input.is_action_just_pressed("dash"):
-		_dash_count += 1
-	input.dash_count = _dash_count
-	if Input.is_action_just_pressed("bomb"):
-		_bomb_count += 1
-	input.bomb_count = _bomb_count
+	if Input.is_action_just_pressed("ability"):
+		_ability_count += 1
+	input.ability_count = _ability_count
 	_last_aim = input.aim
 	return input
 
 
 ## Test mode (`--autopilot`): kite away from the nearest enemy while shooting it,
-## drift in a circle, and dash regularly.
+## drift in a circle, and use the ability regularly.
 func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 	_autopilot_time += delta
 	var input := PlayerInput.new()
 	input.move = Vector2.from_angle(_autopilot_time * 0.7) * 0.5
-	input.dash_count = int(_autopilot_time / AUTOPILOT_DASH_INTERVAL)
-	input.bomb_count = int(_autopilot_time / AUTOPILOT_BOMB_INTERVAL)
+	input.ability_count = int(_autopilot_time / AUTOPILOT_ABILITY_INTERVAL)
 
 	var nearest: Enemy = null
 	var nearest_distance := INF

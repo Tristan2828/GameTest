@@ -144,7 +144,7 @@ func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
 		_remove(i)
 
 
-## Removes every bullet within `radius` of `center` (bombs). Returns how many.
+## Removes every bullet within `radius` of `center` (Grave Blast). Returns how many.
 func clear_near(center: Vector2, radius: float) -> int:
 	var removed := 0
 	var i := 0

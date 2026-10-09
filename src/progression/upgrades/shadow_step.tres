@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_upgrade")
 title = "Shadow Step"
-description = "Dash cooldown 20% shorter"
+description = "Ability cooldown 20% shorter"
 stat = 7
 amount = 0.2
 max_stacks = 3

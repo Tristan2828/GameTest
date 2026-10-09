@@ -22,15 +22,20 @@ func _enter_tree() -> void:
 	_add_action("restart", [_key(KEY_R), _joy(JOY_BUTTON_BACK)])
 	_add_action("pause", [_key(KEY_ESCAPE), _joy(JOY_BUTTON_START)])
 	_add_action("fire",[_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
-	_add_action("dash", [
+	# One ability button per character (Dash, Grave Blast, Blink...): all the
+	# old dash and bomb buttons trigger it.
+	_add_action("ability", [
 		_key(KEY_SPACE),
 		_key(KEY_SHIFT),
+		_key(KEY_Q),
 		_mouse(MOUSE_BUTTON_RIGHT),
+		_mouse(MOUSE_BUTTON_MIDDLE),
 		_axis(JOY_AXIS_TRIGGER_LEFT, 1.0),
 		_joy(JOY_BUTTON_LEFT_SHOULDER),
+		_joy(JOY_BUTTON_RIGHT_SHOULDER),
 		_joy(JOY_BUTTON_A),
+		_joy(JOY_BUTTON_Y),
 	])
-	_add_action("bomb", [_key(KEY_Q), _mouse(MOUSE_BUTTON_MIDDLE), _joy(JOY_BUTTON_RIGHT_SHOULDER), _joy(JOY_BUTTON_Y)])
 
 
 func _add_action(action: StringName, events: Array[InputEvent]) -> void:

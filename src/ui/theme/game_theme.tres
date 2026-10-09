@@ -135,6 +135,7 @@ default_font_size = 9
 Label/colors/font_shadow_color = Color(0.03, 0.02, 0.05, 0.9)
 Label/constants/shadow_offset_x = 1
 Label/constants/shadow_offset_y = 1
+Label/constants/line_spacing = 2
 Button/colors/font_color = Color(0.88, 0.85, 0.95, 1)
 Button/colors/font_hover_color = Color(1, 0.95, 0.8, 1)
 Button/colors/font_pressed_color = Color(0.95, 0.78, 0.4, 1)

@@ -68,35 +68,24 @@ func test_level_up_pauses_until_pick_then_applies_upgrade() -> void:
 	assert_eq(_local_player().upgrade_ids, [choice])
 
 
-func _bomb_input(count: int) -> PlayerInput:
+func _ability_input(count: int) -> PlayerInput:
 	var input := PlayerInput.new()
-	input.bomb_count = count
+	input.ability_count = count
 	return input
 
 
-func test_bomb_press_spends_one_bomb_and_stops_at_zero() -> void:
+func test_ability_press_fires_once_then_waits_for_cooldown() -> void:
 	var player := _local_player()
 	watch_signals(player)
-	player._simulate(_bomb_input(1), 1.0 / 60.0)
-	player._simulate(_bomb_input(1), 1.0 / 60.0)
-	assert_eq(player.bombs_left, player.stats.bombs_per_stage - 1, "holding doesn't re-trigger")
-	player._simulate(_bomb_input(2), 1.0 / 60.0)
-	player._simulate(_bomb_input(3), 1.0 / 60.0)
-	assert_eq(player.bombs_left, 0)
-	assert_signal_emit_count(player, "bomb_requested", 2)
-
-
-func test_bomb_clears_bullets_damages_enemies_and_protects() -> void:
-	var player := _local_player()
-	var at := player.state.position
-	_arena._enemy_bullets.spawn(at + Vector2(100, 0), Vector2.ZERO, 1, 5.0, 0)
-	_arena._enemy_bullets.spawn(at + Vector2(400, 0), Vector2.ZERO, 1, 5.0, 0)
-	var ghoul := _arena._enemies.spawn(EnemyTypes.Id.GHOUL, at + Vector2(50, 0))
-	_arena._enemies.rebuild_grid()
-	_arena._on_player_bomb_requested(player)
-	assert_eq(_arena._enemy_bullets.count(), 1, "far bullet survives")
-	assert_eq(ghoul.hp, ghoul.max_hp - Arena.BOMB_DAMAGE)
-	assert_true(player.health.is_invulnerable())
+	player._simulate(_ability_input(1), 1.0 / 60.0)
+	player._simulate(_ability_input(1), 1.0 / 60.0)
+	assert_signal_emit_count(player, "ability_used", 1, "holding doesn't re-trigger")
+	player._simulate(_ability_input(2), 1.0 / 60.0)
+	assert_signal_emit_count(player, "ability_used", 1, "still on cooldown")
+	for i: int in 60:
+		player._simulate(_ability_input(2), 1.0 / 60.0)
+	player._simulate(_ability_input(3), 1.0 / 60.0)
+	assert_signal_emit_count(player, "ability_used", 2)
 
 
 func _clear_current_stage() -> void:
@@ -120,7 +109,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	assert_eq(_arena._stage, 2)
 	assert_false(player.is_downed(), "ghosts come back")
 	assert_eq(player.health.hearts, player.health.max_hearts)
-	assert_eq(player.bombs_left, player.stats.bombs_per_stage)
+	assert_eq(player.state.ability_cooldown_left, 0.0, "ability ready again")
 	assert_almost_eq(_arena._elapsed, 0.0, 0.5)
 
 
@@ -146,7 +135,7 @@ func test_later_stages_have_tougher_enemies() -> void:
 	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), roundi(base * 2.0))
 
 
-func test_ghost_can_move_but_not_shoot_or_bomb() -> void:
+func test_ghost_can_move_but_not_shoot_or_use_abilities() -> void:
 	var player := _local_player()
 	player.health.take_hit(99, 0.0)
 	watch_signals(player)
@@ -155,11 +144,11 @@ func test_ghost_can_move_but_not_shoot_or_bomb() -> void:
 		var input := PlayerInput.new()
 		input.move = Vector2.RIGHT
 		input.fire = true
-		input.bomb_count = 1
+		input.ability_count = 1
 		player._simulate(input, 1.0 / 60.0)
 	assert_gt(player.state.position.x, start.x)
 	assert_signal_not_emitted(player, "shot_requested")
-	assert_signal_not_emitted(player, "bomb_requested")
+	assert_signal_not_emitted(player, "ability_used")
 	assert_false(player.can_be_hit())
 
 

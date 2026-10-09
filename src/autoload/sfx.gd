@@ -76,7 +76,7 @@ func _build_sounds() -> void:
 		Synth.voice(W.TRIANGLE, 1319.0, 1319.0, 0.14, 0.32, 0.002, 2.0)]), 0.07, 0.3, 2))
 	_add(&"level_up", Synth.echo(_arpeggio([72, 76, 79, 84], 0.07, 0.24, W.SQUARE, 0.55), 0.09, 0.35, 3))
 	_add(&"pickup", Synth.echo(_arpeggio([76, 79, 83, 88, 91], 0.05, 0.26, W.TRIANGLE, 1.0), 0.06, 0.4, 3))
-	# Bombs: a deep boom under a noise blast, with a rolling echo.
+	# Grave Blast (and boss deaths): a deep boom under a noise blast, with a rolling echo.
 	_add(&"bomb", Synth.echo(Synth.mix([
 		Synth.voice(W.NOISE, 360.0, 30.0, 0.8, 0.38, 0.002, 1.6, 0.25),
 		Synth.voice(W.SINE, 90.0, 30.0, 0.7, 0.42, 0.002, 1.4)]), 0.14, 0.3, 2))

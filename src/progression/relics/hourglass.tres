@@ -11,6 +11,6 @@ amount = 0.3
 [resource]
 script = ExtResource("1_relic")
 title = "Cracked Hourglass"
-description = "Dash cooldown 30% shorter"
+description = "Ability cooldown 30% shorter"
 price = 60
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

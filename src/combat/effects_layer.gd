@@ -1,6 +1,6 @@
 class_name EffectsLayer
 extends Node2D
-## Purely visual particles (hit sparks, death puffs, bomb flashes), stored in
+## Purely visual particles (hit sparks, death puffs, blink puffs), stored in
 ## flat arrays like bullets. Every peer spawns its own from events it already
 ## sees, so nothing here is ever sent over the network.
 

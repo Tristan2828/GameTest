@@ -17,8 +17,7 @@ Controls (keyboard + mouse, or a gamepad):
   Move   WASD / left stick
   Aim    mouse / right stick
   Fire   left mouse / right trigger (pushing the right stick also fires)
-  Dash   Space or right mouse / left trigger
-  Bomb   Q or middle mouse / right bumper (2 per stage; clears enemy bullets)
+  Ability  Space or right mouse / left trigger (each character has their own)
   Menu   Esc / Start (Leave Game is in there)
   Host only, after a run ends: R / Select to return to the lobby
 

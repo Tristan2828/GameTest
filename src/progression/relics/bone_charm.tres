@@ -5,12 +5,12 @@
 
 [sub_resource type="Resource" id="effect_0"]
 script = ExtResource("2_upgrade")
-stat = 9
+stat = 5
 amount = 1.0
 
 [resource]
 script = ExtResource("1_relic")
-title = "Bomb Satchel"
-description = "+1 bomb every stage"
-price = 65
+title = "Bone Charm"
+description = "Your bolts pierce 1 more enemy"
+price = 55
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

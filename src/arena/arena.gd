@@ -39,11 +39,6 @@ const SPAWN_OFFSETS: Array[Vector2] = [Vector2(-24, -24), Vector2(24, -24), Vect
 ## Enemy bullets: hearts per hit and how long they fly.
 const ENEMY_BULLET_DAMAGE: int = 1
 const ENEMY_BULLET_LIFETIME: float = 7.0
-## Bombs: clear enemy bullets in a big radius, hurt enemies in a smaller one.
-const BOMB_CLEAR_RADIUS: float = 220.0
-const BOMB_DAMAGE_RADIUS: float = 90.0
-const BOMB_DAMAGE: int = 60
-const BOMB_INVULNERABILITY: float = 1.5
 ## Clients fast-forward enemy patterns by at most this much (very laggy = less fair, not broken).
 const MAX_PATTERN_FAST_FORWARD: float = 0.4
 ## Enemies appear just off-screen: the screen is 640x360, so ~367 px to a corner.
@@ -51,7 +46,7 @@ const SPAWN_DISTANCE_MIN: float = 380.0
 const SPAWN_DISTANCE_MAX: float = 440.0
 const MIN_SPAWN_DISTANCE_FROM_ANY_PLAYER: float = 340.0
 const PACK_RADIUS: float = 28.0
-const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT dash   Q / RB bomb   Esc / Start menu"
+const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT ability   Esc / Start menu"
 const COPIED_FEEDBACK_SECONDS: float = 4.0
 const SPARK_COLOR: Color = Color(1.0, 0.9, 0.6)
 const HURT_COLOR: Color = Color(1.0, 0.25, 0.3)
@@ -262,9 +257,9 @@ func debug_report() -> String:
 	var role := "host" if multiplayer.is_server() else "client"
 	lines.append("[report] peer %d (%s)  stage %d  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, _stage, Phase.keys()[_phase], _elapsed])
 	for player: Player in _player_nodes():
-		var line := "[report]   player %d (%s) slot %d at %s  hearts %d/%d  bombs %d  coins %d  upgrades %s  relics %s" % [
+		var line := "[report]   player %d (%s) slot %d at %s  hearts %d/%d  ability %s  coins %d  upgrades %s  relics %s" % [
 			player.peer_id, player.stats.display_name, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts,
-			player.bombs_left, player.coins, player.upgrade_ids, player.relic_ids]
+			player.stats.ability_name, player.coins, player.upgrade_ids, player.relic_ids]
 		line += "  weapons %s" % [player.weapon_levels]
 		if player.is_local() and not multiplayer.is_server():
 			line += "  corrections=%d largest=%.2fpx" % [player.correction_count, player.largest_correction]
@@ -343,7 +338,7 @@ func _spawn_player(data: Variant) -> Node:
 	var player: Player = PLAYER_SCENE.instantiate()
 	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character)
 	player.shot_requested.connect(_on_player_shot_requested)
-	player.bomb_requested.connect(_on_player_bomb_requested)
+	player.ability_used.connect(_on_player_ability_used)
 	player.hurt.connect(_on_player_hurt)
 	return player
 
@@ -485,7 +480,7 @@ func _settle_stage_rewards() -> void:
 
 
 ## Host: the next stage starts. The run (level, upgrades, relics, coins) carries
-## over; everyone respawns with full hearts and bombs, ghosts included.
+## over; everyone respawns with full hearts and a ready ability, ghosts included.
 func _begin_next_stage() -> void:
 	_stage += 1
 	_elapsed = 0.0
@@ -684,17 +679,29 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2])
 
 
-## Host: a player bombed. Resolve it here and show it on every screen.
-func _on_player_bomb_requested(bomber: Player) -> void:
-	var at := bomber.state.position
-	bomber.health.invulnerable_left = maxf(bomber.health.invulnerable_left, BOMB_INVULNERABILITY)
-	if bomber.stats.bomb_heal > 0:
-		bomber.health.heal(bomber.stats.bomb_heal)
-	var damage := roundi(BOMB_DAMAGE * bomber.stats.bomb_damage_multiplier)
-	_enemies.damage_in_radius(at, BOMB_DAMAGE_RADIUS, damage, bomber.peer_id)
-	_detonate_bomb(at)
-	for peer_id: int in _ready_peers:
-		_receive_bomb.rpc_id(peer_id, at)
+## Host: a player used their ability. Movement (Dash, Blink) already happened in
+## PlayerMotor; here we resolve everything else and show it on every screen.
+func _on_player_ability_used(user: Player) -> void:
+	var stats := user.stats
+	match stats.ability:
+		CharacterStats.Ability.GRAVE_BLAST:
+			var at := user.state.position
+			user.health.invulnerable_left = maxf(user.health.invulnerable_left, stats.blast_invulnerability)
+			if stats.blast_heal > 0:
+				user.health.heal(stats.blast_heal)
+			var damage := roundi(stats.blast_damage * stats.ability_power)
+			_enemies.damage_in_radius(at, stats.blast_damage_radius * sqrt(stats.ability_power), damage, user.peer_id)
+			var radius := stats.blast_clear_radius * sqrt(stats.ability_power)
+			_detonate_blast(at, radius)
+			for peer_id: int in _ready_peers:
+				_receive_blast.rpc_id(peer_id, at, radius)
+		CharacterStats.Ability.BLINK:
+			user.health.invulnerable_left = maxf(user.health.invulnerable_left, stats.blink_invulnerability)
+			_blink_effect(user.state.position, user.slot)
+			for peer_id: int in _ready_peers:
+				_receive_blink.rpc_id(peer_id, user.state.position, user.slot)
+		_:
+			pass  # Dash needs nothing extra: dashing players can't be hit.
 
 
 ## True if `at` is close enough to this machine's player to be worth hearing.
@@ -733,14 +740,19 @@ func _shake_local(strength: float) -> void:
 
 
 ## Everyone: clear enemy bullets and show the blast.
-func _detonate_bomb(at: Vector2) -> void:
+func _detonate_blast(at: Vector2, radius: float) -> void:
 	_shake_local(6.0)
 	Sfx.play(&"bomb")
-	_enemy_bullets.clear_near(at, BOMB_CLEAR_RADIUS)
+	_enemy_bullets.clear_near(at, radius)
 	var blast := BombBlast.new()
-	blast.radius = BOMB_CLEAR_RADIUS
+	blast.radius = radius
 	blast.position = at
 	add_child(blast)
+
+
+## Everyone: a puff of the player's color where they reappeared.
+func _blink_effect(at: Vector2, slot: int) -> void:
+	_effects.burst(at, Player.SLOT_COLORS[slot % Player.SLOT_COLORS.size()].lightened(0.4), 14, 80.0, 0.35, 1.5)
 
 
 ## Host: an enemy (or boss) fires a pattern. Spawn it here and tell clients.
@@ -787,7 +799,7 @@ func _update_hud() -> void:
 	var local := _local_player()
 	if local != null:
 		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
-		_hud.set_bombs(local.bombs_left)
+		_hud.set_ability(local.stats.ability_name, local.ability_ready_ratio(), local.state.ability_cooldown_left)
 		_hud.set_coins(local.coins)
 		_hud.set_weapons(local.weapons_summary())
 	var boss := _enemies.find_boss()
@@ -898,7 +910,6 @@ func _send_snapshots() -> void:
 		var hearts := PackedByteArray()
 		var max_hearts := PackedByteArray()
 		var flags := PackedByteArray()
-		var bombs := PackedByteArray()
 		var coins := PackedInt32Array()
 		for player: Player in _player_nodes():
 			ids.append(player.peer_id)
@@ -908,14 +919,13 @@ func _send_snapshots() -> void:
 			hearts.append(player.health.hearts)
 			max_hearts.append(player.health.max_hearts)
 			flags.append((1 if player.state.is_dashing() else 0) | (2 if player.health.is_invulnerable() else 0))
-			bombs.append(player.bombs_left)
 			coins.append(player.coins)
 		# Whichever pause is running (level-up or shop) reports who we're waiting for.
 		var in_shop := _phase == Phase.SHOP
 		var waiting := PackedInt32Array(_shop.waiting_ids if in_shop else _level_up.waiting_ids)
 		var countdown := _shop.countdown_left if in_shop else _level_up.countdown_left
 		for peer_id: int in peers:
-			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, bombs, coins,
+			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins,
 				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
@@ -937,14 +947,13 @@ func _notify_ready() -> void:
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
-		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray, bombs: PackedByteArray,
+		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
 		coins: PackedInt32Array, elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
 		pause_waiting: PackedInt32Array, pause_countdown: float) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
 			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
-			player.bombs_left = bombs[i]
 			player.coins = coins[i]
 	_sync_clock(elapsed)
 	if stage != _stage:
@@ -998,8 +1007,13 @@ func _receive_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_bomb(at: Vector2) -> void:
-	_detonate_bomb(at)
+func _receive_blast(at: Vector2, radius: float) -> void:
+	_detonate_blast(at, radius)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_blink(at: Vector2, slot: int) -> void:
+	_blink_effect(at, slot)
 
 
 @rpc("authority", "call_remote", "reliable")

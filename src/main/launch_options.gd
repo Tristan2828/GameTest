@@ -11,7 +11,8 @@ extends RefCounted
 ##   --local-only                    host without touching the router or looking up the public IP
 ##   --stage-seconds=<n>             shorter/longer stage (default 300) for testing
 ##   --start-at=<seconds>            host starts the stage clock here (test late-stage content)
-##   --character=<n>                 the host plays this character (0 Wanderer, 1 Gravekeeper, 2 Witch)
+##   --character=<n>                 play this character (0 Wanderer, 1 Gravekeeper, 2 Witch); with
+##                                   --autopilot a joining client picks it in the lobby
 ##   --start-stage=<n>               host starts the run at stage n (1-3)
 ##   --give-weapons                  every player starts with all auto weapons at level 2
 ##   --weak-bosses                   bosses have 2% HP (test stage transitions quickly)

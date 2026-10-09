@@ -39,11 +39,9 @@ theme_override_constants/separation = 8
 
 [node name="Card0" type="Button" parent="Center/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 150)
+custom_minimum_size = Vector2(190, 160)
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
 toggle_mode = true
-autowrap_mode = 3
 
 [node name="Portrait" type="Control" parent="Center/Box/Cards/Card0"]
 layout_mode = 1
@@ -58,13 +56,46 @@ grow_horizontal = 2
 mouse_filter = 2
 script = ExtResource("2_portrait")
 
+
+[node name="Lines" type="VBoxContainer" parent="Center/Box/Cards/Card0"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 44.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Name" type="Label" parent="Center/Box/Cards/Card0/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Blurb" type="Label" parent="Center/Box/Cards/Card0/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Ability" type="Label" parent="Center/Box/Cards/Card0/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Hearts" type="Label" parent="Center/Box/Cards/Card0/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
+horizontal_alignment = 1
+
 [node name="Card1" type="Button" parent="Center/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 150)
+custom_minimum_size = Vector2(190, 160)
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
 toggle_mode = true
-autowrap_mode = 3
 
 [node name="Portrait" type="Control" parent="Center/Box/Cards/Card1"]
 layout_mode = 1
@@ -79,13 +110,46 @@ grow_horizontal = 2
 mouse_filter = 2
 script = ExtResource("2_portrait")
 
+
+[node name="Lines" type="VBoxContainer" parent="Center/Box/Cards/Card1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 44.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Name" type="Label" parent="Center/Box/Cards/Card1/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Blurb" type="Label" parent="Center/Box/Cards/Card1/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Ability" type="Label" parent="Center/Box/Cards/Card1/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Hearts" type="Label" parent="Center/Box/Cards/Card1/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
+horizontal_alignment = 1
+
 [node name="Card2" type="Button" parent="Center/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 150)
+custom_minimum_size = Vector2(190, 160)
 layout_mode = 2
-theme_override_font_sizes/font_size = 9
 toggle_mode = true
-autowrap_mode = 3
 
 [node name="Portrait" type="Control" parent="Center/Box/Cards/Card2"]
 layout_mode = 1
@@ -99,6 +163,41 @@ offset_bottom = 40.0
 grow_horizontal = 2
 mouse_filter = 2
 script = ExtResource("2_portrait")
+
+
+[node name="Lines" type="VBoxContainer" parent="Center/Box/Cards/Card2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 44.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Name" type="Label" parent="Center/Box/Cards/Card2/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Blurb" type="Label" parent="Center/Box/Cards/Card2/Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Ability" type="Label" parent="Center/Box/Cards/Card2/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Hearts" type="Label" parent="Center/Box/Cards/Card2/Lines"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
+horizontal_alignment = 1
 
 [node name="PlayersLabel" type="Label" parent="Center/Box"]
 unique_name_in_owner = true

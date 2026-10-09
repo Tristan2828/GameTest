@@ -4,34 +4,44 @@ extends Resource
 ## in `src/player/characters/`, registered in Characters.ALL (index = network id).
 ## Each player duplicates their character's stats, and upgrades/relics change the copy.
 
+## Each character has one ability on the ability button. Stored as numbers in
+## .tres files: only add new abilities at the end.
+enum Ability { DASH, GRAVE_BLAST, BLINK }
+
 @export var display_name: String = "Wanderer"
 @export_multiline var blurb: String = ""
 ## PixelArt sprite name (P/p pixels take the player's color).
 @export var sprite: String = "wanderer"
 
 @export_group("Ability")
-@export var ability_name: String = ""
+@export var ability: Ability = Ability.DASH
+@export var ability_name: String = "Dash"
 @export_multiline var ability_description: String = ""
-## Second Wind: the first lethal hit each stage leaves you at 1 heart instead.
-@export var second_wind: bool = false
-## Grave Ward: hearts healed by each of your bombs.
-@export var bomb_heal: int = 0
+## Seconds before the ability can be used again.
+@export var ability_cooldown: float = 0.8
+## Multiplies how strong the ability is (relics raise it): dash length, blink
+## distance, blast size and damage.
+@export var ability_power: float = 1.0
+## Dash: speed and duration (you can't be hit while dashing).
+@export var dash_speed: float = 340.0
+@export var dash_duration: float = 0.16
+## Blink: how far you teleport, and how long you're untouchable after.
+@export var blink_distance: float = 90.0
+@export var blink_invulnerability: float = 0.4
+## Grave Blast: clears enemy bullets, damages enemies, heals, protects.
+@export var blast_clear_radius: float = 220.0
+@export var blast_damage_radius: float = 90.0
+@export var blast_damage: int = 60
+@export var blast_heal: int = 1
+@export var blast_invulnerability: float = 1.5
 
 @export_group("Movement")
 @export var move_speed: float = 110.0
-@export var dash_speed: float = 340.0
-@export var dash_duration: float = 0.16
-## Counted from the start of the dash.
-@export var dash_cooldown: float = 0.8
 
 @export_group("Health")
 @export var max_hearts: int = 3
 ## Seconds of invulnerability after taking a hit.
 @export var hit_invulnerability: float = 1.0
-## Bombs at the start of each stage.
-@export var bombs_per_stage: int = 2
-## Bomb damage is multiplied by this (relics raise it).
-@export var bomb_damage_multiplier: float = 1.0
 ## Heal 1 heart every this many kills (0 = never; from relics).
 @export var heal_every_kills: int = 0
 

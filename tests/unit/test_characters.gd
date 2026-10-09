@@ -35,7 +35,9 @@ func test_character_trade_offs() -> void:
 	assert_lt(keeper.move_speed, wanderer.move_speed)
 	assert_lt(witch.max_hearts, wanderer.max_hearts)
 	assert_gt(witch.move_speed, wanderer.move_speed)
-	assert_lt(witch.dash_cooldown, wanderer.dash_cooldown)
+	assert_eq(wanderer.ability, CharacterStats.Ability.DASH)
+	assert_eq(keeper.ability, CharacterStats.Ability.GRAVE_BLAST)
+	assert_eq(witch.ability, CharacterStats.Ability.BLINK)
 
 
 func test_gravekeeper_shotgun_fires_a_wide_fan_and_extra_bolt_adds_pellets() -> void:
@@ -47,39 +49,39 @@ func test_gravekeeper_shotgun_fires_a_wide_fan_and_extra_bolt_adds_pellets() -> 
 	assert_eq(ShotPatterns.angles(pattern, 0.0, 7, 2).size(), 7)
 
 
-func test_second_wind_saves_the_wanderer_once_per_stage() -> void:
+func test_every_character_has_a_different_ability() -> void:
+	var abilities: Dictionary[int, bool] = {}
+	for stats: CharacterStats in Characters.ALL:
+		abilities[stats.ability] = true
+		assert_gt(stats.ability_cooldown, 0.0, stats.display_name)
+	assert_eq(abilities.size(), Characters.ALL.size())
+
+
+func test_hits_are_plain_now_no_second_wind() -> void:
 	var player := _player(Characters.Id.WANDERER)
-	player.health.hearts = 1
-	assert_true(player.take_hit(1))
-	assert_eq(player.health.hearts, 1, "saved")
-	assert_true(player.health.is_invulnerable())
-	player.health.invulnerable_left = 0.0
-	player.take_hit(1)
-	assert_true(player.is_downed(), "only once")
-	player.respawn(Vector2(100, 100))
-	player.health.hearts = 1
-	player.take_hit(1)
-	assert_false(player.is_downed(), "recharges each stage")
-
-
-func test_other_characters_have_no_second_wind() -> void:
-	var player := _player(Characters.Id.HEXBLADE_WITCH)
 	player.take_hit(5)
 	assert_true(player.is_downed())
 
 
-func test_gravekeeper_bombs_heal() -> void:
+func test_grave_blast_clears_bullets_damages_and_heals() -> void:
 	Net.start_solo()
 	RunSetup.characters[1] = Characters.Id.GRAVEKEEPER
 	var arena: Arena = preload("res://src/arena/arena.tscn").instantiate()
 	add_child_autofree(arena)
 	await wait_process_frames(2)
 	var keeper := arena._player_by_id(1)
-	assert_eq(keeper.stats.display_name, "Gravekeeper")
-	assert_eq(keeper.bombs_left, 3)
+	assert_eq(keeper.stats.ability_name, "Grave Blast")
+	var at := keeper.state.position
+	arena._enemy_bullets.spawn(at + Vector2(100, 0), Vector2.ZERO, 1, 5.0, 0)
+	arena._enemy_bullets.spawn(at + Vector2(400, 0), Vector2.ZERO, 1, 5.0, 0)
+	var ghoul := arena._enemies.spawn(EnemyTypes.Id.GHOUL, at + Vector2(50, 0))
+	arena._enemies.rebuild_grid()
 	keeper.health.take_hit(2, 0.0)
-	arena._on_player_bomb_requested(keeper)
+	arena._on_player_ability_used(keeper)
+	assert_eq(arena._enemy_bullets.count(), 1, "the far bullet survives")
+	assert_eq(ghoul.hp, ghoul.max_hp - keeper.stats.blast_damage)
 	assert_eq(keeper.health.hearts, keeper.health.max_hearts - 1)
+	assert_true(keeper.health.is_invulnerable())
 	RunSetup.characters.clear()
 
 

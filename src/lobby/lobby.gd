@@ -31,8 +31,10 @@ var _autopilot_readied: bool = false
 func _ready() -> void:
 	for i: int in _cards.size():
 		var stats := Characters.get_character(i)
-		_cards[i].text = "\n\n\n\n%s\n%s\n\n%s: %s\n%d hearts" % [
-			stats.display_name, stats.blurb, stats.ability_name, stats.ability_description, stats.max_hearts]
+		(_cards[i].get_node("Lines/Name") as Label).text = stats.display_name
+		(_cards[i].get_node("Lines/Blurb") as Label).text = stats.blurb
+		(_cards[i].get_node("Lines/Ability") as Label).text = "%s: %s" % [stats.ability_name, stats.ability_description]
+		(_cards[i].get_node("Lines/Hearts") as Label).text = "%d hearts" % stats.max_hearts
 		(_cards[i].get_node("Portrait") as CharacterPortrait).character_id = i
 		_cards[i].pressed.connect(_choose_locally.bind(i))
 	_ready_button.toggled.connect(_set_ready_locally)
@@ -206,5 +208,6 @@ func _receive_state(ids: PackedInt32Array, characters: PackedInt32Array, readies
 	if LaunchOptions.autopilot and not _autopilot_readied:
 		_autopilot_readied = true
 		get_tree().create_timer(AUTOPILOT_CLIENT_DELAY).timeout.connect(func() -> void:
-			_choose_locally(randi() % Characters.ALL.size())
+			var pick := LaunchOptions.character if Characters.is_valid_id(LaunchOptions.character) else randi() % Characters.ALL.size()
+			_choose_locally(pick)
 			_ready_button.button_pressed = true)
