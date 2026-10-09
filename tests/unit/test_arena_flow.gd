@@ -211,3 +211,15 @@ func test_killed_enemies_sometimes_drop_coins() -> void:
 		var enemy := _arena._enemies.spawn(EnemyTypes.Id.GHOUL, Vector2(300 + i, 300))
 		_arena._enemies.damage(enemy, enemy.hp, 1)
 	assert_between(_arena._coins.count(), 25, 75, "Ghouls drop coins about half the time")
+
+
+func test_run_end_shows_stats_table() -> void:
+	var player := _local_player()
+	_arena._kills_by_peer[1] = 12
+	player.take_hit(99)  # Second Wind saves the Wanderer once...
+	player.health.invulnerable_left = 0.0
+	player.take_hit(99)  # ...but not twice.
+	_arena._update_phase()
+	assert_eq(_arena._phase, Arena.Phase.RUN_OVER)
+	assert_string_contains(_arena._run_stats_text, "12 kills")
+	assert_string_contains(_arena._run_stats_text, "downed 1 time")

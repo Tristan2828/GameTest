@@ -62,6 +62,8 @@ var weapon_clock: float = 0.0
 var coins: int = 0
 ## Host: kills since the last Vampire Fang heal.
 var kills_toward_heal: int = 0
+## Host: how many times this player went down this run.
+var times_downed: int = 0
 ## Host: Second Wind already saved this player this stage.
 var second_wind_used: bool = false
 ## Host: sequence number of the last input it simulated for this player.
@@ -147,7 +149,10 @@ func take_hit(amount: int) -> bool:
 		health.hearts = 1
 		health.invulnerable_left = SECOND_WIND_INVULNERABILITY
 		return true
-	return health.take_hit(amount, stats.hit_invulnerability)
+	var landed := health.take_hit(amount, stats.hit_invulnerability)
+	if landed and health.is_downed():
+		times_downed += 1
+	return landed
 
 
 ## Host: back to full strength at a new spot (start of a stage).

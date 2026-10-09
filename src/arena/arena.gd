@@ -211,6 +211,8 @@ func _physics_process(delta: float) -> void:
 
 
 var _jingle_phase: Phase = Phase.PLAYING
+## End-of-run table, shown under the Victory / Run over banner.
+var _run_stats_text: String = ""
 
 
 func _play_phase_jingle() -> void:
@@ -222,6 +224,9 @@ func _play_phase_jingle() -> void:
 			Sfx.play(&"victory", -2.0)
 		Phase.RUN_OVER:
 			Sfx.play(&"defeat", -2.0)
+	if _is_run_finished() and not LaunchOptions.screenshot_dir.is_empty():
+		await get_tree().create_timer(0.5).timeout
+		Main.save_screenshot(get_tree(), "run_end.png")
 
 
 func _process(delta: float) -> void:
@@ -416,6 +421,7 @@ func _end_stage(phase: Phase) -> void:
 		_settle_stage_rewards()
 	else:
 		_level_up.host_reset()
+		_broadcast_run_stats()
 	_enemies.clear_all()
 	_projectiles.clear()
 	_enemy_bullets.clear()
@@ -425,11 +431,35 @@ func _end_stage(phase: Phase) -> void:
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
 
-## Host: the next stage starts. The run (level, upgrades, relics, coins) carries
-## over; everyone respawns with full hearts and bombs, ghosts included.
 ## Host: nothing is left behind when a stage is won. Gems still on the ground
 ## go to the team bar (level-ups wait for the next stage), loose coins are split
 ## evenly, and everyone gets the boss bounty.
+func _broadcast_run_stats() -> void:
+	var ids := PackedInt32Array()
+	var kills := PackedInt32Array()
+	var damage := PackedInt32Array()
+	var downs := PackedInt32Array()
+	for player: Player in _player_nodes():
+		ids.append(player.peer_id)
+		kills.append(_kills_by_peer.get(player.peer_id, 0))
+		damage.append(_enemies.damage_by_peer.get(player.peer_id, 0))
+		downs.append(player.times_downed)
+	_receive_run_stats(ids, kills, damage, downs)
+	for peer_id: int in _ready_peers:
+		_receive_run_stats.rpc_id(peer_id, ids, kills, damage, downs)
+
+
+## Everyone: format the end-of-run table.
+@rpc("authority", "call_remote", "reliable")
+func _receive_run_stats(ids: PackedInt32Array, kills: PackedInt32Array, damage: PackedInt32Array, downs: PackedInt32Array) -> void:
+	var lines := PackedStringArray()
+	for i: int in ids.size():
+		var player := _player_by_id(ids[i])
+		var who := "%s (%s)" % [player.display_name(), player.stats.display_name] if player != null else "Someone"
+		lines.append("%s: %d kills, %d damage, downed %d time%s" % [who, kills[i], damage[i], downs[i], "" if downs[i] == 1 else "s"])
+	_run_stats_text = "\n".join(lines)
+
+
 func _settle_stage_rewards() -> void:
 	var levels := _team.add_xp(_gems.total_value())
 	if levels > 0:
@@ -443,6 +473,8 @@ func _settle_stage_rewards() -> void:
 		player.coins += share + bounty
 
 
+## Host: the next stage starts. The run (level, upgrades, relics, coins) carries
+## over; everyone respawns with full hearts and bombs, ghosts included.
 func _begin_next_stage() -> void:
 	_stage += 1
 	_elapsed = 0.0
@@ -786,9 +818,9 @@ func _update_hud() -> void:
 		Phase.STAGE_CLEAR:
 			_hud.show_banner("Stage %d cleared!" % _stage, "Stage %d of %d is next. Everyone respawns." % [_stage + 1, STAGE_COUNT])
 		Phase.VICTORY:
-			_hud.show_banner("Victory!", "The crypt is cleansed.   " + restart_hint)
+			_hud.show_banner("Victory!", "Every stage is cleansed.\n\n%s\n\n%s" % [_run_stats_text, restart_hint])
 		Phase.RUN_OVER:
-			_hud.show_banner("Run over", restart_hint)
+			_hud.show_banner("Run over", "Fell in stage %d.\n\n%s\n\n%s" % [_stage, _run_stats_text, restart_hint])
 		_:
 			if _boss_banner_left > 0.0 and boss != null:
 				_hud.show_banner("%s rises!" % boss.type.display_name, "Destroy it to clear the stage.")
