@@ -192,22 +192,42 @@ func _physics_process(delta: float) -> void:
 	if _phase == Phase.PLAYING:
 		_elapsed += delta
 		_run_stats.run_seconds += delta
+		var t := PerfLog.start()
 		for player: Player in _player_nodes():
 			player.tick(delta)
+		PerfLog.stop(&"players", t)
 		if is_host:
+			t = PerfLog.start()
 			_spawn_enemies(delta)
 			_tick_effigies(delta)
+			PerfLog.stop(&"spawn", t)
+			t = PerfLog.start()
 			_enemies.tick_host(delta, _alive_player_positions(), _effigy_positions(), _effigy_lure_radius())
+			PerfLog.stop(&"enemies", t)
+			t = PerfLog.start()
 			_tick_boss(delta)
+			PerfLog.stop(&"boss", t)
+			t = PerfLog.start()
 			_weapons.tick_host(delta, _elapsed, _player_nodes(), _enemies, _ready_peer_list())
+			PerfLog.stop(&"weapons", t)
+			t = PerfLog.start()
 			_apply_contact_damage()
+			PerfLog.stop(&"contact", t)
 		else:
+			t = PerfLog.start()
 			_enemies.rebuild_grid()
+			PerfLog.stop(&"grid", t)
+		t = PerfLog.start()
 		_projectiles.step(delta)
 		_projectiles.resolve_hits(_enemies, is_host)
+		PerfLog.stop(&"shots", t)
+		t = PerfLog.start()
 		_enemy_bullets.step(delta)
 		_enemy_bullets.resolve_player_hits(_player_nodes(), is_host)
+		PerfLog.stop(&"enemy_bullets", t)
+		t = PerfLog.start()
 		_tick_gems(delta, is_host)
+		PerfLog.stop(&"gems", t)
 		if is_host:
 			_update_phase()
 		if is_host and _bonus_levels_left > 0 and _all_peers_loaded():
@@ -245,7 +265,9 @@ func _physics_process(delta: float) -> void:
 			_request_restart()
 	if is_host:
 		_tick += 1
+		var t := PerfLog.start()
 		_send_snapshots()
+		PerfLog.stop(&"snapshots", t)
 
 
 var _jingle_phase: Phase = Phase.PLAYING
@@ -302,7 +324,31 @@ func _process(delta: float) -> void:
 	_boss_banner_left = maxf(_boss_banner_left - delta, 0.0)
 	_play_phase_jingle()
 	_update_music()
+	var t := PerfLog.start()
 	_update_hud()
+	PerfLog.stop(&"hud", t)
+	_perf_report(delta)
+
+
+var _perf_seconds: float = 0.0
+
+
+## --perf-log: one line per second with step timings and object counts.
+func _perf_report(delta: float) -> void:
+	if not PerfLog.enabled:
+		return
+	PerfLog.frame()
+	_perf_seconds += delta
+	if _perf_seconds < 1.0:
+		return
+	var boss := _enemies.find_boss()
+	print(PerfLog.report(_perf_seconds, "t=%.0fs %s enemies %d shots %d enemy_bullets %d effects %d gems %d boss %s draws %d phys %.1fms proc %.1fms" % [
+		_elapsed, Phase.keys()[_phase], _enemies.active_count(), _projectiles.count(), _enemy_bullets.count(),
+		_effects.count(), _gems.count(), "yes" if boss != null else "no",
+		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+		Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0]))
+	_perf_seconds = 0.0
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -1242,6 +1288,13 @@ func _sync_clock(host_elapsed: float) -> void:
 ## host fired them), so what we dodge on screen matches what the host checks.
 @rpc("authority", "call_remote", "reliable")
 func _receive_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2Array, aims: PackedFloat32Array,
+		seeds: PackedInt32Array, fire_times: PackedFloat32Array) -> void:
+	var t := PerfLog.start()
+	_apply_enemy_patterns(patterns, origins, aims, seeds, fire_times)
+	PerfLog.stop(&"rx_patterns", t)
+
+
+func _apply_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2Array, aims: PackedFloat32Array,
 		seeds: PackedInt32Array, fire_times: PackedFloat32Array) -> void:
 	var dodge_time := _elapsed + Net.ping_ms() / 2000.0
 	for i: int in patterns.size():

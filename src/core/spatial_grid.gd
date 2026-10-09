@@ -19,9 +19,11 @@ func clear() -> void:
 
 func insert(id: int, point: Vector2) -> void:
 	var key := _cell_of(point)
-	if not _cells.has(key):
-		_cells[key] = []
-	_cells[key].append(id)
+	var cell: Variant = _cells.get(key)
+	if cell == null:
+		_cells[key] = [id]
+	else:
+		(cell as Array).append(id)
 
 
 ## Appends to `out` every id whose cell overlaps the circle. Callers still need
@@ -31,9 +33,10 @@ func query(point: Vector2, radius: float, out: Array[int]) -> void:
 	var high := _cell_of(point + Vector2(radius, radius))
 	for x: int in range(low.x, high.x + 1):
 		for y: int in range(low.y, high.y + 1):
-			var cell: Array = _cells.get(Vector2i(x, y), [])
-			for id: int in cell:
-				out.append(id)
+			# get() without a default: no new empty array for every empty cell.
+			var cell: Variant = _cells.get(Vector2i(x, y))
+			if cell != null:
+				out.append_array(cell)
 
 
 func _cell_of(point: Vector2) -> Vector2i:

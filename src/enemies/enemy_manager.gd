@@ -97,8 +97,9 @@ func active_count() -> int:
 ## Host: move every enemy toward the nearest target, pushing apart overlaps.
 ## `lures` are decoys (Bone Effigy): regular enemies within `lure_radius` of
 ## one chase it instead of the players.
+## The grid is rebuilt once, at the end (it's still current from last tick; only
+## this tick's new spawns are missing, which just skips their push for one tick).
 func tick_host(delta: float, targets: Array[Vector2], lures: Array[Vector2] = [], lure_radius: float = 0.0) -> void:
-	rebuild_grid()
 	for enemy: Enemy in _pool:
 		if not enemy.active:
 			continue
@@ -226,6 +227,12 @@ func send_snapshot(peer_ids: Array[int]) -> void:
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_snapshot(count: int, data: PackedByteArray) -> void:
+	var t := PerfLog.start()
+	_apply_snapshot(count, data)
+	PerfLog.stop(&"rx_enemies", t)
+
+
+func _apply_snapshot(count: int, data: PackedByteArray) -> void:
 	var seen: Array[bool] = []
 	seen.resize(POOL_SIZE)
 	seen.fill(false)

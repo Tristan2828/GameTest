@@ -61,6 +61,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Lobby: portraits show **your** color (a friend in Red sees red heroes), and small color squares show who picked which hero.
 - [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
 - [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
+- [ ] Performance: the slowdown for 10-20 s after a boss appears (2 players) should be gone. Still any stutter? Who had it, host or friend?
 - [ ] Title menu: Compendium pages (Heroes, Weapons, Upgrades, Relics, Pickups, Enemies, Bosses). Useful? Anything missing or wrong?
 - [ ] Lobby: Difficulty page (sliders + Easy / Normal / Hard). Do the settings feel like they do what they say? Is Hard hard?
 - [ ] Lobby: Custom Game page. Try a single stage on the Bone Marsh or Cathedral, no boss, a short wave, starting level-ups, all weapons. Does the run end in Victory as expected?

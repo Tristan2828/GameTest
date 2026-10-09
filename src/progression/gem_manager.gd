@@ -161,10 +161,21 @@ func clear() -> void:
 	queue_redraw()
 
 
+## Two passes (all glows, then all sprites) so same-texture draws batch
+## together; pickups off screen are skipped.
 func _draw() -> void:
 	var now := Time.get_ticks_msec() / 1000.0
+	var view := PixelArt.visible_rect(self)
+	if glow_color.a > 0.0:
+		var small_glow := PixelArt.disc_texture(5.0, glow_color)
+		var big_glow := PixelArt.disc_texture(7.0, glow_color)
+		for id: int in CAPACITY:
+			if _active[id] == 0 or not view.has_point(_positions[id]):
+				continue
+			var glow := small_glow if _values[id] < mid_value else big_glow
+			draw_texture(glow, _positions[id] - Vector2(glow.get_size()) / 2.0)
 	for id: int in CAPACITY:
-		if _active[id] == 0:
+		if _active[id] == 0 or not view.has_point(_positions[id]):
 			continue
 		var value := _values[id]
 		var sprite := sprite_big if value >= big_value else (sprite_mid if value >= mid_value else sprite_small)
@@ -172,8 +183,6 @@ func _draw() -> void:
 		if PixelArt.has_sprite(sprite + "_1") and int(now * 6.0 + id) % 4 == 0:
 			sprite += "_1"
 		var bob := roundf(sin(now * 4.0 + id) * 1.0) if _targets[id] == 0 else 0.0
-		if glow_color.a > 0.0:
-			draw_circle(_positions[id], 5.0 if value < mid_value else 7.0, glow_color)
 		PixelArt.draw(self, sprite, _positions[id] + Vector2(0, bob))
 
 

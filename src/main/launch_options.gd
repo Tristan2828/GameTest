@@ -19,6 +19,8 @@ extends RefCounted
 ##   --screenshot-dir=<folder>       save PNGs: the title screen (when no mode flag), gameplay every 10s,
 ##                                   and the first lobby, level-up, shop and run-end screens
 ##                                   (needs a real window, not --headless)
+##   --perf-log                      print step timings, fps and object counts every second
+##   --invincible                    players can't be hit (performance / visual testing)
 ##   --run-config=<k=v,k=v>          host's Difficulty / Custom Game settings (RunConfig names),
 ##                                   e.g. --run-config=single_stage=true,stage=2,enemy_health=1.5
 
@@ -41,6 +43,7 @@ static var start_stage: int = 1
 static var character: int = -1
 ## --run-config values (RunConfig names -> parsed values); empty = lobby choice.
 static var run_config: Dictionary = {}
+static var invincible: bool = false
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -74,6 +77,10 @@ static func parse(args: PackedStringArray) -> void:
 			screenshot_dir = arg.trim_prefix("--screenshot-dir=")
 		elif arg.begins_with("--stage-seconds="):
 			stage_seconds = arg.trim_prefix("--stage-seconds=").to_float()
+		elif arg == "--perf-log":
+			PerfLog.enabled = true
+		elif arg == "--invincible":
+			invincible = true
 		elif arg.begins_with("--run-config="):
 			for pair: String in arg.trim_prefix("--run-config=").split(",", false):
 				var parts := pair.split("=")

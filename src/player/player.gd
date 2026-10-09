@@ -202,6 +202,8 @@ func is_downed() -> bool:
 ## Checked when an enemy or enemy bullet touches this player. Dashing dodges
 ## hits. Works on clients too, using the latest known state.
 func can_be_hit() -> bool:
+	if LaunchOptions.invincible:
+		return false  # Test flag (performance and visual checks).
 	return not health.is_downed() and not health.is_invulnerable() and not is_dashing()
 
 

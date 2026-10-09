@@ -1041,6 +1041,7 @@ const TINT_CHAR: String = "P"
 const TINT_SHADE_CHAR: String = "p"
 
 static var _cache: Dictionary[String, ImageTexture] = {}
+static var _disc_cache: Dictionary[String, ImageTexture] = {}
 
 
 static func has_sprite(sprite: String) -> bool:
@@ -1086,6 +1087,39 @@ static func texture(sprite: String, tint: Color = Color.WHITE, flash: bool = fal
 	var built := ImageTexture.create_from_image(image)
 	_cache[key] = built
 	return built
+
+
+## A filled circle (with an optional inner circle on top) baked into a small
+## texture: pixels whose centers are within the radius, like draw_circle. Many
+## copies of one texture draw in a single batch, far cheaper than draw_circle
+## (which builds a polygon and its own draw call every time). Cached.
+static func disc_texture(radius: float, color: Color, inner_radius: float = 0.0, inner_color: Color = Color.WHITE) -> ImageTexture:
+	var key := "%s|%s|%s|%s" % [radius, color.to_html(), inner_radius, inner_color.to_html()]
+	if _disc_cache.has(key):
+		return _disc_cache[key]
+	var side := ceili(radius) * 2 + 1
+	var image := Image.create(side, side, false, Image.FORMAT_RGBA8)
+	var middle := side / 2.0
+	for y: int in side:
+		for x: int in side:
+			var distance := Vector2(x + 0.5 - middle, y + 0.5 - middle).length()
+			if distance <= inner_radius:
+				image.set_pixel(x, y, inner_color)
+			elif distance <= radius:
+				image.set_pixel(x, y, color)
+	var built := ImageTexture.create_from_image(image)
+	_disc_cache[key] = built
+	return built
+
+
+## The part of the world this canvas item's viewport shows right now (for
+## skipping off-screen drawing), grown by `margin`.
+static func visible_rect(canvas: CanvasItem, margin: float = 16.0) -> Rect2:
+	var viewport := canvas.get_viewport()
+	if viewport == null:
+		return Rect2(-1e6, -1e6, 2e6, 2e6)
+	var to_world := (canvas.get_global_transform_with_canvas().affine_inverse())
+	return (to_world * viewport.get_visible_rect()).grow(margin)
 
 
 ## Draws a sprite centered on `center` from a CanvasItem's _draw().

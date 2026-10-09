@@ -158,13 +158,19 @@ func clear_near(center: Vector2, radius: float) -> int:
 	return removed
 
 
+## One baked glow+core texture per bullet (batched into a single draw call);
+## bullets off screen are skipped. Bullets live up to 7s in an arena much bigger
+## than the screen, so most of them usually are.
 func _draw() -> void:
+	var texture := PixelArt.disc_texture(glow_radius, glow_color, core_radius, core_color)
+	var half := Vector2(texture.get_size()) / 2.0
+	var view := PixelArt.visible_rect(self)
 	for i: int in _count:
 		if _ages[i] < 0.0:
 			continue
 		var point := position_of(i)
-		draw_circle(point, glow_radius, glow_color)
-		draw_circle(point, core_radius, core_color)
+		if view.has_point(point):
+			draw_texture(texture, point - half)
 
 
 ## Order doesn't matter, so fill the gap with the last bullet.
