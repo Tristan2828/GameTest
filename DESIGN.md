@@ -103,7 +103,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Setting:** Dark fantasy (undead hordes, demons, dark magic).
 - **Art style:** Pixel art.
 - Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
-- Audio: TBD.
+- Audio: synthesized placeholder sound effects (v0.7.0). Music and final sounds TBD.
 
 ## 7. Milestones
 
@@ -169,6 +169,14 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
   1. **The Crypt:** Shamblers, Bats, Ghouls, Cultists. Boss: the Bone Warden.
   2. **The Bone Marsh:** Mire Crawlers (fast swarms), Plague Spitters (slow bullet rings), Ghouls. Boss: the Mire Hag (sweeping bullet walls, random sprays).
   3. **The Burning Cathedral:** Flame Imps (fast, erratic), Fallen Paladins (tanky, aimed lines), Cultists. Boss: the Ashen Bishop (rotating crosses, aimed bursts).
+
+### Polish pass (v0.7.0, by Claude while the owner was away)
+- Pause menu (Esc / Start) replaces instant-leave; solo pauses, online only blocks your input.
+- Settings: master/effects volume, fullscreen, screen shake (saved).
+- Game feel: particles (hit sparks, death puffs), screen shake, hurt flash.
+- Sound: 14 synthesized placeholder effects; no music yet (Audio still TBD, see section 6).
+- End-of-run stats table (kills, damage, times downed).
+- Everything awaiting human review is listed in `docs/PLAYTEST.md`.
 
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.

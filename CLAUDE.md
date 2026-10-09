@@ -33,6 +33,9 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 - After adding a new `class_name` script, run `--import` before running scripts headless. Godot only learns about new global classes during an import, and without it you get "Could not find type" parse errors. The tools scripts already do this.
 - Test helpers must not reuse Node callback names (`_input`, `_process`, `_ready`...): `GutTest` is a Node.
 
+## Playtesting
+- `docs/PLAYTEST.md` is the human playtest checklist (what to test, where each number is tuned). Keep it current when adding features or changing what needs human judgment.
+
 ## Project layout
 Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/autoload/`: global singletons. `Sfx` (sound effects synthesized in code at startup; `Sfx.play(&"name")`; rate-limited; plays on the "SFX" bus), `Settings` (volume, fullscreen, screen shake; saved to user://settings.cfg), `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
