@@ -229,15 +229,17 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 12. *(Reported after)* Slowdown for 10-20 s after a boss spawns with 2 players: boss bullets (7 s lifetime, aimed at each player) were each drawn as two `draw_circle` shapes, hundreds of draw calls rebuilt every physics tick. Now one baked texture per bullet/gem glow, off-screen ones skipped: client physics step with ~110 bullets 4.7 ms -> 1.1 ms, draw calls ~650 -> ~150. Enemy grid also cheaper (~15%).
 13. *(Requested after)* In-game updater: the title screen checks GitHub's latest release; if newer, **Update now** downloads the zip, swaps `GameTest.exe` (renames the running one to `.old`) and restarts. Falls back to opening the release page.
 
-### Where things stand (2026-10-09, v0.13.0, released on GitHub)
+### Where things stand (2026-10-09, v0.14.1, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.
 - v0.13.0 added: level-up card previews (level + stat before -> after), the end-of-run summary screen (`RunStats` + `RunSummaryPanel`), the Necromancer (Bone Effigy) and the Witch's Hex Snare.
-- **v0.14.0 (built, not yet released):** the playtest 2 changes above. The 2026-10-09 co-op run (owner + one friend) was on v0.13.0.
+- **Co-op playtest (owner + one friend, v0.13.0, 2026-10-09):** "awesome, a great start". Their list became v0.14.0 (Playtest 2 changes above), plus the Compendium, Playtest Checklist, lobby Difficulty / Custom Game pages and the boss-spawn performance fix.
+- **v0.14.1:** in-game updater. Friends on v0.14.1+ update with one click from the title screen; anyone older must download once by hand.
+- **Not yet verified by a human:** everything new in v0.14.x (checklist section 3.0a in `docs/PLAYTEST.md`, also shown in-game). The perf fix was measured, but my PC never dropped below 120 fps even before it, so the friend's/owner's next boss fight is the real test (`--perf-log` if it still stutters). The updater's `.old` cleanup only runs from v0.14.1 on.
 - **Not yet played by a human:** stages 2–3 and their bosses, Victory, Hex Snare, the Necromancer, the end-of-run screen, the shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
 - **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
 
 ### Next (proposed, in rough priority)
-1. Full co-op playtest of v0.13.0 (everything above), then tune numbers.
+1. Co-op playtest of v0.14.1: level-up pacing (half as many; is it now too hard by stage 2–3?), boss-spawn performance, Difficulty / Custom Game, and the first one-click update when the next version ships. Then tune numbers.
 2. Working title (replace "GameTest" in the title, window, and build file names).
 3. Content depth: more upgrades/relics/weapons with synergies, more enemy variety per stage, boss attack variety.
 4. Meta/feel: hero portraits, records/stats screen, more animation.

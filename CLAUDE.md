@@ -5,7 +5,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 ## Context
 - The owner is new to Godot and game dev; AI writes most of the code. Explain engine concepts briefly when introducing them, and prefer simple, readable solutions.
 - Target: Windows PC only. Input: mouse + keyboard and gamepad, both first-class.
-- Current state (v0.14.0): Milestones 1–5 plus polish, art, audio, UI and animation passes are done; v0.13.0 added a 4th character, unique abilities and the end-of-run summary; v0.14.0 implements the first co-op playtest's requests (level-up pacing, resume countdown, weapon icons, teammate arrows). See `DESIGN.md` §7 for what's been playtested and what hasn't.
+- Current state (v0.14.1, released): Milestones 1–5 plus polish, art, audio, UI and animation passes are done; v0.13.0 added a 4th character, unique abilities and the end-of-run summary; v0.14.0 implemented the first co-op playtest's requests (level-up pacing, resume countdown, weapon icons, teammate arrows), title-screen Compendium and Playtest Checklist, lobby Difficulty / Custom Game pages, and a boss-fight performance fix; v0.14.1 added the in-game updater. See `DESIGN.md` §7 for what's been playtested and what hasn't.
 
 ## Engine & language rules
 - **Godot 4.x only.** Never use Godot 3 syntax or APIs (e.g. use `@export`, `@onready`, `super()`, `CharacterBody2D`, `velocity` property + `move_and_slide()` with no args, `signal.connect(callable)`, `@rpc`, `FileAccess`, `Tween` via `create_tween()`).
