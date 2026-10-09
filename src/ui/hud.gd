@@ -15,10 +15,16 @@ extends CanvasLayer
 @onready var _banner_title: Label = %BannerTitle
 @onready var _banner_subtitle: Label = %BannerSubtitle
 @onready var level_up_panel: LevelUpPanel = %LevelUpPanel
+@onready var shop_panel: ShopPanel = %ShopPanel
+@onready var _coins_label: Label = %CoinsLabel
 
 
 func set_hearts(current: int, maximum: int) -> void:
 	_hearts.set_hearts(current, maximum)
+
+
+func set_coins(count: int) -> void:
+	_coins_label.text = "%d coins" % count
 
 
 func set_bombs(count: int) -> void:

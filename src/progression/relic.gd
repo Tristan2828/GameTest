@@ -1,0 +1,10 @@
+class_name Relic
+extends Resource
+## A passive item bought in the shop between stages. Each is a `.tres` file in
+## `src/progression/relics/`, registered in Relics.ALL (index = network id).
+
+@export var title: String = "Relic"
+@export_multiline var description: String = ""
+@export var price: int = 20
+## Stat effects, applied in order (they can include drawbacks).
+@export var effects: Array[Upgrade] = []

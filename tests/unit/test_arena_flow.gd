@@ -114,6 +114,8 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	player.health.take_hit(99, 0.0)
 	assert_true(player.is_downed())
 	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
+	_arena._shop._ready_locally()
+	await wait_physics_frames(2)
 	assert_eq(_arena._phase, Arena.Phase.PLAYING)
 	assert_eq(_arena._stage, 2)
 	assert_false(player.is_downed(), "ghosts come back")
@@ -169,3 +171,43 @@ func test_ghosts_still_collect_gems() -> void:
 		_arena._tick_gems(1.0 / 60.0, true)
 	assert_eq(_arena._gems.count(), 0)
 	assert_eq(_arena._team.xp, 3)
+
+
+func test_stage_clear_opens_shop_then_next_stage() -> void:
+	_clear_current_stage()
+	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
+	assert_eq(_arena._phase, Arena.Phase.SHOP)
+	assert_true(_arena._shop.is_open_locally())
+	_arena._shop._ready_locally()
+	await wait_physics_frames(2)
+	assert_eq(_arena._phase, Arena.Phase.PLAYING)
+	assert_eq(_arena._stage, 2)
+
+
+func test_buying_in_the_shop_spends_coins_and_applies_relic() -> void:
+	var player := _local_player()
+	_clear_current_stage()
+	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
+	player.coins = 100
+	var relic_id: int = _arena._shop._my_offers[0]
+	_arena._shop._buy_locally(relic_id)
+	assert_eq(player.relic_ids, [relic_id])
+	assert_eq(player.coins, 100 - Relics.get_relic(relic_id).price)
+	_arena._shop._buy_locally(relic_id)
+	assert_eq(player.relic_ids, [relic_id], "can't buy the same relic twice")
+
+
+func test_stage_clear_pays_bounty_and_banks_leftover_pickups() -> void:
+	var player := _local_player()
+	_arena._gems.spawn_host(Vector2(5, 5), 4)
+	_arena._coins.spawn_host(Vector2(5, 5), 3)
+	_clear_current_stage()
+	assert_eq(player.coins, 3 + Arena.BOSS_BOUNTY)
+	assert_eq(_arena._team.xp, 4)
+
+
+func test_killed_enemies_sometimes_drop_coins() -> void:
+	for i: int in 100:
+		var enemy := _arena._enemies.spawn(EnemyTypes.Id.GHOUL, Vector2(300 + i, 300))
+		_arena._enemies.damage(enemy, enemy.hp, 1)
+	assert_between(_arena._coins.count(), 25, 75, "Ghouls drop coins about half the time")

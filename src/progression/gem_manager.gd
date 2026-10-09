@@ -1,6 +1,7 @@
 class_name GemManager
 extends Node2D
-## XP gems, stored in flat arrays like bullets (a fixed pool, no node per gem).
+## Pickups (XP gems, and a second instance for coins), stored in flat arrays
+## like bullets (a fixed pool, no node per pickup).
 ##
 ## Host: spawns gems when enemies die, decides who collects them, and tells
 ## clients about spawns and pickups (batched, reliable, once per tick).
@@ -13,9 +14,16 @@ const CAPACITY: int = 400
 const COLLECT_RADIUS: float = 6.0
 const PULL_ACCELERATION: float = 900.0
 const MAX_PULL_SPEED: float = 420.0
-const SMALL_COLOR: Color = Color(0.35, 0.75, 1.0)
-const BIG_COLOR: Color = Color(0.45, 1.0, 0.55)
 const OUTLINE_COLOR: Color = Color(0.05, 0.08, 0.15)
+
+@export var small_color: Color = Color(0.35, 0.75, 1.0)
+@export var big_color: Color = Color(0.45, 1.0, 0.55)
+## Values at or above this draw bigger and in big_color.
+@export var big_value: int = 5
+## Round coins instead of diamond gems.
+@export var round_shape: bool = false
+## Group used by the autopilot to find pickups.
+@export var group_name: StringName = &"gems"
 
 var _active: PackedByteArray = PackedByteArray()
 var _positions: PackedVector2Array = PackedVector2Array()
@@ -44,11 +52,20 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	add_to_group("gems")
+	add_to_group(group_name)
 
 
 func count() -> int:
 	return _count
+
+
+## Total value of everything on the ground.
+func total_value() -> int:
+	var total := 0
+	for id: int in CAPACITY:
+		if _active[id] != 0:
+			total += _values[id]
+	return total
 
 
 ## Position of the closest gem, or Vector2.INF if there are none.
@@ -143,8 +160,13 @@ func _draw() -> void:
 	for id: int in CAPACITY:
 		if _active[id] == 0:
 			continue
-		var size := 3.0 if _values[id] >= 5 else 2.0
+		var is_big := _values[id] >= big_value
+		var size := 3.0 if is_big else 2.0
 		var center := _positions[id].round()
+		if round_shape:
+			draw_circle(center, size + 1.0, OUTLINE_COLOR)
+			draw_circle(center, size, big_color if is_big else small_color)
+			continue
 		var outline := PackedVector2Array([
 			center + Vector2(0, -size - 1), center + Vector2(size + 1, 0),
 			center + Vector2(0, size + 1), center + Vector2(-size - 1, 0)])
@@ -152,7 +174,7 @@ func _draw() -> void:
 			center + Vector2(0, -size), center + Vector2(size, 0),
 			center + Vector2(0, size), center + Vector2(-size, 0)])
 		draw_colored_polygon(outline, OUTLINE_COLOR)
-		draw_colored_polygon(diamond, BIG_COLOR if _values[id] >= 5 else SMALL_COLOR)
+		draw_colored_polygon(diamond, big_color if is_big else small_color)
 
 
 func _find_collector(at: Vector2, player_positions: Dictionary[int, Vector2], pickup_radii: Dictionary[int, float]) -> int:

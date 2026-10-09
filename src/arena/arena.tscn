@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://src/progression/gem_manager.gd" id="5_gems"]
 [ext_resource type="Script" path="res://src/progression/level_up_controller.gd" id="6_levelup"]
 [ext_resource type="Script" path="res://src/arena/arena_floor.gd" id="7_floor"]
+[ext_resource type="Script" path="res://src/progression/shop_controller.gd" id="8_shop"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -16,6 +17,14 @@ script = ExtResource("7_floor")
 
 [node name="Gems" type="Node2D" parent="."]
 script = ExtResource("5_gems")
+
+[node name="Coins" type="Node2D" parent="."]
+script = ExtResource("5_gems")
+small_color = Color(1, 0.8, 0.3, 1)
+big_color = Color(1, 0.92, 0.55, 1)
+big_value = 2
+round_shape = true
+group_name = &"coins"
 
 [node name="Enemies" type="Node2D" parent="."]
 script = ExtResource("2_enemies")
@@ -38,5 +47,8 @@ core_color = Color(1, 0.9, 0.98, 1)
 
 [node name="LevelUp" type="Node" parent="."]
 script = ExtResource("6_levelup")
+
+[node name="Shop" type="Node" parent="."]
+script = ExtResource("8_shop")
 
 [node name="Hud" parent="." instance=ExtResource("4_hud")]

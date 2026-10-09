@@ -46,6 +46,12 @@ var health: PlayerHealth = PlayerHealth.new()
 var bombs_left: int = 0
 ## Every upgrade this player has taken, in order (same on all peers).
 var upgrade_ids: Array[int] = []
+## Relics owned, in purchase order (same on all peers).
+var relic_ids: Array[int] = []
+## Coins in this player's pocket (host-owned, synced in snapshots).
+var coins: int = 0
+## Host: kills since the last Vampire Fang heal.
+var kills_toward_heal: int = 0
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -124,6 +130,23 @@ func respawn(at: Vector2) -> void:
 	state.dash_cooldown_left = 0.0
 	state.fire_cooldown_left = 0.0
 	position = at
+
+
+## Runs on every peer when the host announces a purchase.
+func apply_relic(relic_id: int) -> void:
+	relic_ids.append(relic_id)
+	Relics.apply(relic_id, stats, health)
+	queue_redraw()
+
+
+## Host: count a kill toward heal-on-kill relics.
+func register_kill() -> void:
+	if stats.heal_every_kills <= 0 or health.is_downed():
+		return
+	kills_toward_heal += 1
+	if kills_toward_heal >= stats.heal_every_kills:
+		kills_toward_heal = 0
+		health.heal(1)
 
 
 func is_downed() -> bool:

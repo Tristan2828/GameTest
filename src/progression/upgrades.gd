@@ -43,10 +43,14 @@ static func roll(rng: RandomNumberGenerator, owned: Array[int], is_hurt: bool) -
 	return result
 
 
-## Applies an upgrade to one player's stats (and health). Every peer runs this
-## for every upgrade, so all copies of a player's stats stay identical.
+## Applies a level-up upgrade to one player's stats (and health). Every peer runs
+## this for every upgrade, so all copies of a player's stats stay identical.
 static func apply(id: int, stats: CharacterStats, health: PlayerHealth) -> void:
-	var upgrade := get_upgrade(id)
+	apply_effect(get_upgrade(id), stats, health)
+
+
+## Applies one stat effect (from an upgrade or a relic).
+static func apply_effect(upgrade: Upgrade, stats: CharacterStats, health: PlayerHealth) -> void:
 	match upgrade.stat:
 		Upgrade.Stat.DAMAGE:
 			stats.bullet_damage += int(upgrade.amount)
@@ -55,9 +59,12 @@ static func apply(id: int, stats: CharacterStats, health: PlayerHealth) -> void:
 		Upgrade.Stat.MOVE_SPEED:
 			stats.move_speed *= 1.0 + upgrade.amount
 		Upgrade.Stat.MAX_HEARTS:
-			stats.max_hearts += int(upgrade.amount)
+			stats.max_hearts = maxi(stats.max_hearts + int(upgrade.amount), 1)
 			health.max_hearts = stats.max_hearts
-			health.heal(int(upgrade.amount))
+			if upgrade.amount > 0.0:
+				health.heal(int(upgrade.amount))
+			else:
+				health.hearts = mini(health.hearts, health.max_hearts)
 		Upgrade.Stat.EXTRA_BOLT:
 			stats.projectile_count += int(upgrade.amount)
 		Upgrade.Stat.PIERCE:
@@ -68,3 +75,11 @@ static func apply(id: int, stats: CharacterStats, health: PlayerHealth) -> void:
 			stats.dash_cooldown *= 1.0 - upgrade.amount
 		Upgrade.Stat.HEAL:
 			health.heal(int(upgrade.amount))
+		Upgrade.Stat.BOMBS:
+			stats.bombs_per_stage = maxi(stats.bombs_per_stage + int(upgrade.amount), 0)
+		Upgrade.Stat.BULLET_SPEED:
+			stats.bullet_speed *= 1.0 + upgrade.amount
+		Upgrade.Stat.KILL_HEAL:
+			stats.heal_every_kills = int(upgrade.amount)
+		Upgrade.Stat.BOMB_DAMAGE:
+			stats.bomb_damage_multiplier += upgrade.amount

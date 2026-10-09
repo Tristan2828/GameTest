@@ -1,15 +1,19 @@
 class_name Upgrade
 extends Resource
-## One level-up choice. Each is a `.tres` file in `src/progression/upgrades/`,
-## registered in Upgrades.ALL (its index there is the network id).
+## One stat effect. Used as a level-up choice (`src/progression/upgrades/`,
+## registered in Upgrades.ALL, index = network id) and as an effect inside relics.
 
-enum Stat { DAMAGE, FIRE_RATE, MOVE_SPEED, MAX_HEARTS, EXTRA_BOLT, PIERCE, PICKUP_RADIUS, DASH_COOLDOWN, HEAL }
+## Stored as numbers in .tres files: only add new stats at the end.
+enum Stat {
+	DAMAGE, FIRE_RATE, MOVE_SPEED, MAX_HEARTS, EXTRA_BOLT, PIERCE, PICKUP_RADIUS, DASH_COOLDOWN, HEAL,
+	BOMBS, BULLET_SPEED, KILL_HEAL, BOMB_DAMAGE,
+}
 
 @export var title: String = "Upgrade"
 @export_multiline var description: String = ""
 @export var stat: Stat = Stat.DAMAGE
-## Meaning depends on the stat: flat amount for DAMAGE/MAX_HEARTS/EXTRA_BOLT/PIERCE/HEAL,
-## a fraction (0.1 = 10%) for the others.
+## Meaning depends on the stat: flat amount for DAMAGE/MAX_HEARTS/EXTRA_BOLT/PIERCE/HEAL/BOMBS,
+## kills per heal for KILL_HEAL, a fraction (0.1 = 10%) for the others. Can be negative.
 @export var amount: float = 1.0
 ## How many times one player can take it. 0 = no limit.
 @export var max_stacks: int = 0

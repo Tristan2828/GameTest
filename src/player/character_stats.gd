@@ -18,6 +18,10 @@ extends Resource
 @export var hit_invulnerability: float = 1.0
 ## Bombs at the start of each stage.
 @export var bombs_per_stage: int = 2
+## Bomb damage is multiplied by this (relics raise it).
+@export var bomb_damage_multiplier: float = 1.0
+## Heal 1 heart every this many kills (0 = never; from relics).
+@export var heal_every_kills: int = 0
 
 @export_group("Body")
 ## Size used for drawing and keeping the player inside the arena.

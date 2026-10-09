@@ -12,6 +12,9 @@ extends Resource
 ## Hearts removed when it touches a player.
 @export var contact_damage: int = 1
 @export var xp_value: int = 1
+## Chance (0..1) to drop a coin on death, and what it's worth.
+@export var coin_chance: float = 0.1
+@export var coin_value: int = 1
 @export var color: Color = Color(0.45, 0.55, 0.4)
 ## How much the path weaves left and right (radians). 0 = walks straight at you.
 @export var wobble: float = 0.0

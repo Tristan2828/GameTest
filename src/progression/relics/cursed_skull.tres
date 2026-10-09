@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Relic" format=3]
+
+[ext_resource type="Script" path="res://src/progression/relic.gd" id="1_relic"]
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="2_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("2_upgrade")
+stat = 0
+amount = 6.0
+
+[sub_resource type="Resource" id="effect_1"]
+script = ExtResource("2_upgrade")
+stat = 3
+amount = -1.0
+
+[resource]
+script = ExtResource("1_relic")
+title = "Cursed Skull"
+description = "+6 damage, but -1 max heart"
+price = 25
+effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0"), SubResource("effect_1")])
