@@ -37,6 +37,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/autoload/`: global singletons. `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
 - `src/main/`: root scene `main.tscn` (menu plus `Level` slot plus `LevelSpawner`) and `LaunchOptions`.
+- `src/lobby/`: `Lobby` scene (character select + ready-up, host-owned state broadcast on change; spawned by `LevelSpawner` like the arena) with pure `LobbyState` rules and `CharacterPortrait`. `RunSetup` (in `src/main/`) carries choices and join order into the arena.
 - `src/ui/`: main menu, `Hud` scene (hearts, timer, banners), and HUD widgets.
 - `src/stages/`: `StageDef` resources (one `.tres` per stage: spawn table of `SpawnEntry`, pack type, boss type, boss attack script of `BossStep`s, floor palette and prop style) registered in `Stages.ALL`. New stage content is mostly data here.
 - `src/arena/`: arena scene, `ArenaFloor` (seeded decorative ground, drawn once, palette from the stage), and `SpawnDirector` (spawn pacing; enemy mix from the stage table). The arena owns the fixed tick order (players, then spawning, then enemies, then contact damage, then bullets, then hits, then the phase check), the stage timer and end states, and host snapshots.

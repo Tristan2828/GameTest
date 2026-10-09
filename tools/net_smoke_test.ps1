@@ -11,7 +11,7 @@
 
 param(
 	[int]$Port = 7810,
-	[double]$Seconds = 6
+	[double]$Seconds = 12
 )
 
 $godot = if ($env:GODOT) { $env:GODOT } else { "C:\Code Tools\Godot\Godot_v4.7.2-stable_win64_console.exe" }

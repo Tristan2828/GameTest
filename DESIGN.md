@@ -155,7 +155,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
   - Found as **weapon altars** that appear twice per stage (~1:20 and ~2:40). First player to touch one takes it. Taking a weapon you already own levels it up (max level 3).
   - Three weapons to start: **Orbiting Skulls** (circle you, hurt on touch), **Seeking Bolts** (auto-fire at the nearest enemy), and **Holy Aura** (pulses damage around you).
 
-### Milestone 5: Characters, lobby, three themed stages (in progress)
+### Milestone 5: Characters, lobby, three themed stages (implemented in v0.6.0; awaiting playtest)
 The owner approved the plan; details below are Claude's defaults. **Revisit in the next playtest.**
 - **Lobby:**
   - Solo/Host/Join leads to a lobby: pick a character, press Ready, and the host starts (solo starts right away).

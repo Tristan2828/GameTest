@@ -136,7 +136,12 @@ func _ready() -> void:
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
 		_add_player(1)
-		for peer_id: int in multiplayer.get_peers():
+		var peers: Array[int] = []
+		peers.assign(multiplayer.get_peers())
+		# Same order as the lobby, so everyone keeps their color.
+		peers.sort_custom(func(a: int, b: int) -> bool:
+			return _lobby_rank(a) < _lobby_rank(b))
+		for peer_id: int in peers:
 			_add_player(peer_id)
 	else:
 		_notify_ready.rpc_id(1)
@@ -267,6 +272,11 @@ func _add_player(peer_id: int) -> void:
 		for weapon_id: int in AutoWeapons.ALL.size():
 			for level: int in 2:
 				_weapons.grant(peer_id, weapon_id, _ready_peer_list())
+
+
+func _lobby_rank(peer_id: int) -> int:
+	var index := RunSetup.order.find(peer_id)
+	return index if index >= 0 else 1000 + peer_id
 
 
 func _remove_player(peer_id: int) -> void:
@@ -686,7 +696,7 @@ func _update_hud() -> void:
 		info = _invite_hud_text() + "\n" + info
 	_hud.set_info(info)
 
-	var restart_hint := "Press R / Start to play again" if multiplayer.is_server() else "Waiting for the host to restart..."
+	var restart_hint := "Press R / Start to return to the lobby" if multiplayer.is_server() else "Waiting for the host..."
 	var name_of := func(peer_id: int) -> String:
 		var player := _player_by_id(peer_id)
 		return player.display_name() if player != null else "someone"

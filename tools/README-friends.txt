@@ -10,6 +10,9 @@ Thanks for helping test!
 2. Paste the invite your host sent you (looks like 203.0.113.5:7777)
    into the "Paste invite" box, then click "Join Game".
 
+3. In the lobby, pick a character (Wanderer, Gravekeeper or Hexblade Witch)
+   and press Ready. The host starts the run.
+
 Controls (keyboard + mouse, or a gamepad):
   Move   WASD / left stick
   Aim    mouse / right stick

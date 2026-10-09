@@ -6,6 +6,8 @@ extends RefCounted
 
 ## peer id -> Characters id
 static var characters: Dictionary[int, int] = {}
+## Lobby join order (host first); the arena hands out player slots in this order.
+static var order: Array[int] = []
 
 
 static func character_for(peer_id: int) -> int:

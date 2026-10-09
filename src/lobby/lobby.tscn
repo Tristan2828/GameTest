@@ -1,0 +1,137 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/lobby/lobby.gd" id="1_lobby"]
+[ext_resource type="Script" path="res://src/lobby/character_portrait.gd" id="2_portrait"]
+
+[node name="Lobby" type="CanvasLayer"]
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.055, 0.045, 0.075, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Box" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Center/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.75, 1, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.08, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 18
+text = "Choose your hero"
+horizontal_alignment = 1
+
+[node name="Cards" type="HBoxContainer" parent="Center/Box"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Card0" type="Button" parent="Center/Box/Cards"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 150)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+toggle_mode = true
+autowrap_mode = 3
+
+[node name="Portrait" type="Control" parent="Center/Box/Cards/Card0"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_top = 6.0
+offset_right = 20.0
+offset_bottom = 40.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("2_portrait")
+
+[node name="Card1" type="Button" parent="Center/Box/Cards"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 150)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+toggle_mode = true
+autowrap_mode = 3
+
+[node name="Portrait" type="Control" parent="Center/Box/Cards/Card1"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_top = 6.0
+offset_right = 20.0
+offset_bottom = 40.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("2_portrait")
+
+[node name="Card2" type="Button" parent="Center/Box/Cards"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 150)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+toggle_mode = true
+autowrap_mode = 3
+
+[node name="Portrait" type="Control" parent="Center/Box/Cards/Card2"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_top = 6.0
+offset_right = 20.0
+offset_bottom = 40.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("2_portrait")
+
+[node name="PlayersLabel" type="Label" parent="Center/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 10
+horizontal_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Box"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="ReadyButton" type="Button" parent="Center/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+toggle_mode = true
+text = "Ready"
+
+[node name="StartButton" type="Button" parent="Center/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Start Run"
+
+[node name="StatusLabel" type="Label" parent="Center/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+horizontal_alignment = 1

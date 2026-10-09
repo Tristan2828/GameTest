@@ -1,11 +1,12 @@
 class_name Main
 extends Node
 ## Root scene. Shows the main menu, starts solo/host/join sessions, and owns the
-## `Level` slot. The host puts the arena into that slot; `LevelSpawner` (a
-## MultiplayerSpawner) then recreates it automatically on every client, including
-## friends who join later.
+## `Level` slot. The host puts the lobby or the arena into that slot;
+## `LevelSpawner` (a MultiplayerSpawner) then recreates it automatically on every
+## client, including friends who join later.
 
 const ARENA_SCENE: PackedScene = preload("res://src/arena/arena.tscn")
+const LOBBY_SCENE: PackedScene = preload("res://src/lobby/lobby.tscn")
 
 @onready var _level: Node = $Level
 @onready var _menu: MainMenu = $MainMenu
@@ -69,7 +70,7 @@ func _take_screenshots_periodically() -> void:
 func _start_solo() -> void:
 	Net.start_solo()
 	_apply_character_flag()
-	_load_arena()
+	_load_lobby()
 
 
 func _start_host(port: int) -> void:
@@ -79,7 +80,7 @@ func _start_host(port: int) -> void:
 		return
 	print("Hosting on port %d" % port)
 	_apply_character_flag()
-	_load_arena()
+	_load_lobby()
 
 
 func _start_join(address: String, port: int) -> void:
@@ -105,21 +106,30 @@ func _on_server_disconnected() -> void:
 	_leave_game("Disconnected from the host.")
 
 
+## Host: show the lobby (start of a session, and after every run).
+func _load_lobby() -> void:
+	_clear_level()
+	_menu.hide()
+	var lobby: Lobby = LOBBY_SCENE.instantiate()
+	# Deferred: swap scenes after the current frame, never in the middle of one.
+	lobby.start_requested.connect(_load_arena, CONNECT_DEFERRED)
+	_level.add_child(lobby)
+
+
+## Host: start a run. LevelSpawner removes the old scene and creates the new one
+## on every client too.
 func _load_arena() -> void:
+	_clear_level()
 	_menu.hide()
 	var arena: Arena = ARENA_SCENE.instantiate()
-	# Deferred: swap arenas after the current frame, not in the middle of its tick.
-	arena.restart_requested.connect(_restart_arena, CONNECT_DEFERRED)
+	arena.restart_requested.connect(_load_lobby, CONNECT_DEFERRED)
 	_level.add_child(arena)
 
 
-## Host: replace the arena with a fresh one. LevelSpawner removes the old arena
-## and creates the new one on every client too.
-func _restart_arena() -> void:
+func _clear_level() -> void:
 	for child: Node in _level.get_children():
 		_level.remove_child(child)
 		child.queue_free()
-	_load_arena()
 
 
 func _leave_game(message: String) -> void:
@@ -132,8 +142,11 @@ func _leave_game(message: String) -> void:
 
 func _report_and_quit() -> void:
 	var arena := _level.get_node_or_null("Arena") as Arena
+	var lobby := _level.get_node_or_null("Lobby") as Lobby
 	if arena != null:
 		print(arena.debug_report())
+	elif lobby != null:
+		print(lobby.debug_report())
 	else:
 		print("[report] peer %d: no arena loaded" % multiplayer.get_unique_id())
 	Net.leave_game()
