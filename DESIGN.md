@@ -162,6 +162,9 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
   - Solo/Host/Join leads to a lobby: pick a character, press Ready, and the host starts (solo starts right away).
   - After Victory or Run over, the host returns everyone to the lobby.
   - Friends joining mid-run still drop in, as the Wanderer.
+  - **Difficulty and Custom Game pages (v0.14.0, owner request; defaults by Claude, revisit):** the host sets them in the lobby; friends see them read-only, and a summary line shows the current choice. Saved on the host's PC.
+    - *Difficulty:* sliders for enemy health, boss health, enemy count (spawn rate), XP gain, coin drops (25%–300%), and bonus hearts (−2 to +3). Presets: Easy / Normal / Hard.
+    - *Custom Game:* full run or a **single stage** on a chosen map (won by clearing it; it always has first-stage toughness whichever map), wave length (1–10 min), boss on/off (off = survive the timer to win), starting level-ups (0–10), start with every auto weapon.
 - **Characters (one passive ability each):**
   - **Wanderer:** balanced. Ability **Dash** (0.8s): quick dash, can't be hit while dashing.
   - **Gravekeeper:** slow, 5 hearts, short-range shotgun. Ability **Grave Blast** (14s): clears nearby enemy bullets, damages enemies around you, heals 1 heart.
@@ -222,6 +225,7 @@ Owner played a co-op run with one friend ("awesome, a great start"). Requested a
 8. New boss arrival sound: impact, tolling bell and a dissonant horn swell (the old low growl was hard to hear).
 9. Far fewer level-ups (see Progression, Pacing). Difficulty was judged good, so enemies are unchanged. **Watch:** with half the upgrades, players are weaker by stage 2–3; if it gets too hard, make upgrades stronger rather than more frequent.
 10. *(Added after the playtest list)* Title menu: **Compendium** (heroes, weapons, upgrades, relics, pickups, enemies, bosses; all numbers read from the game data) and **Playtest Checklist** (the items in `docs/PLAYTEST.md`, tick as you test, "Copy what's left" to paste to Claude).
+11. *(Added after the playtest list)* Lobby: **Difficulty** and **Custom Game** pages (see Milestone 5, Lobby).
 
 ### Where things stand (2026-10-09, v0.13.0, released on GitHub)
 - Playtested by the owner: M1 (online, with a friend), M2 (with a friend), and a solo run of v0.11 that cleared stage 1 (incl. the Bone Warden) and reached the shop. That review produced the v0.12.0 changes.

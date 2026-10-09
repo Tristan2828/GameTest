@@ -15,23 +15,26 @@ var level: int = 1
 var xp: int = 0
 ## Players in the game (host and clients both set it; the cost depends on it).
 var player_count: int = 1
+## Difficulty "XP gain": the cost of every level is divided by this.
+var xp_rate: float = 1.0
 
 
-static func xp_to_next(for_level: int, players: int = 1) -> int:
+static func xp_to_next(for_level: int, players: int = 1, rate: float = 1.0) -> int:
 	var base := BASE_XP + (for_level - 1) * XP_PER_LEVEL
-	return roundi(base * (1.0 + SpawnDirector.EXTRA_PLAYER_MULTIPLIER * (maxi(players, 1) - 1)))
+	var team := 1.0 + SpawnDirector.EXTRA_PLAYER_MULTIPLIER * (maxi(players, 1) - 1)
+	return maxi(roundi(base * team / maxf(rate, 0.01)), 1)
 
 
 ## Adds XP and returns how many levels were gained (can be more than one).
 func add_xp(amount: int) -> int:
 	xp += amount
 	var gained := 0
-	while xp >= xp_to_next(level, player_count):
-		xp -= xp_to_next(level, player_count)
+	while xp >= xp_to_next(level, player_count, xp_rate):
+		xp -= xp_to_next(level, player_count, xp_rate)
 		level += 1
 		gained += 1
 	return gained
 
 
 func progress_ratio() -> float:
-	return minf(float(xp) / float(xp_to_next(level, player_count)), 1.0)
+	return minf(float(xp) / float(xp_to_next(level, player_count, xp_rate)), 1.0)

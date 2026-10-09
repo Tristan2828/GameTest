@@ -19,6 +19,8 @@ extends RefCounted
 ##   --screenshot-dir=<folder>       save PNGs: the title screen (when no mode flag), gameplay every 10s,
 ##                                   and the first lobby, level-up, shop and run-end screens
 ##                                   (needs a real window, not --headless)
+##   --run-config=<k=v,k=v>          host's Difficulty / Custom Game settings (RunConfig names),
+##                                   e.g. --run-config=single_stage=true,stage=2,enemy_health=1.5
 
 enum Mode { MENU, SOLO, HOST, JOIN }
 
@@ -37,6 +39,8 @@ static var weak_bosses: bool = false
 static var give_weapons: bool = false
 static var start_stage: int = 1
 static var character: int = -1
+## --run-config values (RunConfig names -> parsed values); empty = lobby choice.
+static var run_config: Dictionary = {}
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -70,5 +74,11 @@ static func parse(args: PackedStringArray) -> void:
 			screenshot_dir = arg.trim_prefix("--screenshot-dir=")
 		elif arg.begins_with("--stage-seconds="):
 			stage_seconds = arg.trim_prefix("--stage-seconds=").to_float()
+		elif arg.begins_with("--run-config="):
+			for pair: String in arg.trim_prefix("--run-config=").split(",", false):
+				var parts := pair.split("=")
+				if parts.size() == 2:
+					var text := parts[1].strip_edges()
+					run_config[parts[0].strip_edges()] = (text == "true") if text in ["true", "false"] else text.to_float()
 		else:
 			push_warning("Unknown launch option: %s" % arg)

@@ -19,6 +19,7 @@ const COUNT_UP_SECONDS: float = 1.2
 ## Card width by player count (index = players - 1); fits 640 px wide.
 const CARD_WIDTHS: Array[int] = [250, 210, 170, 138]
 
+var _stage_in_run: int = 1
 ## Labels that count up: label -> [final value, is_time]
 var _counters: Dictionary[Label, Array] = {}
 
@@ -30,8 +31,11 @@ func _ready() -> void:
 
 ## Builds and shows the screen. `players` are the Player nodes still in the game.
 ## `can_return` shows the return button (the host); `hint` is the line under it.
+## `stage_in_run` is how far into the run the last stage was (differs from
+## stats.stage_reached in a single-stage custom game on a later map).
 func open(stats: RunStats, players: Array[Player], stage_title: String, stage_count: int, hint: String,
-		can_return: bool = false) -> void:
+		can_return: bool = false, stage_in_run: int = -1) -> void:
+	_stage_in_run = stage_in_run if stage_in_run > 0 else stats.stage_reached
 	for child: Node in get_children():
 		child.queue_free()
 	_counters.clear()
@@ -85,8 +89,10 @@ func open(stats: RunStats, players: Array[Player], stage_title: String, stage_co
 
 func _headline(stats: RunStats, stage_title: String, stage_count: int) -> String:
 	if stats.victory:
+		if stage_count == 1:
+			return "%s cleansed. The dark recedes... for now." % stage_title
 		return "All %d stages cleansed. The dark recedes... for now." % stage_count
-	var where := "Stage %d: %s" % [stats.stage_reached, stage_title]
+	var where := "Stage %d: %s" % [_stage_in_run, stage_title]
 	if stats.fell_to.is_empty():
 		return "Overrun by the horde in %s" % where
 	var foe := stats.fell_to
@@ -100,7 +106,7 @@ func _summary_row(stats: RunStats, stage_count: int) -> HBoxContainer:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 22)
 	row.add_child(_chip("TIME", stats.run_seconds, true))
-	row.add_child(_chip_text("STAGE", "%d/%d" % [stats.stage_reached, stage_count]))
+	row.add_child(_chip_text("STAGE", "%d/%d" % [_stage_in_run, stage_count]))
 	row.add_child(_chip("LEVEL", stats.team_level))
 	row.add_child(_chip("KILLS", stats.total(RunStats.Stat.KILLS)))
 	row.add_child(_chip_text("BOSSES", "%d/%d" % [stats.bosses_defeated, stage_count]))

@@ -57,11 +57,16 @@ const HURT_COLOR: Color = Color(1.0, 0.25, 0.3)
 const AUTOPILOT_RESTART_DELAY: float = 2.0
 
 var _phase: Phase = Phase.PLAYING
-## Current stage, 1..STAGE_COUNT (host-owned, synced in snapshots).
+## Current stage number = map (1 Crypt, 2 Marsh, 3 Cathedral; host-owned, synced
+## in snapshots). See _run_depth() for how far into the run it is.
 var _stage: int = 1
 var _stage_clear_left: float = 0.0
 var _elapsed: float = 0.0
 var _wave_duration: float = WAVE_DURATION
+## Difficulty and custom game options for this run (RunSetup.config).
+var _config: RunConfig = RunConfig.new()
+## Host: starting level-ups not yet handed out (waits until everyone has loaded).
+var _bonus_levels_left: int = 0
 var _boss_brain: BossBrain = null
 ## Turning angle for SPIN boss steps.
 var _boss_spin: float = 0.0
@@ -129,8 +134,14 @@ func _ready() -> void:
 	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_rng.randomize()
-	if multiplayer.is_server():
+	# The lobby's Difficulty / Custom Game choices (clients got a copy from the host).
+	_config = RunSetup.config
+	_stage = _config.first_stage()
+	if multiplayer.is_server() and LaunchOptions.start_stage > 1:
 		_stage = LaunchOptions.start_stage
+	_wave_duration = _config.wave_seconds
+	_team.xp_rate = _config.xp_rate
+	_bonus_levels_left = _config.bonus_levels
 	_setup_stage()
 	_level_up.bind_panel(_hud.level_up_panel, _local_player)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
@@ -199,6 +210,11 @@ func _physics_process(delta: float) -> void:
 		_tick_gems(delta, is_host)
 		if is_host:
 			_update_phase()
+		if is_host and _bonus_levels_left > 0 and _all_peers_loaded():
+			# Custom game "starting level-ups": handed out once every client can see them.
+			_level_up.host_queue(_bonus_levels_left)
+			_team.level += _bonus_levels_left
+			_bonus_levels_left = 0
 		if is_host and _phase == Phase.PLAYING and _level_up.host_should_start():
 			_start_level_up()
 	elif _phase == Phase.LEVEL_UP:
@@ -308,6 +324,7 @@ func debug_report() -> String:
 	var lines := PackedStringArray()
 	var role := "host" if multiplayer.is_server() else "client"
 	lines.append("[report] peer %d (%s)  stage %d  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, _stage, Phase.keys()[_phase], _elapsed])
+	lines.append("[report]   config: %s   wave %.0fs" % [_config.summary(), _wave_duration])
 	for player: Player in _player_nodes():
 		var line := "[report]   player %d (%s) slot %d at %s  hearts %d/%d  ability %s  coins %d  upgrades %s  relics %s" % [
 			player.peer_id, player.stats.display_name, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts,
@@ -365,7 +382,11 @@ func _alive_player_positions() -> Array[Vector2]:
 
 
 func _add_player(peer_id: int) -> void:
-	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id)})
+	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id),
+		"hearts_bonus": _config.hearts_bonus})
+	if _config.start_with_weapons:
+		for weapon_id: int in AutoWeapons.ALL.size():
+			_weapons.grant(peer_id, weapon_id, _ready_peer_list())
 	if LaunchOptions.give_weapons:
 		# Test aid: same path as real pickups (new joiners also get it via history).
 		for weapon_id: int in AutoWeapons.ALL.size():
@@ -395,7 +416,7 @@ func _spawn_player(data: Variant) -> Node:
 	if not Characters.is_valid_id(character):
 		character = Characters.Id.WANDERER
 	var player: Player = PLAYER_SCENE.instantiate()
-	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character)
+	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character, int(info.get("hearts_bonus", 0)))
 	player.shot_requested.connect(_on_player_shot_requested)
 	player.ability_used.connect(_on_player_ability_used)
 	player.hurt.connect(_on_player_hurt)
@@ -419,7 +440,7 @@ func _spawn_enemies(delta: float) -> void:
 	if alive_players.is_empty():
 		return
 	var rate := BOSS_FIGHT_SPAWN_RATE if _boss_spawned else 1.0
-	rate *= 1.0 + STAGE_SPAWN_RATE_GROWTH * (_stage - 1)
+	rate *= (1.0 + STAGE_SPAWN_RATE_GROWTH * (_run_depth() - 1)) * _config.enemy_count
 	for type_id: int in _director.tick(delta, _elapsed, alive_players.size(), _enemies.active_count(), rate):
 		var point := _offscreen_spawn_point(alive_players)
 		if point.is_finite():
@@ -433,9 +454,22 @@ func _spawn_enemies(delta: float) -> void:
 				_enemies.spawn(pack_type, (center + offset).clamp(BOUNDS.position, BOUNDS.end), _scaled_hp(pack_type))
 
 
-## Enemy max HP for the current stage.
+## Enemy max HP for the current stage (and the difficulty sliders).
 func _scaled_hp(type_id: int) -> int:
-	return roundi(EnemyTypes.get_type(type_id).max_hp * (1.0 + STAGE_HP_GROWTH * (_stage - 1)))
+	var type := EnemyTypes.get_type(type_id)
+	var difficulty := _config.boss_health if type.is_boss else _config.enemy_health
+	return maxi(roundi(type.max_hp * (1.0 + STAGE_HP_GROWTH * (_run_depth() - 1)) * difficulty), 1)
+
+
+## How far into the run this stage is (1 = first). Later stages are tougher.
+## A single-stage custom game is always the first stage, whichever map it uses.
+func _run_depth() -> int:
+	return _stage - _config.first_stage() + 1
+
+
+## Stages in this run (1 for a single-stage custom game).
+func _stage_count() -> int:
+	return _config.stage_count()
 
 
 ## A point just off-screen from a random player, inside the arena and not too
@@ -474,11 +508,14 @@ func _update_phase() -> void:
 	elif _boss_defeated:
 		_end_stage(Phase.STAGE_CLEAR)
 	elif _elapsed >= _wave_duration and not _boss_spawned:
-		_spawn_boss()
+		if _config.boss_enabled:
+			_spawn_boss()
+		else:
+			_end_stage(Phase.STAGE_CLEAR)  # Custom game without a boss: survived the timer.
 
 
 func _end_stage(phase: Phase) -> void:
-	if phase == Phase.STAGE_CLEAR and _stage >= STAGE_COUNT:
+	if phase == Phase.STAGE_CLEAR and _run_depth() >= _stage_count():
 		phase = Phase.VICTORY
 	_phase = phase
 	_stage_clear_left = STAGE_CLEAR_DELAY
@@ -505,7 +542,7 @@ func _broadcast_run_stats(victory: bool) -> void:
 	_run_stats.victory = victory
 	_run_stats.stage_reached = _stage
 	_run_stats.team_level = _team.level
-	_run_stats.bosses_defeated = _stage if victory else _stage - 1
+	_run_stats.bosses_defeated = 0 if not _config.boss_enabled else (_run_depth() if victory else _run_depth() - 1)
 	var boss := _enemies.find_boss()
 	_run_stats.fell_to = "" if victory or boss == null else boss.type.display_name
 	for player: Player in _player_nodes():
@@ -527,8 +564,8 @@ func _receive_run_stats(data: Dictionary) -> void:
 	_final_stats = RunStats.decode(data)
 	var is_host := multiplayer.is_server()
 	var restart_hint := "or press R / Select" if is_host else "Waiting for the host to return to character select..."
-	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, STAGE_COUNT,
-		restart_hint, is_host)
+	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, _stage_count(),
+		restart_hint, is_host, _final_stats.stage_reached - _config.first_stage() + 1)
 
 
 func _settle_stage_rewards() -> void:
@@ -539,7 +576,7 @@ func _settle_stage_rewards() -> void:
 	if players.is_empty():
 		return
 	var share := _coins.total_value() / players.size()
-	var bounty := BOSS_BOUNTY + BOSS_BOUNTY_PER_STAGE * (_stage - 1)
+	var bounty := BOSS_BOUNTY + BOSS_BOUNTY_PER_STAGE * (_run_depth() - 1)
 	for player: Player in players:
 		player.coins += share + bounty
 		_run_stats.add(player.peer_id, RunStats.Stat.COINS_EARNED, share + bounty)
@@ -628,7 +665,7 @@ func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
 	if not _gems.spawn_host(enemy.position, enemy.type.xp_value):
 		# Too many gems on the ground: grant the XP directly instead.
 		_on_gem_collected(enemy.type.xp_value, killer_peer_id)
-	if _rng.randf() < enemy.type.coin_chance:
+	if _rng.randf() < enemy.type.coin_chance * _config.coin_rate:
 		var offset := Vector2.from_angle(_rng.randf() * TAU) * 5.0
 		if not _coins.spawn_host(enemy.position + offset, enemy.type.coin_value):
 			_on_coin_collected(enemy.type.coin_value, killer_peer_id)
@@ -709,6 +746,14 @@ func _is_run_finished() -> bool:
 ## No combat is happening: between stages or after the run.
 func _is_between_stages() -> bool:
 	return _phase == Phase.STAGE_CLEAR or _phase == Phase.SHOP or _is_run_finished()
+
+
+## Host: every connected client's arena has loaded.
+func _all_peers_loaded() -> bool:
+	for peer_id: int in multiplayer.get_peers():
+		if not _ready_peers.has(peer_id):
+			return false
+	return true
 
 
 func _ready_peer_list() -> Array[int]:
@@ -1005,7 +1050,7 @@ func _update_hud() -> void:
 	var status := "Solo"
 	if Net.is_online():
 		status = "Host" if multiplayer.is_server() else "Client  ping %d ms" % Net.ping_ms()
-	_hud.set_status("Stage %d/%d   %s   players %d" % [_stage, STAGE_COUNT, status, _player_nodes().size()])
+	_hud.set_status("Stage %d/%d   %s   players %d" % [_run_depth(), _stage_count(), status, _player_nodes().size()])
 
 	var info := CONTROLS_HINT
 	if Net.is_online() and multiplayer.is_server():
@@ -1031,7 +1076,7 @@ func _update_hud() -> void:
 		Phase.COUNTDOWN:
 			_hud.show_banner(str(maxi(ceili(_resume_left), 1)), "Get ready!")
 		Phase.STAGE_CLEAR:
-			_hud.show_banner("Stage %d cleared!" % _stage, "Stage %d of %d is next. Everyone respawns." % [_stage + 1, STAGE_COUNT])
+			_hud.show_banner("Stage %d cleared!" % _run_depth(), "Stage %d of %d is next. Everyone respawns." % [_run_depth() + 1, _stage_count()])
 		Phase.VICTORY, Phase.RUN_OVER:
 			_hud.hide_banner()  # The run summary panel shows instead.
 		_:
@@ -1126,6 +1171,7 @@ func _notify_ready() -> void:
 	if multiplayer.is_server():
 		var peer_id := multiplayer.get_remote_sender_id()
 		_ready_peers[peer_id] = true
+		_receive_config.rpc_id(peer_id, _config.to_dict())
 		_gems.send_full_state(peer_id)
 		_coins.send_full_state(peer_id)
 		_weapons.send_full_state(peer_id)
@@ -1169,6 +1215,16 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			_coins.clear()
 			_weapons.clear_altars()
 			_clear_ability_markers()
+
+
+## Client: the host's run settings (friends who drop in mid-run never saw the lobby).
+@rpc("authority", "call_remote", "reliable")
+func _receive_config(data: Dictionary) -> void:
+	_config = RunConfig.from_dict(data)
+	RunSetup.config = _config
+	if LaunchOptions.stage_seconds <= 0.0:
+		_wave_duration = _config.wave_seconds
+	_team.xp_rate = _config.xp_rate
 
 
 ## Client: keep our copy of the stage clock close to the host's *current* time.

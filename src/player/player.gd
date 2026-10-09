@@ -97,7 +97,7 @@ var _remote_dashing: bool = false
 
 ## Called by the arena's spawn function, before the node enters the tree.
 func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_bounds: Rect2,
-		character: int = Characters.Id.WANDERER) -> void:
+		character: int = Characters.Id.WANDERER, hearts_bonus: int = 0) -> void:
 	peer_id = owner_peer_id
 	slot = player_slot
 	bounds = arena_bounds
@@ -105,6 +105,7 @@ func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_
 	name = str(owner_peer_id)
 	# Each player gets its own copy so upgrades only change this player.
 	stats = Characters.get_character(character).duplicate()
+	stats.max_hearts = maxi(stats.max_hearts + hearts_bonus, 1)  # Difficulty setting.
 	health.reset(stats.max_hearts)
 	state.position = spawn_position
 	position = spawn_position

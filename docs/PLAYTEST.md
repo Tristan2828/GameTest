@@ -1,7 +1,7 @@
 # Playtest Review (v0.14.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (212 unit tests, plus online host+client runs).
+Automated tests prove it *works* (223 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -24,6 +24,7 @@ $g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
 & $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (tests the flow, not balance)
 & $g -- --solo --give-weapons                      # Start with all 3 auto weapons at level 2
 & $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
+& $g -- --solo --run-config=single_stage=true,stage=3,bonus_levels=5   # Custom game without the lobby pages
 ```
 
 Flags combine. `--start-at` and `--start-stage` skip upgrades, so jumped-to fights are **harder** than in a real run.
@@ -61,6 +62,9 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
 - [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
 - [ ] Title menu: Compendium pages (Heroes, Weapons, Upgrades, Relics, Pickups, Enemies, Bosses). Useful? Anything missing or wrong?
+- [ ] Lobby: Difficulty page (sliders + Easy / Normal / Hard). Do the settings feel like they do what they say? Is Hard hard?
+- [ ] Lobby: Custom Game page. Try a single stage on the Bone Marsh or Cathedral, no boss, a short wave, starting level-ups, all weapons. Does the run end in Victory as expected?
+- [ ] Friends see the host's settings (summary line in the lobby; pages are read-only for them).
 - [ ] Title menu: this Playtest Checklist. Ticks are remembered after restarting the game? "Copy what's left" works?
 
 ### 3.0 Changes from your first playtest (v0.12.0)

@@ -131,10 +131,11 @@ func clear_list() -> void:
 
 
 ## A bordered row that can take focus (gold border when focused), so gamepad
-## and keyboard users can scroll through the list.
-func add_row(content: Control) -> PanelContainer:
+## and keyboard users can scroll through the list. Rows holding their own
+## controls (sliders, buttons) pass `focusable = false`: the control takes focus.
+func add_row(content: Control, focusable: bool = true) -> PanelContainer:
 	var row := PanelContainer.new()
-	row.focus_mode = Control.FOCUS_ALL
+	row.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	row.add_theme_stylebox_override("panel", _row_style)
 	row.focus_entered.connect(func() -> void: row.add_theme_stylebox_override("panel", _row_focus_style))
 	row.focus_exited.connect(func() -> void: row.add_theme_stylebox_override("panel", _row_style))
@@ -149,11 +150,17 @@ func add_heading(text: String) -> Label:
 	return heading
 
 
+## The first row (or control inside a row) that can take focus.
 func first_focusable_row() -> Control:
 	for child: Node in list.get_children():
 		var control := child as Control
-		if control != null and control.focus_mode != Control.FOCUS_NONE and control.visible:
+		if control == null or not control.visible:
+			continue
+		if control.focus_mode != Control.FOCUS_NONE:
 			return control
+		for inner: Node in control.find_children("*", "Control", true, false):
+			if (inner as Control).focus_mode == Control.FOCUS_ALL:
+				return inner as Control
 	return null
 
 

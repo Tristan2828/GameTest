@@ -5,6 +5,10 @@ extends CanvasLayer
 ## The host owns the lobby state and broadcasts it whenever it changes. Clients
 ## send their choice and ready flag. Spawned by Main's LevelSpawner like the
 ## arena, so friends who join now land here automatically.
+##
+## The host also sets the run's Difficulty and Custom Game options (RunConfig,
+## kept in RunSetup.config); clients get them with the lobby state and can look
+## at both pages read-only.
 
 signal start_requested
 
@@ -26,6 +30,12 @@ var _autopilot_readied: bool = false
 @onready var _ready_button: Button = %ReadyButton
 @onready var _start_button: Button = %StartButton
 @onready var _status_label: Label = %StatusLabel
+@onready var _config_label: Label = %ConfigLabel
+@onready var _difficulty_button: Button = %DifficultyButton
+@onready var _custom_button: Button = %CustomButton
+@onready var _center: Control = $Center
+var _difficulty: DifficultyScreen = null
+var _custom_game: CustomGameScreen = null
 
 
 func _ready() -> void:
@@ -34,7 +44,6 @@ func _ready() -> void:
 		(_cards[i].get_node("Lines/Name") as Label).text = stats.display_name
 		(_cards[i].get_node("Lines/Blurb") as Label).text = stats.blurb
 		(_cards[i].get_node("Lines/Ability") as Label).text = "%s: %s" % [stats.ability_name, stats.ability_description]
-		(_cards[i].get_node("Lines/Hearts") as Label).text = "%d hearts" % stats.max_hearts
 		(_cards[i].get_node("Portrait") as CharacterPortrait).character_id = i
 		_cards[i].pressed.connect(_choose_locally.bind(i))
 	_ready_button.toggled.connect(_set_ready_locally)
@@ -42,6 +51,14 @@ func _ready() -> void:
 	var is_host := multiplayer.is_server()
 	_start_button.visible = is_host
 	_ready_button.visible = not is_host
+	if is_host:
+		# Automated runs (autopilot) always use the defaults, not your saved choices.
+		RunSetup.config = RunConfig.new() if LaunchOptions.autopilot else RunConfig.load_saved()
+		if not LaunchOptions.run_config.is_empty():
+			var merged := RunSetup.config.to_dict()
+			merged.merge(LaunchOptions.run_config, true)
+			RunSetup.config = RunConfig.from_dict(merged)
+	_setup_config_screens(is_host)
 	if is_host:
 		_state.add(1, RunSetup.character_for(1))
 		for peer_id: int in RunSetup.order:
@@ -57,7 +74,36 @@ func _ready() -> void:
 	_refresh()
 	if not LaunchOptions.screenshot_dir.is_empty():
 		await get_tree().create_timer(0.3).timeout
-		Main.save_screenshot(get_tree(), "lobby.png")
+		await Main.save_screenshot(get_tree(), "lobby.png")
+		for page: Array in [[_difficulty_button, _difficulty, "lobby_difficulty.png"], [_custom_button, _custom_game, "lobby_custom.png"]]:
+			(page[0] as Button).pressed.emit()
+			await get_tree().create_timer(0.2).timeout
+			await Main.save_screenshot(get_tree(), page[2])
+			(page[1] as RunConfigScreen).close()
+
+
+func _setup_config_screens(is_host: bool) -> void:
+	_difficulty = DifficultyScreen.new()
+	_custom_game = CustomGameScreen.new()
+	for page: Array in [[_difficulty, _difficulty_button], [_custom_game, _custom_button]]:
+		var screen: RunConfigScreen = page[0]
+		var button: Button = page[1]
+		screen.editable = is_host
+		add_child(screen)
+		screen.config_changed.connect(_on_config_changed)
+		button.pressed.connect(func() -> void:
+			screen.config = RunSetup.config
+			_center.hide()
+			screen.open())
+		screen.closed.connect(func() -> void:
+			_center.show()
+			button.grab_focus())
+
+
+## Host: a difficulty or custom game value changed.
+func _on_config_changed() -> void:
+	RunSetup.config.save()
+	_broadcast()
 
 
 func _process(delta: float) -> void:
@@ -106,6 +152,10 @@ func _refresh() -> void:
 		var you := "  (you)" if peer_id == me else ""
 		lines.append("%s: %s, %s%s" % [_name_for(peer_id), Characters.get_character(_state.characters[peer_id]).display_name, role, you])
 	_players_label.text = "\n".join(lines)
+	_config_label.text = RunSetup.config.summary()
+	for i: int in _cards.size():
+		var hearts := maxi(Characters.get_character(i).max_hearts + RunSetup.config.hearts_bonus, 1)
+		(_cards[i].get_node("Lines/Hearts") as Label).text = "%d hearts" % hearts
 	if multiplayer.is_server():
 		var waiting := _state.not_ready(1)
 		_start_button.disabled = not waiting.is_empty()
@@ -177,8 +227,9 @@ func _broadcast() -> void:
 	for peer_id: int in _state.order:
 		characters.append(_state.characters[peer_id])
 		readies.append(1 if _state.ready.get(peer_id, false) else 0)
+	var config := RunSetup.config.to_dict()
 	for peer_id: int in _ready_peers:
-		_receive_state.rpc_id(peer_id, ids, characters, readies)
+		_receive_state.rpc_id(peer_id, ids, characters, readies, config)
 
 
 # --- Network messages ------------------------------------------------------------
@@ -204,7 +255,11 @@ func _request_ready(is_ready: bool) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_state(ids: PackedInt32Array, characters: PackedInt32Array, readies: PackedByteArray) -> void:
+func _receive_state(ids: PackedInt32Array, characters: PackedInt32Array, readies: PackedByteArray,
+		config: Dictionary) -> void:
+	RunSetup.config = RunConfig.from_dict(config)
+	for screen: RunConfigScreen in [_difficulty, _custom_game]:
+		screen.show_config(RunSetup.config)
 	var fresh := LobbyState.new()
 	for i: int in ids.size():
 		fresh.add(ids[i], characters[i])

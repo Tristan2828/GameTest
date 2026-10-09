@@ -260,10 +260,31 @@ theme_override_colors/font_color = Color(0.9, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
 
+[node name="ConfigLabel" type="Label" parent="Center/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+
 [node name="Buttons" type="HBoxContainer" parent="Center/Box"]
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 12
+
+[node name="DifficultyButton" type="Button" parent="Center/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "Difficulty"
+
+[node name="CustomButton" type="Button" parent="Center/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "Custom Game"
 
 [node name="ReadyButton" type="Button" parent="Center/Box/Buttons"]
 unique_name_in_owner = true
