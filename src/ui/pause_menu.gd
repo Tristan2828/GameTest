@@ -8,6 +8,9 @@ signal leave_requested
 @onready var _resume_button: Button = %ResumeButton
 @onready var _leave_button: Button = %LeaveButton
 @onready var _hint_label: Label = %PauseHint
+@onready var _settings_button: Button = %SettingsButton
+@onready var _box: Control = $Center/Box
+@onready var _settings: SettingsPanel = %Settings
 
 
 func _ready() -> void:
@@ -15,6 +18,12 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	hide()
 	_resume_button.pressed.connect(close)
+	_settings_button.pressed.connect(func() -> void:
+		_box.hide()
+		_settings.open())
+	_settings.closed.connect(func() -> void:
+		_box.show()
+		_settings_button.grab_focus())
 	_leave_button.pressed.connect(func() -> void:
 		close()
 		leave_requested.emit())
@@ -22,6 +31,8 @@ func _ready() -> void:
 
 func open() -> void:
 	show()
+	_box.show()
+	_settings.hide()
 	LocalInput.blocked = true
 	if Net.is_online():
 		_hint_label.text = "The game keeps going for everyone else while this is open."
@@ -38,6 +49,6 @@ func close() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if visible and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
+	if visible and not _settings.visible and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		close()
 		get_viewport().set_input_as_handled()

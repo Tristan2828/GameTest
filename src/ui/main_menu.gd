@@ -13,6 +13,9 @@ signal join_requested(address: String, port: int)
 @onready var _port_edit: LineEdit = %PortEdit
 @onready var _status_label: Label = %StatusLabel
 @onready var _version_label: Label = %VersionLabel
+@onready var _settings_button: Button = %SettingsButton
+@onready var _settings: SettingsPanel = %Settings
+@onready var _panel: Control = $Center/Panel
 
 
 func _ready() -> void:
@@ -21,11 +24,19 @@ func _ready() -> void:
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)
+	_settings_button.pressed.connect(func() -> void:
+		_panel.hide()
+		_settings.open())
+	_settings.closed.connect(func() -> void:
+		_panel.show()
+		_settings_button.grab_focus())
 	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
 
 
 func show_menu(message: String = "") -> void:
 	show()
+	_panel.show()
+	_settings.hide()
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()

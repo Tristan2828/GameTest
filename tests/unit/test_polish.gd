@@ -75,3 +75,16 @@ func test_sfx_bus_exists_for_the_volume_setting() -> void:
 func test_unknown_sound_is_ignored() -> void:
 	Sfx.play(&"no_such_sound")
 	assert_true(true, "no crash")
+
+
+func test_settings_panel_changes_apply_immediately() -> void:
+	var panel: SettingsPanel = preload("res://src/ui/settings_panel.tscn").instantiate()
+	add_child_autofree(panel)
+	var before := Settings.sfx_volume
+	panel.open()
+	(panel.get_node("%SfxSlider") as HSlider).value = 0.25
+	assert_eq(Settings.sfx_volume, 0.25)
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(&"SFX")), linear_to_db(0.25), 0.01)
+	Settings.sfx_volume = before
+	Settings.apply()
+	Settings.save()
