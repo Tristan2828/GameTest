@@ -8,3 +8,4 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter with dark 
 - `DESIGN.md`: game design, the source of truth
 - `CLAUDE.md`: engine rules, project layout, and how to test, build and release
 - `docs/PLAYTEST.md`: the human playtest checklist
+- `docs/RELEASING.md`: publishing builds (GitHub Releases + Discord announcements)
