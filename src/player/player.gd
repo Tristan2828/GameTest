@@ -81,6 +81,7 @@ var _predictor: ClientPredictor = ClientPredictor.new()
 var _visual_offset: Vector2 = Vector2.ZERO
 var _remote_target: Vector2 = Vector2.ZERO
 var _last_seen_hearts: int = -1
+var _was_dashing: bool = false
 var _shake: float = 0.0
 var _remote_dashing: bool = false
 
@@ -262,6 +263,10 @@ func _process(delta: float) -> void:
 	if _last_seen_hearts >= 0 and health.hearts < _last_seen_hearts:
 		hurt.emit(self)
 		add_shake(5.0)
+	var dashing := is_dashing()
+	if dashing and not _was_dashing and is_local():
+		Sfx.play(&"dash", -6.0)
+	_was_dashing = dashing
 	_last_seen_hearts = health.hearts
 	if _shake > 0.0:
 		_shake = maxf(_shake - delta * 20.0, 0.0)

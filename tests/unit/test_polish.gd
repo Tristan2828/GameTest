@@ -60,3 +60,18 @@ func test_settings_round_trip() -> void:
 	assert_eq(Settings.screen_shake, not before_shake)
 	Settings.screen_shake = before_shake
 	Settings.save()
+
+
+func test_every_sound_is_synthesized() -> void:
+	for sound: StringName in [&"shoot", &"hit", &"death", &"hurt", &"gem", &"coin", &"level_up", &"pickup",
+			&"bomb", &"boss", &"dash", &"enemy_shot", &"victory", &"defeat"]:
+		assert_true(Sfx.has_sound(sound), str(sound))
+
+
+func test_sfx_bus_exists_for_the_volume_setting() -> void:
+	assert_gt(AudioServer.get_bus_index(&"SFX"), 0)
+
+
+func test_unknown_sound_is_ignored() -> void:
+	Sfx.play(&"no_such_sound")
+	assert_true(true, "no crash")

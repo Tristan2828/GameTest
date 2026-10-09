@@ -26,6 +26,7 @@ func open(level: int, offered: Array[int]) -> void:
 			var upgrade := Upgrades.get_upgrade(offered[i])
 			button.text = "%s\n\n%s" % [upgrade.title, upgrade.description]
 	show()
+	Sfx.play(&"level_up", -4.0)
 	if not offered.is_empty():
 		(buttons[0] as Button).grab_focus()
 	if not _screenshot_taken and not LaunchOptions.screenshot_dir.is_empty():

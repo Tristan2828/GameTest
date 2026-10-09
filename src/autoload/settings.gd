@@ -37,6 +37,13 @@ func save() -> void:
 
 func apply() -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(master_volume))
+	var sfx_bus := AudioServer.get_bus_index(&"SFX")
+	if sfx_bus < 0:
+		AudioServer.add_bus()
+		sfx_bus = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(sfx_bus, &"SFX")
+		AudioServer.set_bus_send(sfx_bus, &"Master")
+	AudioServer.set_bus_volume_db(sfx_bus, linear_to_db(sfx_volume))
 	if DisplayServer.get_name() == "headless":
 		return
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED

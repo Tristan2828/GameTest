@@ -125,7 +125,15 @@ func _ready() -> void:
 	_weapons.bounds = BOUNDS
 	_enemies.enemy_vanished.connect(_on_enemy_vanished)
 	_projectiles.hit_at.connect(func(at: Vector2) -> void:
-		_effects.burst(at, SPARK_COLOR, 3, 60.0, 0.15, 1.0))
+		_effects.burst(at, SPARK_COLOR, 3, 60.0, 0.15, 1.0)
+		if _near_local_player(at):
+			Sfx.play(&"hit", -10.0))
+	_gems.picked_up_at.connect(func(at: Vector2) -> void:
+		if _near_local_player(at, 60.0):
+			Sfx.play(&"gem", -8.0, 1.0 + randf() * 0.3))
+	_coins.picked_up_at.connect(func(at: Vector2) -> void:
+		if _near_local_player(at, 60.0):
+			Sfx.play(&"coin", -6.0))
 	_weapons.weapon_gained.connect(_on_weapon_gained)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	if LaunchOptions.stage_seconds > 0.0:
@@ -202,11 +210,26 @@ func _physics_process(delta: float) -> void:
 		_send_snapshots()
 
 
+var _jingle_phase: Phase = Phase.PLAYING
+
+
+func _play_phase_jingle() -> void:
+	if _phase == _jingle_phase:
+		return
+	_jingle_phase = _phase
+	match _phase:
+		Phase.VICTORY, Phase.STAGE_CLEAR:
+			Sfx.play(&"victory", -2.0)
+		Phase.RUN_OVER:
+			Sfx.play(&"defeat", -2.0)
+
+
 func _process(delta: float) -> void:
 	for player: Player in _player_nodes():
 		player.weapon_clock = _elapsed
 	_copied_feedback_left = maxf(_copied_feedback_left - delta, 0.0)
 	_boss_banner_left = maxf(_boss_banner_left - delta, 0.0)
+	_play_phase_jingle()
 	_update_hud()
 
 
@@ -516,6 +539,8 @@ func _on_weapon_gained(peer_id: int, weapon_id: int) -> void:
 	var player := _player_by_id(peer_id)
 	if player != null:
 		player.gain_weapon(weapon_id)
+		if player.is_local():
+			Sfx.play(&"pickup")
 
 
 ## Host: a Seeking Bolts volley. Clients get a small event and spawn the same bolts.
@@ -595,6 +620,8 @@ func _on_player_shot_requested(shooter: Player, input_seq: int) -> void:
 	var aim := shooter.state.aim
 	var seed_value := ShotPatterns.make_seed(shooter.peer_id, input_seq)
 	_spawn_shot(shooter.peer_id, pattern, origin, aim, seed_value)
+	if shooter.is_local():
+		Sfx.play(&"shoot", -14.0)
 	if multiplayer.is_server():
 		for peer_id: int in _ready_peers:
 			# The shooter already predicted this shot itself.
@@ -627,8 +654,18 @@ func _on_player_bomb_requested(bomber: Player) -> void:
 		_receive_bomb.rpc_id(peer_id, at)
 
 
+## True if `at` is close enough to this machine's player to be worth hearing.
+func _near_local_player(at: Vector2, distance: float = 340.0) -> bool:
+	var local := _local_player()
+	return local != null and local.world_position().distance_to(at) <= distance
+
+
 func _on_enemy_vanished(at: Vector2, color: Color, radius: float) -> void:
 	var is_boss := radius >= 18.0
+	if is_boss:
+		Sfx.play(&"bomb", 2.0, 0.6)
+	elif _phase == Phase.PLAYING and _near_local_player(at):
+		Sfx.play(&"death", -9.0)
 	_effects.burst(at, color, 24 if is_boss else 6, 120.0 if is_boss else 50.0, 0.9 if is_boss else 0.35,
 		3.0 if is_boss else 1.5)
 	if is_boss:
@@ -639,6 +676,7 @@ func _on_player_hurt(victim: Player) -> void:
 	_effects.burst(victim.position, HURT_COLOR, 10, 70.0, 0.4)
 	if victim.is_local():
 		_hud.flash_hurt()
+		Sfx.play(&"hurt", -3.0)
 
 
 func _shake_local(strength: float) -> void:
@@ -650,6 +688,7 @@ func _shake_local(strength: float) -> void:
 ## Everyone: clear enemy bullets and show the blast.
 func _detonate_bomb(at: Vector2) -> void:
 	_shake_local(6.0)
+	Sfx.play(&"bomb")
 	_enemy_bullets.clear_near(at, BOMB_CLEAR_RADIUS)
 	var blast := BombBlast.new()
 	blast.radius = BOMB_CLEAR_RADIUS
@@ -670,6 +709,8 @@ func _fire_enemy_pattern(pattern: int, origin: Vector2, aim: float) -> void:
 
 ## `age` > 0 starts the pattern partway through (clients catching up on lag).
 func _spawn_enemy_pattern(pattern: int, origin: Vector2, aim: float, seed_value: int, age: float) -> void:
+	if _near_local_player(origin, 360.0):
+		Sfx.play(&"enemy_shot", -12.0)
 	var bullets := ShotPatterns.build(pattern as ShotPatterns.Id, aim, seed_value)
 	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
 		var offset := Vector2(bullets[i + 3], bullets[i + 4])
@@ -704,6 +745,7 @@ func _update_hud() -> void:
 		_boss_seen = false
 	if boss != null and not _boss_seen:
 		_boss_seen = true
+		Sfx.play(&"boss")
 		_boss_banner_left = BOSS_BANNER_SECONDS
 	if _is_between_stages():
 		_hud.set_timer_text("")

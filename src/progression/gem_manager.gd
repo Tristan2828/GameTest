@@ -9,6 +9,8 @@ extends Node2D
 ## the pull looks right on every screen. Only the host's pickups count.
 
 signal collected(value: int, collector_peer_id: int)
+## Every peer: a pickup was collected here (for sounds).
+signal picked_up_at(at: Vector2)
 
 const CAPACITY: int = 400
 const COLLECT_RADIUS: float = 6.0
@@ -111,6 +113,7 @@ func tick(delta: float, player_positions: Dictionary[int, Vector2], pickup_radii
 		_positions[id] = _positions[id].move_toward(destination, _speeds[id] * delta)
 		if is_host and _positions[id].distance_to(destination) <= COLLECT_RADIUS:
 			var value := _values[id]
+			picked_up_at.emit(_positions[id])
 			_release(id)
 			_collected_ids.append(id)
 			collected.emit(value, target_id)
@@ -220,4 +223,6 @@ func _receive_spawns(ids: PackedInt32Array, positions: PackedVector2Array, value
 func _receive_collected(_count_hint: int, ids: PackedInt32Array) -> void:
 	for id: int in ids:
 		if id >= 0 and id < CAPACITY:
+			if _active[id] != 0:
+				picked_up_at.emit(_positions[id])
 			_release(id)

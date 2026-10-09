@@ -35,7 +35,7 @@ Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter, dark fant
 
 ## Project layout
 Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
-- `src/autoload/`: global singletons. `Settings` (volume, fullscreen, screen shake; saved to user://settings.cfg), `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
+- `src/autoload/`: global singletons. `Sfx` (sound effects synthesized in code at startup; `Sfx.play(&"name")`; rate-limited; plays on the "SFX" bus), `Settings` (volume, fullscreen, screen shake; saved to user://settings.cfg), `Net` (ENet/offline session, invite parsing) and `GameInput` (all input bindings, registered in code). Also `HostInvite`, owned by `Net`: UPnP port opening, public-IP lookup, invite text.
 - `src/main/`: root scene `main.tscn` (menu plus `Level` slot plus `LevelSpawner`) and `LaunchOptions`.
 - `src/lobby/`: `Lobby` scene (character select + ready-up, host-owned state broadcast on change; spawned by `LevelSpawner` like the arena) with pure `LobbyState` rules and `CharacterPortrait`. `RunSetup` (in `src/main/`) carries choices and join order into the arena.
 - `src/ui/`: main menu, `Hud` scene (hearts, timer, banners), and HUD widgets.
