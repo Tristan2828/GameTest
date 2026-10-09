@@ -7,13 +7,20 @@ extends Node2D
 ## A bullet's position is origin + velocity * age, so any peer that spawns the
 ## same bullet gets the same path.
 ##
-## Only the host's bullets deal damage. Clients' bullets are visual: they vanish
-## when they touch an enemy, but the host decides the actual hits.
+## A bullet with negative age hasn't appeared yet (patterns like spirals spawn
+## all their bullets at once with staggered delays).
+##
+## Two instances exist: player bullets (hit enemies) and enemy bullets (hit
+## players). Only the host's bullets deal damage. Clients' bullets are visual:
+## they vanish on contact, but the host decides the actual hits.
 
 const CAPACITY: int = 4096
-const HIT_RADIUS: float = 2.0
-const GLOW_COLOR: Color = Color(1.0, 0.75, 0.3, 0.45)
-const CORE_COLOR: Color = Color(1.0, 0.97, 0.8)
+
+@export var hit_radius: float = 2.0
+@export var glow_radius: float = 3.0
+@export var core_radius: float = 1.5
+@export var glow_color: Color = Color(1.0, 0.75, 0.3, 0.45)
+@export var core_color: Color = Color(1.0, 0.97, 0.8)
 
 ## Bullets outside this rectangle are removed.
 var bounds: Rect2 = Rect2(-10000, -10000, 20000, 20000)
@@ -43,12 +50,14 @@ func _init() -> void:
 
 
 ## Returns false if the pool is full.
-func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, owner_peer_id: int, pierce: int = 0) -> bool:
+## `start_age` < 0 delays the bullet; > 0 starts it partway along its path.
+func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, owner_peer_id: int,
+		pierce: int = 0, start_age: float = 0.0) -> bool:
 	if _count >= CAPACITY:
 		return false
 	_origins[_count] = origin
 	_velocities[_count] = velocity
-	_ages[_count] = 0.0
+	_ages[_count] = start_age
 	_lifetimes[_count] = lifetime
 	_damages[_count] = damage
 	_owners[_count] = owner_peer_id
@@ -76,7 +85,9 @@ func step(delta: float) -> void:
 	var i := 0
 	while i < _count:
 		_ages[i] += delta
-		if _ages[i] >= _lifetimes[i] or not bounds.has_point(position_of(i)):
+		if _ages[i] < 0.0:
+			i += 1
+		elif _ages[i] >= _lifetimes[i] or not bounds.has_point(position_of(i)):
 			_remove(i)
 		else:
 			i += 1
@@ -88,7 +99,10 @@ func step(delta: float) -> void:
 func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 	var i := 0
 	while i < _count:
-		var enemy := enemies.find_hit(position_of(i), HIT_RADIUS)
+		if _ages[i] < 0.0:
+			i += 1
+			continue
+		var enemy := enemies.find_hit(position_of(i), hit_radius)
 		if enemy == null or enemy.pool_index == _last_hit[i]:
 			i += 1
 			continue
@@ -102,11 +116,51 @@ func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 			_remove(i)
 
 
+## Enemy bullets vs players. Bullets pass through players who can't be hit right
+## now (dashing, invulnerable, downed). Host: hits cost hearts. Clients: the
+## bullet just vanishes; hearts arrive in the next snapshot.
+func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
+	var i := 0
+	while i < _count:
+		if _ages[i] < 0.0:
+			i += 1
+			continue
+		var point := position_of(i)
+		var hit_player: Player = null
+		for player: Player in players:
+			var reach := player.stats.hitbox_radius + hit_radius
+			if player.world_position().distance_squared_to(point) <= reach * reach and player.can_be_hit():
+				hit_player = player
+				break
+		if hit_player == null:
+			i += 1
+			continue
+		if is_host:
+			hit_player.health.take_hit(_damages[i], hit_player.stats.hit_invulnerability)
+		_remove(i)
+
+
+## Removes every bullet within `radius` of `center` (bombs). Returns how many.
+func clear_near(center: Vector2, radius: float) -> int:
+	var removed := 0
+	var i := 0
+	while i < _count:
+		if position_of(i).distance_squared_to(center) <= radius * radius:
+			_remove(i)
+			removed += 1
+		else:
+			i += 1
+	queue_redraw()
+	return removed
+
+
 func _draw() -> void:
 	for i: int in _count:
+		if _ages[i] < 0.0:
+			continue
 		var point := position_of(i)
-		draw_circle(point, 3.0, GLOW_COLOR)
-		draw_circle(point, 1.5, CORE_COLOR)
+		draw_circle(point, glow_radius, glow_color)
+		draw_circle(point, core_radius, core_color)
 
 
 ## Order doesn't matter, so fill the gap with the last bullet.

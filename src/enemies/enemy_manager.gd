@@ -6,6 +6,8 @@ extends Node2D
 ## All peers: keep a SpatialGrid of enemy positions for fast hit checks.
 
 signal enemy_killed(enemy: Enemy, killer_peer_id: int)
+## Host: a ranged enemy fired. The arena turns this into bullets + a network event.
+signal pattern_fired(pattern: int, origin: Vector2, aim: float)
 
 const ENEMY_SCENE: PackedScene = preload("res://src/enemies/enemy.tscn")
 const POOL_SIZE: int = 300
@@ -65,11 +67,8 @@ func tick_host(delta: float, targets: Array[Vector2]) -> void:
 		var velocity := Vector2.ZERO
 		if not targets.is_empty():
 			var to_target := _nearest(targets, enemy.position) - enemy.position
-			var direction := to_target.normalized()
-			if enemy.type.wobble > 0.0:
-				enemy.wobble_phase += delta * 5.0
-				direction = direction.rotated(sin(enemy.wobble_phase) * enemy.type.wobble)
-			velocity = direction * enemy.type.move_speed
+			velocity = _desired_velocity(enemy, to_target, delta)
+			_try_fire(enemy, to_target, delta)
 		velocity += _separation(enemy) * SEPARATION_STRENGTH
 		var inner := bounds.grow(-enemy.type.radius)
 		enemy.position = (enemy.position + velocity * delta).clamp(inner.position, inner.end)
@@ -164,6 +163,32 @@ func _receive_snapshot(count: int, data: PackedByteArray) -> void:
 	for index: int in POOL_SIZE:
 		if not seen[index] and _pool[index].active:
 			_pool[index].deactivate()
+
+
+func _desired_velocity(enemy: Enemy, to_target: Vector2, delta: float) -> Vector2:
+	var direction := to_target.normalized()
+	var preferred := enemy.type.preferred_distance
+	if preferred > 0.0:
+		var distance := to_target.length()
+		if distance < preferred - 20.0:
+			direction = -direction
+		elif distance <= preferred + 30.0:
+			# In the comfort zone: circle around the target instead.
+			direction = direction.orthogonal() * (1.0 if enemy.pool_index % 2 == 0 else -1.0)
+	if enemy.type.wobble > 0.0:
+		enemy.wobble_phase += delta * 5.0
+		direction = direction.rotated(sin(enemy.wobble_phase) * enemy.type.wobble)
+	return direction * enemy.type.move_speed
+
+
+func _try_fire(enemy: Enemy, to_target: Vector2, delta: float) -> void:
+	if enemy.type.shot_pattern < 0:
+		return
+	enemy.fire_cooldown -= delta
+	if enemy.fire_cooldown > 0.0 or to_target.length() > enemy.type.fire_range:
+		return
+	enemy.fire_cooldown = enemy.type.fire_interval
+	pattern_fired.emit(enemy.type.shot_pattern, enemy.position, to_target.angle())
 
 
 func _release(enemy: Enemy) -> void:

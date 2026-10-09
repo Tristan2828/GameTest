@@ -19,6 +19,7 @@ const PACK_INTERVAL_MIN: float = 35.0
 const PACK_INTERVAL_MAX: float = 50.0
 const BAT_UNLOCK_TIME: float = 45.0
 const GHOUL_UNLOCK_TIME: float = 90.0
+const CULTIST_UNLOCK_TIME: float = 120.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -60,9 +61,12 @@ func pick_type(elapsed: float) -> int:
 	var shambler_weight := 10.0
 	var bat_weight := 0.0 if elapsed < BAT_UNLOCK_TIME else 4.0
 	var ghoul_weight := 0.0 if elapsed < GHOUL_UNLOCK_TIME else 1.5 + (elapsed - GHOUL_UNLOCK_TIME) / 60.0
-	var roll := rng.randf() * (shambler_weight + bat_weight + ghoul_weight)
+	var cultist_weight := 0.0 if elapsed < CULTIST_UNLOCK_TIME else 2.5
+	var roll := rng.randf() * (shambler_weight + bat_weight + ghoul_weight + cultist_weight)
 	if roll < shambler_weight:
 		return EnemyTypes.Id.SHAMBLER
 	if roll < shambler_weight + bat_weight:
 		return EnemyTypes.Id.BAT
-	return EnemyTypes.Id.GHOUL
+	if roll < shambler_weight + bat_weight + ghoul_weight:
+		return EnemyTypes.Id.GHOUL
+	return EnemyTypes.Id.CULTIST

@@ -119,9 +119,24 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - XP gems with magnet pull, shared team level, networked level-up pause with 9 stat upgrades.
 - 5-minute timed stage, "Stage clear" / "Run over", host restart (R / Start).
 
+### Milestone 3: First stage + first boss (in progress)
+Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
+- **Stage flow:** 4:00 of horde waves, then the boss arrives. The horde keeps trickling at 40% rate during the fight, with no pack surges. **Stage clear = boss defeated** (no longer a timer).
+- **First boss, "The Bone Warden":** a slow, huge undead that drifts toward the players and cycles attacks:
+  - ring bursts (bullets in every direction)
+  - a spiral
+  - aimed fans at each player
+  - Below 50% HP: phase 2, faster with a double spiral.
+  - Boss HP scales with player count (+75% per extra player). Regular enemies still don't scale (see Co-op rules).
+- **First ranged enemy, Cultist** (from 2:00): keeps its distance and fires a slow 3-bullet aimed fan.
+- **Enemy bullets:** 1 heart per hit; readable speeds (90–140 px/s); magenta glow with a white core. Dashing passes through them.
+- **Bomb:** 2 per stage, refilled at stage start. It clears enemy bullets within a large radius around you, damages nearby enemies, and gives brief invulnerability. Bound to Q / middle mouse / RB / Y.
+- **Fair dodging online:** enemy bullet patterns are fast-forwarded on clients by the network delay, so what you dodge on your screen matches what the host checks.
+- **Arena look:** dark stone floor with seeded variation, plus decorative graves and bones (no collision yet).
+
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.
-- M3: First arena stage + first boss with bullet patterns.
+- M3 (above): First arena stage + first boss with bullet patterns.
 - M4: Shop, relics, weapon pickups, ghost/respawn.
 - M5: Multiple characters, multiple stages, full 15–20 min run.
 
@@ -134,7 +149,6 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - Number of stages per run and their themes.
 - Shop economy: how coins are earned, what's sold.
 - Ghost mechanics: can ghosts do anything (e.g., distract, collect)?
-- Bomb count and how bombs are replenished.
 
 ## 9. Ideas for Later
 

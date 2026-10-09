@@ -10,6 +10,7 @@ extends RefCounted
 ##   --run-for=<seconds>             print a report and quit (for headless smoke tests)
 ##   --local-only                    host without touching the router or looking up the public IP
 ##   --stage-seconds=<n>             shorter/longer stage (default 300) for testing
+##   --start-at=<seconds>            host starts the stage clock here (test late-stage content)
 ##   --screenshot-dir=<folder>       save PNGs: gameplay every 10s, and the first level-up screen
 ##                                   (needs a real window, not --headless)
 
@@ -25,6 +26,7 @@ static var run_for_seconds: float = 0.0
 static var local_only: bool = false
 static var stage_seconds: float = 0.0
 static var screenshot_dir: String = ""
+static var start_at_seconds: float = 0.0
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -44,6 +46,8 @@ static func parse(args: PackedStringArray) -> void:
 			run_for_seconds = arg.trim_prefix("--run-for=").to_float()
 		elif arg == "--local-only":
 			local_only = true
+		elif arg.begins_with("--start-at="):
+			start_at_seconds = arg.trim_prefix("--start-at=").to_float()
 		elif arg.begins_with("--screenshot-dir="):
 			screenshot_dir = arg.trim_prefix("--screenshot-dir=")
 		elif arg.begins_with("--stage-seconds="):

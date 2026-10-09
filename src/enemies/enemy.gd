@@ -18,6 +18,8 @@ var hp: int = 1
 ## Clients only know HP as a fraction (0..1), for HP bars.
 var hp_ratio: float = 1.0
 var wobble_phase: float = 0.0
+## Host: seconds until this enemy may fire again (ranged enemies).
+var fire_cooldown: float = 0.0
 ## Host: set when hit, cleared after each snapshot so clients can flash too.
 var hit_since_snapshot: bool = false
 ## Clients: latest position from the host, approached smoothly.
@@ -41,6 +43,8 @@ func activate(enemy_type_id: int, at: Vector2) -> void:
 	position = at
 	target_position = at
 	wobble_phase = randf() * TAU
+	# Stagger first volleys so a group doesn't fire in perfect sync.
+	fire_cooldown = type.fire_interval * randf_range(0.5, 1.0)
 	hit_since_snapshot = false
 	_flash_left = 0.0
 	queue_redraw()

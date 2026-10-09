@@ -112,9 +112,10 @@ func is_downed() -> bool:
 	return health.is_downed()
 
 
-## Host: checked when an enemy touches this player. Dashing dodges hits.
+## Checked when an enemy or enemy bullet touches this player. Dashing dodges
+## hits. Works on clients too, using the latest known state.
 func can_be_hit() -> bool:
-	return not health.is_downed() and not health.is_invulnerable() and not state.is_dashing()
+	return not health.is_downed() and not health.is_invulnerable() and not is_dashing()
 
 
 ## Best known position of this player on this peer: simulated on the host and

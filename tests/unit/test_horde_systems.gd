@@ -55,7 +55,7 @@ func test_only_shamblers_early_then_mix() -> void:
 	var seen: Dictionary[int, bool] = {}
 	for i: int in 500:
 		seen[director.pick_type(200.0)] = true
-	assert_eq(seen.size(), 3, "all three types appear later in the stage")
+	assert_eq(seen.size(), 4, "every type appears later in the stage")
 
 
 func test_pack_comes_once_per_interval() -> void:

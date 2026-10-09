@@ -19,6 +19,11 @@ const PLAYER_SNAPSHOT_INTERVAL_TICKS: int = 2
 ## Enemies are smoothed on clients anyway, so 15 per second is plenty.
 const ENEMY_SNAPSHOT_INTERVAL_TICKS: int = 4
 const SPAWN_OFFSETS: Array[Vector2] = [Vector2(-24, -24), Vector2(24, -24), Vector2(-24, 24), Vector2(24, 24)]
+## Enemy bullets: hearts per hit and how long they fly.
+const ENEMY_BULLET_DAMAGE: int = 1
+const ENEMY_BULLET_LIFETIME: float = 7.0
+## Clients fast-forward enemy patterns by at most this much (very laggy = less fair, not broken).
+const MAX_PATTERN_FAST_FORWARD: float = 0.4
 ## Enemies appear just off-screen: the screen is 640x360, so ~367 px to a corner.
 const SPAWN_DISTANCE_MIN: float = 380.0
 const SPAWN_DISTANCE_MAX: float = 440.0
@@ -48,12 +53,19 @@ var _team: TeamProgress = TeamProgress.new()
 var _copied_feedback_left: float = 0.0
 var _announced_invite: bool = false
 var _time_since_stage_end: float = 0.0
+# Host: enemy pattern events fired this tick, sent once per tick.
+var _pattern_ids: PackedInt32Array = PackedInt32Array()
+var _pattern_origins: PackedVector2Array = PackedVector2Array()
+var _pattern_aims: PackedFloat32Array = PackedFloat32Array()
+var _pattern_seeds: PackedInt32Array = PackedInt32Array()
+var _pattern_times: PackedFloat32Array = PackedFloat32Array()
 
 @onready var _players: Node2D = $Players
 @onready var _player_spawner: MultiplayerSpawner = $PlayerSpawner
 @onready var _enemies: EnemyManager = $Enemies
 @onready var _gems: GemManager = $Gems
 @onready var _projectiles: ProjectileManager = $Projectiles
+@onready var _enemy_bullets: ProjectileManager = $EnemyProjectiles
 @onready var _level_up: LevelUpController = $LevelUp
 @onready var _hud: Hud = $Hud
 
@@ -63,6 +75,7 @@ func _ready() -> void:
 	# clients call it automatically with the same data when the spawn replicates.
 	_player_spawner.spawn_function = _spawn_player
 	_projectiles.bounds = BOUNDS
+	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_rng.randomize()
 	_level_up.bind_panel(_hud.level_up_panel)
@@ -70,9 +83,11 @@ func _ready() -> void:
 	if LaunchOptions.stage_seconds > 0.0:
 		_stage_duration = LaunchOptions.stage_seconds
 	if multiplayer.is_server():
+		_elapsed = LaunchOptions.start_at_seconds
 		Net.invite.changed.connect(_on_invite_changed)
 		_on_invite_changed()
 		_enemies.enemy_killed.connect(_on_enemy_killed)
+		_enemies.pattern_fired.connect(_fire_enemy_pattern)
 		_gems.collected.connect(_on_gem_collected)
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
@@ -97,6 +112,8 @@ func _physics_process(delta: float) -> void:
 			_enemies.rebuild_grid()
 		_projectiles.step(delta)
 		_projectiles.resolve_hits(_enemies, is_host)
+		_enemy_bullets.step(delta)
+		_enemy_bullets.resolve_player_hits(_player_nodes(), is_host)
 		_tick_gems(delta, is_host)
 		if is_host:
 			_update_phase()
@@ -156,6 +173,7 @@ func debug_report() -> String:
 		lines.append("[report]   damage by peer: %s" % [_enemies.damage_by_peer])
 		lines.append("[report]   kills by peer: %s" % [_kills_by_peer])
 		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
+	lines.append("[report]   enemy bullets alive: %d" % _enemy_bullets.count())
 	lines.append("[report]   bullets alive: %d   physics time: %.2f ms/tick" % [_projectiles.count(), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
 	return "\n".join(lines)
 
@@ -279,6 +297,7 @@ func _end_stage(phase: Phase) -> void:
 	_level_up.host_reset()
 	_enemies.clear_all()
 	_projectiles.clear()
+	_enemy_bullets.clear()
 	_gems.clear()
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
@@ -351,9 +370,41 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 	if shooter == null:
 		return
 	var stats := shooter.stats
-	for angle: float in ShotPatterns.angles(pattern, aim, seed_value, stats.projectile_count):
-		_projectiles.spawn(origin, Vector2.from_angle(angle) * stats.bullet_speed, stats.bullet_damage,
-			stats.bullet_lifetime, shooter_id, stats.pierce)
+	var bullets := ShotPatterns.build(pattern, aim, seed_value, stats.projectile_count, stats.bullet_speed)
+	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
+		_projectiles.spawn(origin, Vector2.from_angle(bullets[i]) * bullets[i + 1], stats.bullet_damage,
+			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2])
+
+
+## Host: an enemy (or boss) fires a pattern. Spawn it here and tell clients.
+func _fire_enemy_pattern(pattern: int, origin: Vector2, aim: float) -> void:
+	var seed_value := _rng.randi() & 0x7fffffff
+	_spawn_enemy_pattern(pattern, origin, aim, seed_value, 0.0)
+	_pattern_ids.append(pattern)
+	_pattern_origins.append(origin)
+	_pattern_aims.append(aim)
+	_pattern_seeds.append(seed_value)
+	_pattern_times.append(_elapsed)
+
+
+## `age` > 0 starts the pattern partway through (clients catching up on lag).
+func _spawn_enemy_pattern(pattern: int, origin: Vector2, aim: float, seed_value: int, age: float) -> void:
+	var bullets := ShotPatterns.build(pattern as ShotPatterns.Id, aim, seed_value)
+	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
+		_enemy_bullets.spawn(origin, Vector2.from_angle(bullets[i]) * bullets[i + 1], ENEMY_BULLET_DAMAGE,
+			ENEMY_BULLET_LIFETIME, 0, 0, age - bullets[i + 2])
+
+
+func _flush_enemy_patterns(peers: Array[int]) -> void:
+	if _pattern_ids.is_empty():
+		return
+	for peer_id: int in peers:
+		_receive_enemy_patterns.rpc_id(peer_id, _pattern_ids, _pattern_origins, _pattern_aims, _pattern_seeds, _pattern_times)
+	_pattern_ids.clear()
+	_pattern_origins.clear()
+	_pattern_aims.clear()
+	_pattern_seeds.clear()
+	_pattern_times.clear()
 
 
 # --- HUD ---------------------------------------------------------------------
@@ -420,6 +471,7 @@ func _send_snapshots() -> void:
 		return
 	var peers := _ready_peer_list()
 	_gems.flush_events(peers)
+	_flush_enemy_patterns(peers)
 	if _tick % PLAYER_SNAPSHOT_INTERVAL_TICKS == 0:
 		var ids := PackedInt32Array()
 		var positions := PackedVector2Array()
@@ -463,7 +515,7 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 		var player := _player_by_id(ids[i])
 		if player != null:
 			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
-	_elapsed = elapsed
+	_sync_clock(elapsed)
 	_team.level = team_level
 	_team.xp = team_xp
 	_level_up.apply_status(level_up_waiting, level_up_countdown)
@@ -473,7 +525,30 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 		_phase = phase as Phase
 		if _is_stage_over():
 			_projectiles.clear()
+			_enemy_bullets.clear()
 			_gems.clear()
+
+
+## Client: keep our copy of the stage clock close to the host's *current* time.
+## Snapshots are about half a round trip old when they arrive, so add that.
+func _sync_clock(host_elapsed: float) -> void:
+	var estimate := host_elapsed + Net.ping_ms() / 2000.0
+	if absf(estimate - _elapsed) > 0.25:
+		_elapsed = estimate
+	else:
+		_elapsed = lerpf(_elapsed, estimate, 0.1)
+
+
+## Client: enemy patterns fired on the host. They're fast-forwarded to where they
+## will be when our own inputs reach the host (about one round trip after the
+## host fired them), so what we dodge on screen matches what the host checks.
+@rpc("authority", "call_remote", "reliable")
+func _receive_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2Array, aims: PackedFloat32Array,
+		seeds: PackedInt32Array, fire_times: PackedFloat32Array) -> void:
+	var dodge_time := _elapsed + Net.ping_ms() / 2000.0
+	for i: int in patterns.size():
+		var age := clampf(dodge_time - fire_times[i], 0.0, MAX_PATTERN_FAST_FORWARD)
+		_spawn_enemy_pattern(patterns[i], origins[i], aims[i], seeds[i], age)
 
 
 @rpc("authority", "call_remote", "reliable")

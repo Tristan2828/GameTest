@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyType" format=3]
+
+[ext_resource type="Script" path="res://src/enemies/enemy_type.gd" id="1_type"]
+
+[resource]
+script = ExtResource("1_type")
+display_name = "Cultist"
+max_hp = 45
+move_speed = 34.0
+radius = 6.0
+contact_damage = 1
+xp_value = 3
+color = Color(0.85, 0.35, 0.55, 1)
+wobble = 0.0
+show_hp_bar = false
+shot_pattern = 1
+fire_interval = 3.0
+fire_range = 260.0
+preferred_distance = 150.0

@@ -17,3 +17,13 @@ extends Resource
 @export var wobble: float = 0.0
 ## Show an HP bar once damaged (for tanky enemies).
 @export var show_hp_bar: bool = false
+
+@export_group("Ranged")
+## Bullet pattern this enemy fires (ShotPatterns.Id), or -1 for melee only.
+@export var shot_pattern: int = -1
+## Seconds between volleys.
+@export var fire_interval: float = 3.0
+## Only fires at players closer than this.
+@export var fire_range: float = 260.0
+## Tries to stay about this far from its target (0 = walks right up to you).
+@export var preferred_distance: float = 0.0
