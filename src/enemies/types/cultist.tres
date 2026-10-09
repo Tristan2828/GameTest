@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "cultist"
+sprite_frames = 1
+sprite_scale = 1.0
 display_name = "Cultist"
 max_hp = 45
 move_speed = 34.0

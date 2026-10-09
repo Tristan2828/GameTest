@@ -6,7 +6,7 @@
 script = ExtResource("1_stats")
 display_name = "Wanderer"
 blurb = "Balanced all-rounder with a steady bolt gun."
-look = 0
+sprite = "wanderer"
 ability_name = "Second Wind"
 ability_description = "The first lethal hit each stage leaves you at 1 heart."
 second_wind = true

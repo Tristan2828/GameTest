@@ -21,9 +21,11 @@ extends Resource
 ## Show an HP bar once damaged (for tanky enemies).
 @export var show_hp_bar: bool = false
 
-## Extra decoration drawn on the body.
-enum Look { PLAIN, HORNS, WITCH_HAT, MITRE, WINGS, HELMET }
-@export var look: Look = Look.PLAIN
+## PixelArt sprite name. Animated sprites add frames named "<sprite>_1", ...
+@export var sprite: String = ""
+@export var sprite_frames: int = 1
+## Bosses are drawn at 2x.
+@export var sprite_scale: float = 1.0
 
 ## Bosses get the big HUD health bar and end the stage when they die.
 @export var is_boss: bool = false

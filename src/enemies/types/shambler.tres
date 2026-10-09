@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "shambler"
+sprite_frames = 1
+sprite_scale = 1.0
 display_name = "Shambler"
 max_hp = 30
 move_speed = 38.0

@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "plague_spitter"
+sprite_frames = 1
+sprite_scale = 1.0
 display_name = "Plague Spitter"
 max_hp = 50
 move_speed = 30.0
@@ -15,7 +18,6 @@ coin_value = 2
 color = Color(0.7, 0.75, 0.3, 1)
 wobble = 0.0
 show_hp_bar = false
-look = 0
 shot_pattern = 6
 fire_interval = 3.5
 fire_range = 240.0

@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "mire_crawler"
+sprite_frames = 1
+sprite_scale = 1.0
 display_name = "Mire Crawler"
 max_hp = 14
 move_speed = 70.0
@@ -15,4 +18,3 @@ coin_value = 1
 color = Color(0.4, 0.55, 0.3, 1)
 wobble = 0.5
 show_hp_bar = false
-look = 0

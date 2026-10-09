@@ -101,7 +101,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 ## 6. Art & audio
 
 - **Setting:** Dark fantasy (undead hordes, demons, dark magic).
-- **Art style:** Pixel art.
+- **Art style:** Pixel art. Sprites are text grids with a shared palette (`src/art/pixel_art.gd`).
 - Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
 - Audio: synthesized placeholder sound effects (v0.7.0). Music and final sounds TBD.
 
@@ -177,6 +177,11 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
 - Sound: 14 synthesized placeholder effects; no music yet (Audio still TBD, see section 6).
 - End-of-run stats table (kills, damage, times downed).
 - Everything awaiting human review is listed in `docs/PLAYTEST.md`.
+
+### Pixel art pass (v0.8.0, by Claude)
+- All characters, enemies, bosses, pickups and orbit skulls are pixel-art sprites drawn as text grids in `src/art/pixel_art.gd`, using one shared limited palette.
+- Player sprites are tinted with each player's slot color; bosses are drawn at 2x; bats and imps animate.
+- Bullets stay as glowing code-drawn circles and the player's hitbox dot is always visible (readability first).
 
 ### Future milestones (rough)
 - M2 (above): A session is **timed survival** (start: 5 min, then "Stage clear"), or "Run over" if everyone is downed. Both lead to a restart.

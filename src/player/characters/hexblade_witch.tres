@@ -6,7 +6,7 @@
 script = ExtResource("1_stats")
 display_name = "Hexblade Witch"
 blurb = "Fast and fragile. Rapid hexes that pierce through enemies."
-look = 2
+sprite = "hexblade_witch"
 ability_name = "Blink"
 ability_description = "A longer, faster-recharging dash."
 second_wind = false

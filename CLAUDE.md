@@ -42,6 +42,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/main/`: root scene `main.tscn` (menu plus `Level` slot plus `LevelSpawner`) and `LaunchOptions`.
 - `src/lobby/`: `Lobby` scene (character select + ready-up, host-owned state broadcast on change; spawned by `LevelSpawner` like the arena) with pure `LobbyState` rules and `CharacterPortrait`. `RunSetup` (in `src/main/`) carries choices and join order into the arena.
 - `src/ui/`: main menu, `Hud` scene (hearts, timer, banners), and HUD widgets.
+- `src/art/`: `PixelArt`: every sprite as text rows (one character per pixel, colors from one shared `PALETTE`; `P`/`p` are recolored per player), built into cached textures at runtime. Edit sprites there; keep rows equal length and mostly left/right symmetric. `PixelArt.draw()` draws one centered (flip, scale, hit-flash white). Bullets stay code-drawn glowing circles for readability, and the player hitbox dot is always drawn on top.
 - `src/stages/`: `StageDef` resources (one `.tres` per stage: spawn table of `SpawnEntry`, pack type, boss type, boss attack script of `BossStep`s, floor palette and prop style) registered in `Stages.ALL`. New stage content is mostly data here.
 - `src/arena/`: arena scene, `ArenaFloor` (seeded decorative ground, drawn once, palette from the stage), and `SpawnDirector` (spawn pacing; enemy mix from the stage table). The arena owns the fixed tick order (players, then spawning, then enemies, then contact damage, then bullets, then hits, then the phase check), the stage timer and end states, and host snapshots.
 - `src/player/`: `Player` node, pure `PlayerMotor` sim, `ClientPredictor`, `PlayerHealth`, `LocalInput`, `CharacterStats` resource. Characters are `.tres` files in `characters/`, registered in `Characters.ALL` (index = network id, append only); the character id travels in the player spawn data, and each player duplicates its character's stats so upgrades stay per-player. All damage to players goes through `Player.take_hit()` (handles Second Wind).
@@ -57,7 +58,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - Nodes don't run their own `_physics_process` for gameplay; the arena calls `tick()` in a fixed order. `_process` is for visuals only.
 - RPC channels: 0 = reliable events, 1 = host snapshots, 2 = client inputs. Host only sends to peers in `_ready_peers` (arena loaded).
 - `untyped_declaration` is an error in project settings, so type every declaration, including `for` loop variables (`for i: int in n:`).
-- Placeholder art is drawn with `_draw()` for now. It will be replaced by pixel-art sprites later.
+- Sprites come from `PixelArt` (text grids). Effects, bullets, floors and UI bars are still drawn with `_draw()`.
 - RPC gotcha: an **empty** `PackedByteArray` sent as an RPC's only argument arrives as "no arguments" and the call fails. Always send a count or another argument alongside packed data.
 - Never remove or free the arena (or other ticking nodes) in the middle of its own tick; defer it (`CONNECT_DEFERRED` / `call_deferred`).
 - `-s some_script.gd` runs do NOT get autoloads (`Net`, `GameInput`), so game scenes can't run that way. To check visuals, launch the real game with `--screenshot-dir`.

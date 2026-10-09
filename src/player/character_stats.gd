@@ -4,11 +4,10 @@ extends Resource
 ## in `src/player/characters/`, registered in Characters.ALL (index = network id).
 ## Each player duplicates their character's stats, and upgrades/relics change the copy.
 
-enum Look { HOOD, WIDE_HAT, WITCH_HAT }
-
 @export var display_name: String = "Wanderer"
 @export_multiline var blurb: String = ""
-@export var look: Look = Look.HOOD
+## PixelArt sprite name (P/p pixels take the player's color).
+@export var sprite: String = "wanderer"
 
 @export_group("Ability")
 @export var ability_name: String = ""

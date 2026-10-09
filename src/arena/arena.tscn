@@ -22,10 +22,9 @@ script = ExtResource("5_gems")
 
 [node name="Coins" type="Node2D" parent="."]
 script = ExtResource("5_gems")
-small_color = Color(1, 0.8, 0.3, 1)
-big_color = Color(1, 0.92, 0.55, 1)
+sprite_small = "coin"
+sprite_big = "coin_big"
 big_value = 2
-round_shape = true
 group_name = &"coins"
 
 [node name="Weapons" type="Node2D" parent="."]

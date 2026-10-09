@@ -6,7 +6,7 @@
 script = ExtResource("1_stats")
 display_name = "Gravekeeper"
 blurb = "Slow and sturdy. A short-range shotgun that shreds crowds."
-look = 1
+sprite = "gravekeeper"
 ability_name = "Grave Ward"
 ability_description = "Starts each stage with 3 bombs; each bomb also heals 1 heart."
 second_wind = false

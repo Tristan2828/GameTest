@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "bone_warden"
+sprite_frames = 1
+sprite_scale = 2.0
 display_name = "The Bone Warden"
 max_hp = 6000
 move_speed = 22.0
@@ -13,7 +16,6 @@ coin_chance = 0.0
 coin_value = 1
 xp_value = 50
 color = Color(0.82, 0.78, 0.66, 1)
-look = 1
 wobble = 0.0
 show_hp_bar = false
 is_boss = true

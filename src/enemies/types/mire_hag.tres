@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "mire_hag"
+sprite_frames = 1
+sprite_scale = 2.0
 display_name = "The Mire Hag"
 max_hp = 6000
 move_speed = 26.0
@@ -15,7 +18,6 @@ coin_value = 1
 color = Color(0.42, 0.6, 0.38, 1)
 wobble = 0.0
 show_hp_bar = false
-look = 2
 is_boss = true
 hp_per_extra_player = 0.75
 preferred_distance = 120.0

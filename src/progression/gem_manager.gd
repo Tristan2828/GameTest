@@ -16,14 +16,11 @@ const CAPACITY: int = 400
 const COLLECT_RADIUS: float = 6.0
 const PULL_ACCELERATION: float = 900.0
 const MAX_PULL_SPEED: float = 420.0
-const OUTLINE_COLOR: Color = Color(0.05, 0.08, 0.15)
-
-@export var small_color: Color = Color(0.35, 0.75, 1.0)
-@export var big_color: Color = Color(0.45, 1.0, 0.55)
 ## Values at or above this draw bigger and in big_color.
 @export var big_value: int = 5
-## Round coins instead of diamond gems.
-@export var round_shape: bool = false
+## PixelArt sprites for small and big pickups.
+@export var sprite_small: String = "gem"
+@export var sprite_big: String = "gem_big"
 ## Group used by the autopilot to find pickups.
 @export var group_name: StringName = &"gems"
 
@@ -161,24 +158,8 @@ func clear() -> void:
 
 func _draw() -> void:
 	for id: int in CAPACITY:
-		if _active[id] == 0:
-			continue
-		var is_big := _values[id] >= big_value
-		var size := 3.0 if is_big else 2.0
-		var center := _positions[id].round()
-		if round_shape:
-			draw_circle(center, size + 1.0, OUTLINE_COLOR)
-			draw_circle(center, size, big_color if is_big else small_color)
-			continue
-		var outline := PackedVector2Array([
-			center + Vector2(0, -size - 1), center + Vector2(size + 1, 0),
-			center + Vector2(0, size + 1), center + Vector2(-size - 1, 0)])
-		var diamond := PackedVector2Array([
-			center + Vector2(0, -size), center + Vector2(size, 0),
-			center + Vector2(0, size), center + Vector2(-size, 0)])
-		draw_colored_polygon(outline, OUTLINE_COLOR)
-		draw_colored_polygon(diamond, big_color if is_big else small_color)
-
+		if _active[id] != 0:
+			PixelArt.draw(self, sprite_big if _values[id] >= big_value else sprite_small, _positions[id])
 
 func _find_collector(at: Vector2, player_positions: Dictionary[int, Vector2], pickup_radii: Dictionary[int, float]) -> int:
 	var best_id := 0

@@ -1,4 +1,4 @@
-# Playtest Review (v0.7.0)
+# Playtest Review (v0.8.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (159 unit tests, plus online host+client runs).
@@ -143,8 +143,11 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Is the controls hint at the bottom still useful, or clutter?
 
 ### 3.12 Looks
+- [ ] **New:** pixel-art sprites for every character, enemy and boss. Do they read well at a glance in a crowd?
+- [ ] Can you always tell the enemy types apart? The bosses?
+- [ ] Your character in your player color: easy to find yourself? Is the white hitbox dot clear?
+- [ ] Any sprite you'd like redrawn (too small, wrong vibe, ugly)? *(Sprites are text grids in `src/art/pixel_art.gd`; easy to change.)*
 - [ ] Each stage's floor: atmospheric? Distracting?
-- [ ] Placeholder art overall: what bothers you most? (Helps prioritise real pixel art.)
 
 ---
 
@@ -169,7 +172,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 
 ## 5. Known limitations (not bugs)
 - No music yet; sound effects are simple synthesized placeholders.
-- All art is placeholder shapes drawn in code.
+- Sprites are drawn by Claude as text grids (no animation beyond bats/imps and a walk bob); floors, effects and UI are still simple code drawing.
 - Enemy bullets already on screen aren't sent to a friend who joins mid-fight (new ones are).
 - Joining mid-run always gives the Wanderer.
 - The autopilot used in automated tests can't dodge, so it can't tell us anything about balance.

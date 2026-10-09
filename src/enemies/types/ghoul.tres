@@ -4,6 +4,9 @@
 
 [resource]
 script = ExtResource("1_type")
+sprite = "ghoul"
+sprite_frames = 1
+sprite_scale = 1.0
 display_name = "Ghoul"
 max_hp = 160
 move_speed = 24.0

@@ -34,9 +34,9 @@ const REMOTE_SMOOTHING: float = 18.0
 const CORRECTION_SMOOTHING: float = 10.0
 const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
 const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
-const GHOST_EYE_COLOR: Color = Color(0.1, 0.08, 0.15, 0.8)
+const GUN_COLOR: Color = Color(0.92, 0.92, 0.98)
+const HITBOX_OUTLINE_COLOR: Color = Color(0.1, 0.05, 0.12)
 const SECOND_WIND_INVULNERABILITY: float = 2.0
-const SKULL_EYE_COLOR: Color = Color(0.15, 0.1, 0.12)
 
 @export var stats: CharacterStats
 
@@ -84,6 +84,11 @@ var _visual_offset: Vector2 = Vector2.ZERO
 var _remote_target: Vector2 = Vector2.ZERO
 var _last_seen_hearts: int = -1
 var _was_dashing: bool = false
+## Walk bob height in pixels, and the last movement direction (for dash trails).
+var _bob: float = 0.0
+var _walk_time: float = 0.0
+var _last_move: Vector2 = Vector2.RIGHT
+var _last_drawn_position: Vector2 = Vector2.ZERO
 var _shake: float = 0.0
 var _remote_dashing: bool = false
 
@@ -283,26 +288,40 @@ func _process(delta: float) -> void:
 		position = state.position + _visual_offset
 	else:
 		position = position.lerp(_remote_target, 1.0 - exp(-REMOTE_SMOOTHING * delta))
+	_update_walk(delta)
 	queue_redraw()
+
+
+func _update_walk(delta: float) -> void:
+	var moved := position - _last_drawn_position
+	_last_drawn_position = position
+	if moved.length() > 0.2:
+		_last_move = moved.normalized()
+		_walk_time += delta
+		_bob = roundf(absf(sin(_walk_time * 12.0)))
+	else:
+		_bob = 0.0
 
 
 func _draw() -> void:
 	var color: Color = SLOT_COLORS[slot % SLOT_COLORS.size()]
 	_draw_heart_pips()
 	if health.is_downed():
-		_draw_ghost(color)
+		var bob := sin(Time.get_ticks_msec() / 250.0)
+		PixelArt.draw(self, "ghost", Vector2(0, -2 + bob), Color.WHITE, false, false, 1.0, Color(color.lightened(0.6), 0.55))
 		return
 	_draw_weapons()
+	var aim_direction := Vector2.from_angle(state.aim)
+	var modulate := Color.WHITE
 	# Blink while invulnerable after a hit.
 	if health.is_invulnerable() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
-		color = Color(color, 0.25)
+		modulate = Color(1, 1, 1, 0.3)
 	if is_dashing():
-		draw_circle(Vector2.ZERO, stats.body_radius + 3.0, Color(color, 0.35))
-		color = color.lightened(0.4)
-	draw_circle(Vector2.ZERO, stats.body_radius, color)
-	_draw_look(color)
-	var aim_direction := Vector2.from_angle(state.aim)
-	draw_line(aim_direction * 4.0, aim_direction * MUZZLE_DISTANCE, Color(0.92, 0.92, 0.98), 2.0)
+		PixelArt.draw(self, stats.sprite, -_last_move * 6.0, color, false, aim_direction.x < 0.0, 1.0, Color(1, 1, 1, 0.3))
+	PixelArt.draw(self, stats.sprite, Vector2(0, -2 - _bob), color, false, aim_direction.x < 0.0, 1.0, modulate)
+	draw_line(aim_direction * 4.0, aim_direction * MUZZLE_DISTANCE, GUN_COLOR, 2.0)
+	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
+	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
 
 
@@ -316,23 +335,6 @@ func _draw_heart_pips() -> void:
 
 
 ## Character silhouette details, drawn over the body in a darker shade.
-func _draw_look(color: Color) -> void:
-	var r := stats.body_radius
-	var dark := color.darkened(0.45)
-	match stats.look:
-		CharacterStats.Look.HOOD:
-			draw_colored_polygon(PackedVector2Array([
-				Vector2(-r, -r * 0.1), Vector2(-r * 0.6, -r * 1.0), Vector2(0, -r * 1.35),
-				Vector2(r * 0.6, -r * 1.0), Vector2(r, -r * 0.1), Vector2(r * 0.55, -r * 0.55), Vector2(-r * 0.55, -r * 0.55)]), dark)
-		CharacterStats.Look.WIDE_HAT:
-			draw_rect(Rect2(-r * 1.4, -r * 0.75, r * 2.8, 2.0), dark)
-			draw_rect(Rect2(-r * 0.7, -r * 1.45, r * 1.4, r * 0.75), dark)
-		CharacterStats.Look.WITCH_HAT:
-			draw_rect(Rect2(-r * 1.3, -r * 0.7, r * 2.6, 1.5), dark)
-			draw_colored_polygon(PackedVector2Array([
-				Vector2(-r * 0.7, -r * 0.65), Vector2(r * 0.7, -r * 0.65), Vector2(r * 0.9, -r * 2.2)]), dark)
-
-
 func _draw_weapons() -> void:
 	for weapon_id: int in weapon_levels:
 		var weapon := AutoWeapons.get_weapon(weapon_id)
@@ -346,21 +348,7 @@ func _draw_weapons() -> void:
 			AutoWeapon.Kind.ORBIT:
 				# Same math as the host's hit checks, relative to where we're drawn.
 				for skull: Vector2 in AutoWeapons.orbit_positions(Vector2.ZERO, level, weapon_clock):
-					var size := weapon.radius_at(level)
-					draw_circle(skull, size, weapon.color)
-					draw_rect(Rect2(skull + Vector2(-size * 0.5, -size * 0.3), Vector2(1, 1)), SKULL_EYE_COLOR)
-					draw_rect(Rect2(skull + Vector2(size * 0.5 - 1, -size * 0.3), Vector2(1, 1)), SKULL_EYE_COLOR)
-
-
-func _draw_ghost(color: Color) -> void:
-	var body := Color(color.lightened(0.5), 0.45)
-	var bob := sin(Time.get_ticks_msec() / 250.0)
-	draw_circle(Vector2(0, -2 + bob), stats.body_radius, body)
-	draw_rect(Rect2(-stats.body_radius, -2 + bob, stats.body_radius * 2.0, 5), body)
-	for i: int in 3:
-		draw_circle(Vector2(-4 + i * 4, 3 + bob), 2.0, body)
-	draw_rect(Rect2(-3, -4 + bob, 2, 2), GHOST_EYE_COLOR)
-	draw_rect(Rect2(1, -4 + bob, 2, 2), GHOST_EYE_COLOR)
+					PixelArt.draw(self, "skull", skull)
 
 
 func _shows_remote_state() -> bool:
