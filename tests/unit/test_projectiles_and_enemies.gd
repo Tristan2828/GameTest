@@ -133,12 +133,33 @@ func test_snapshot_round_trip_activates_enemies_on_client() -> void:
 	data.encode_s16(4, 123)
 	data.encode_s16(6, 456)
 	data.encode_u8(8, 128)
-	client._receive_snapshot(1, data)
+	client._receive_snapshot(0, 1, data)
 	assert_eq(client.active_count(), 1)
 	var mirrored: Enemy = client.get_child(enemy.pool_index)
 	assert_true(mirrored.active)
 	assert_eq(mirrored.type_id, EnemyTypes.Id.GHOUL)
 	assert_eq(mirrored.target_position, Vector2(123, 456))
 	assert_almost_eq(mirrored.hp_ratio, 0.5, 0.01)
-	client._receive_snapshot(0, PackedByteArray())
+	client._receive_snapshot(0, 0, PackedByteArray())
 	assert_false(mirrored.active, "missing from the next snapshot = gone")
+
+
+func test_snapshot_parts_only_cover_their_own_pool_indices() -> void:
+	# Fill the first part so the next enemy lands in the second one.
+	for i: int in EnemyManager.SNAPSHOT_CHUNK:
+		_spawn_shambler(Vector2(100 + i, 100))
+	var late := _spawn_shambler(Vector2(321, 654))
+	assert_eq(late.pool_index, EnemyManager.SNAPSHOT_CHUNK)
+	var client := EnemyManager.new()
+	add_child_autofree(client)
+	for first: int in range(0, EnemyManager.POOL_SIZE, EnemyManager.SNAPSHOT_CHUNK):
+		var chunk := _enemies.snapshot_chunk(first)
+		assert_lt((chunk[1] as PackedByteArray).size(), 1300, "each part fits in one packet")
+		client._receive_snapshot(first, chunk[0], chunk[1])
+	assert_eq(client.active_count(), EnemyManager.SNAPSHOT_CHUNK + 1)
+	var mirrored: Enemy = client.get_child(late.pool_index)
+	assert_eq(mirrored.target_position, Vector2(321, 654))
+	# An empty first part removes only first-part enemies.
+	client._receive_snapshot(0, 0, PackedByteArray())
+	assert_eq(client.active_count(), 1)
+	assert_true(mirrored.active, "enemies in other parts stay")

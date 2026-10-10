@@ -24,6 +24,10 @@ const SEPARATION_STRENGTH: float = 40.0
 const FLEE_WALL_DISTANCE: float = 110.0
 ## Each enemy in a snapshot: u16 index, u8 type, u8 flags, s16 x, s16 y, u8 hp.
 const SNAPSHOT_STRIDE: int = 9
+## A snapshot is sent in parts, each covering this many pool indices, so every
+## part fits in one network packet (~1400 bytes). A bigger unreliable message is
+## split by ENet and lost whenever any piece of it is lost.
+const SNAPSHOT_CHUNK: int = 100
 const FLAG_HIT: int = 1
 const FLAG_HEXED: int = 2
 const FLAG_CRIT: int = 4
@@ -47,6 +51,13 @@ var _pool: Array[Enemy] = []
 var _free_indices: Array[int] = []
 var _grid: SpatialGrid = SpatialGrid.new(GRID_CELL_SIZE)
 var _nearby: Array[int] = []
+## Each enemy's position and radius when the grid was last rebuilt (radius -1 =
+## not in the grid or gone since). Separation reads these: much cheaper than
+## reading every neighbour node's properties.
+var _grid_positions: PackedVector2Array = PackedVector2Array()
+var _grid_radii: PackedFloat32Array = PackedFloat32Array()
+## The biggest radius in the grid (bosses and champions are much bigger than the rest).
+var _grid_max_radius: float = 0.0
 
 
 func _ready() -> void:
@@ -59,6 +70,9 @@ func _ready() -> void:
 		_pool.append(enemy)
 	for i: int in range(POOL_SIZE - 1, -1, -1):
 		_free_indices.append(i)
+	_grid_positions.resize(POOL_SIZE)
+	_grid_radii.resize(POOL_SIZE)
+	_grid_radii.fill(-1.0)
 
 
 ## Host: returns the spawned enemy, or null if the pool is full.
@@ -167,9 +181,17 @@ func tick_host(delta: float, targets: Array[Vector2], lures: Array[Vector2] = []
 ## All peers, after positions change.
 func rebuild_grid() -> void:
 	_grid.clear()
+	_grid_max_radius = 0.0
 	for enemy: Enemy in _pool:
+		var index := enemy.pool_index
 		if enemy.active:
-			_grid.insert(enemy.pool_index, enemy.position)
+			var radius := enemy.type.radius
+			_grid.insert(index, enemy.position)
+			_grid_positions[index] = enemy.position
+			_grid_radii[index] = radius
+			_grid_max_radius = maxf(_grid_max_radius, radius)
+		else:
+			_grid_radii[index] = -1.0
 
 
 ## The first active enemy overlapping the circle, or null.
@@ -321,13 +343,26 @@ func clear_all() -> void:
 	rebuild_grid()
 
 
-## Host: pack every active enemy into bytes and send them to the given peers.
+## Host: pack every active enemy into bytes and send them to the given peers,
+## one message per SNAPSHOT_CHUNK pool indices.
 func send_snapshot(peer_ids: Array[int]) -> void:
-	var count := active_count()
+	for first: int in range(0, POOL_SIZE, SNAPSHOT_CHUNK):
+		var chunk := snapshot_chunk(first)
+		for peer_id: int in peer_ids:
+			# The count is also what keeps the RPC valid when there are no enemies:
+			# an empty byte array as the only argument arrives as "no arguments".
+			_receive_snapshot.rpc_id(peer_id, first, chunk[0], chunk[1])
+
+
+## Host: [count, bytes] of the active enemies among pool indices
+## first .. first + SNAPSHOT_CHUNK - 1 (clears their hit / crit marks).
+func snapshot_chunk(first: int) -> Array:
 	var data := PackedByteArray()
-	data.resize(count * SNAPSHOT_STRIDE)
+	data.resize(SNAPSHOT_CHUNK * SNAPSHOT_STRIDE)
 	var offset := 0
-	for enemy: Enemy in _pool:
+	var count := 0
+	for index: int in range(first, mini(first + SNAPSHOT_CHUNK, POOL_SIZE)):
+		var enemy := _pool[index]
 		if not enemy.active:
 			continue
 		data.encode_u16(offset, enemy.pool_index)
@@ -346,26 +381,30 @@ func send_snapshot(peer_ids: Array[int]) -> void:
 		enemy.hit_since_snapshot = false
 		enemy.crit_since_snapshot = false
 		offset += SNAPSHOT_STRIDE
-	for peer_id: int in peer_ids:
-		# The count is also what keeps the RPC valid when there are no enemies:
-		# an empty byte array as the only argument arrives as "no arguments".
-		_receive_snapshot.rpc_id(peer_id, count, data)
+		count += 1
+	data.resize(offset)
+	return [count, data]
 
 
+## One part of a snapshot: the active enemies among pool indices
+## first .. first + SNAPSHOT_CHUNK - 1. Others in that range are gone.
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
-func _receive_snapshot(count: int, data: PackedByteArray) -> void:
+func _receive_snapshot(first: int, count: int, data: PackedByteArray) -> void:
 	var t := PerfLog.start()
-	_apply_snapshot(count, data)
+	_apply_snapshot(first, count, data)
 	PerfLog.stop(&"rx_enemies", t)
 
 
-func _apply_snapshot(count: int, data: PackedByteArray) -> void:
+func _apply_snapshot(first: int, count: int, data: PackedByteArray) -> void:
+	var last := mini(first + SNAPSHOT_CHUNK, POOL_SIZE)
+	if first < 0 or first >= last:
+		return
 	var seen: Array[bool] = []
 	seen.resize(POOL_SIZE)
 	seen.fill(false)
 	for offset: int in range(0, mini(count * SNAPSHOT_STRIDE, data.size() - SNAPSHOT_STRIDE + 1), SNAPSHOT_STRIDE):
 		var index := data.decode_u16(offset)
-		if index >= POOL_SIZE:
+		if index < first or index >= last:
 			continue
 		seen[index] = true
 		var enemy := _pool[index]
@@ -385,7 +424,7 @@ func _apply_snapshot(count: int, data: PackedByteArray) -> void:
 		if not is_equal_approx(ratio, enemy.hp_ratio):
 			enemy.hp_ratio = ratio
 			enemy.queue_redraw()
-	for index: int in POOL_SIZE:
+	for index: int in range(first, last):
 		if not seen[index] and _pool[index].active:
 			var gone := _pool[index]
 			enemy_vanished.emit(gone.position, gone.type_id, gone.facing_left)
@@ -440,6 +479,7 @@ func _try_fire(enemy: Enemy, to_target: Vector2, delta: float) -> void:
 func _release(enemy: Enemy) -> void:
 	enemy_vanished.emit(enemy.position, enemy.type_id, enemy.facing_left)
 	enemy.deactivate()
+	_grid_radii[enemy.pool_index] = -1.0
 	_free_indices.append(enemy.pool_index)
 
 
@@ -452,24 +492,27 @@ func _nearest(targets: Array[Vector2], from: Vector2) -> Vector2:
 
 
 ## Push direction away from overlapping neighbours (0 when not overlapping).
+## Neighbours are where they were at the last grid rebuild. This is the host's
+## hottest loop (every enemy x its neighbours), so it only reads packed arrays.
 func _separation(enemy: Enemy) -> Vector2:
 	var push := Vector2.ZERO
+	var own := enemy.position
+	var radius := enemy.type.radius
+	var own_index := enemy.pool_index
 	_nearby.clear()
-	_grid.query(enemy.position, enemy.type.radius + MAX_ENEMY_RADIUS, _nearby)
+	_grid.query(own, radius + _grid_max_radius, _nearby)
 	for index: int in _nearby:
-		if index == enemy.pool_index:
+		var other_radius := _grid_radii[index]
+		if index == own_index or other_radius < 0.0:
 			continue
-		var other := _pool[index]
-		if not other.active:
-			continue
-		var offset := enemy.position - other.position
-		var min_distance := enemy.type.radius + other.type.radius
+		var offset := own - _grid_positions[index]
+		var min_distance := radius + other_radius
 		var distance_squared := offset.length_squared()
 		if distance_squared >= min_distance * min_distance:
 			continue
 		if distance_squared < 0.0001:
 			# Exactly on top of each other: split them apart deterministically.
-			offset = Vector2.from_angle(enemy.pool_index)
+			offset = Vector2.from_angle(own_index)
 			distance_squared = 1.0
 		var distance := sqrt(distance_squared)
 		push += offset / distance * (1.0 - distance / min_distance)

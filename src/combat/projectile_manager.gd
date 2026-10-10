@@ -230,24 +230,39 @@ func _bounce(i: int, enemies: EnemyManager, hit: Enemy) -> bool:
 ## now (dashing, invulnerable, downed). Host: hits cost hearts. Clients: the
 ## bullet just vanishes; hearts arrive in the next snapshot.
 func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
+	# Read each hittable player's position and reach once, not once per bullet
+	# (hundreds of bullets x up to 4 players every tick).
+	var targets: Array[Player] = []
+	var spots := PackedVector2Array()
+	var reaches_squared := PackedFloat32Array()
+	for player: Player in players:
+		if player.can_be_hit():
+			var reach := player.stats.hitbox_radius + hit_radius
+			targets.append(player)
+			spots.append(player.world_position())
+			reaches_squared.append(reach * reach)
+	if targets.is_empty():
+		return
 	var i := 0
 	while i < _count:
 		if _ages[i] < 0.0:
 			i += 1
 			continue
-		var point := position_of(i)
-		var hit_player: Player = null
-		for player: Player in players:
-			var reach := player.stats.hitbox_radius + hit_radius
-			if player.world_position().distance_squared_to(point) <= reach * reach and player.can_be_hit():
-				hit_player = player
+		var point := _origins[i] + _velocities[i] * _ages[i]
+		var hit := -1
+		for t: int in targets.size():
+			if spots[t].distance_squared_to(point) <= reaches_squared[t]:
+				hit = t
 				break
-		if hit_player == null:
+		if hit < 0:
 			i += 1
 			continue
+		var hit_player := targets[hit]
 		if is_host:
 			hit_player.take_hit(_damages[i])
 		_remove(i)
+		if not hit_player.can_be_hit():
+			reaches_squared[hit] = -1.0  # Invulnerable or down now: later bullets pass through.
 
 
 ## Removes every bullet within `radius` of `center` (Grave Blast). Returns how many.
