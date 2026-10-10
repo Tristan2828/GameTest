@@ -16,6 +16,9 @@ func test_xp_curve_grows_each_level() -> void:
 	assert_eq(TeamProgress.xp_to_next(1), 10)
 	assert_eq(TeamProgress.xp_to_next(2), 19)
 	assert_gt(TeamProgress.xp_to_next(10), TeamProgress.xp_to_next(9))
+	assert_eq(TeamProgress.xp_to_next(TeamProgress.LATE_LEVEL), 10 + 9 * (TeamProgress.LATE_LEVEL - 1), "stage 1 pacing unchanged")
+	var late_step := TeamProgress.xp_to_next(31) - TeamProgress.xp_to_next(30)
+	assert_gt(late_step, TeamProgress.XP_PER_LEVEL * 3, "late levels get much pricier")
 
 
 func test_bigger_teams_need_more_xp_per_level() -> void:

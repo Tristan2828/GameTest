@@ -2,6 +2,10 @@ class_name Lobby
 extends CanvasLayer
 ## Pre-run lobby: everyone picks a character and readies up; the host starts.
 ##
+## The main page is the party: one card per player (their name, hero walking on
+## the spot, ability, hearts and ready state). Your own card (or Choose Hero)
+## opens the hero picker sub-screen with all four heroes.
+##
 ## The host owns the lobby state and broadcasts it whenever it changes. Clients
 ## send their choice and ready flag. Spawned by Main's LevelSpawner like the
 ## arena, so friends who join now land here automatically.
@@ -17,6 +21,13 @@ signal start_requested
 const AUTOPILOT_HOST_MIN_SECONDS: float = 4.0
 const AUTOPILOT_CLIENT_DELAY: float = 0.5
 const COPIED_FEEDBACK_SECONDS: float = 4.0
+const PARTY_CARD_SIZE: Vector2 = Vector2(148, 178)
+const LABEL_COLOR: Color = Color(0.6, 0.57, 0.68)
+const VALUE_COLOR: Color = Color(0.95, 0.93, 1.0)
+const ABILITY_COLOR: Color = Color(0.95, 0.78, 0.4)
+const HEARTS_COLOR: Color = Color(0.95, 0.45, 0.5)
+const READY_COLOR: Color = Color(0.55, 0.95, 0.5)
+const CARD_BG: Color = Color(0.1, 0.08, 0.14)
 
 var _state: LobbyState = LobbyState.new()
 ## Host: clients whose lobby has loaded (can receive state).
@@ -26,7 +37,10 @@ var _copied_feedback_left: float = 0.0
 var _autopilot_readied: bool = false
 
 @onready var _cards: Array[Button] = [%Card0, %Card1, %Card2, %Card3]
-@onready var _players_label: Label = %PlayersLabel
+@onready var _party: HBoxContainer = %Party
+@onready var _picker: Control = %Picker
+@onready var _hero_button: Button = %HeroButton
+@onready var _back_button: Button = %BackButton
 @onready var _ready_button: Button = %ReadyButton
 @onready var _start_button: Button = %StartButton
 @onready var _status_label: Label = %StatusLabel
@@ -36,6 +50,10 @@ var _autopilot_readied: bool = false
 @onready var _center: Control = $Center
 var _difficulty: DifficultyScreen = null
 var _custom_game: CustomGameScreen = null
+## What the party cards were last built from (rebuilt only when it changes).
+var _party_signature: String = ""
+## Your own party card (opens the hero picker).
+var _my_card: Button = null
 
 
 func _ready() -> void:
@@ -45,7 +63,11 @@ func _ready() -> void:
 		(_cards[i].get_node("Lines/Blurb") as Label).text = stats.blurb
 		(_cards[i].get_node("Lines/Ability") as Label).text = "%s: %s" % [stats.ability_name, stats.ability_description]
 		(_cards[i].get_node("Portrait") as CharacterPortrait).character_id = i
-		_cards[i].pressed.connect(_choose_locally.bind(i))
+		_cards[i].pressed.connect(func() -> void:
+			_choose_locally(i)
+			_close_picker())
+	_hero_button.pressed.connect(_open_picker)
+	_back_button.pressed.connect(_close_picker)
 	_ready_button.toggled.connect(_set_ready_locally)
 	_start_button.pressed.connect(_start_locally)
 	var is_host := multiplayer.is_server()
@@ -70,11 +92,20 @@ func _ready() -> void:
 		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	else:
 		_notify_ready.rpc_id(1)
-	_cards[RunSetup.character_for(multiplayer.get_unique_id())].grab_focus()
 	_refresh()
+	if _my_card != null:
+		_my_card.grab_focus()
 	if not LaunchOptions.screenshot_dir.is_empty():
 		await get_tree().create_timer(0.3).timeout
 		await Main.save_screenshot(get_tree(), "lobby.png")
+		if not is_inside_tree():
+			return
+		_open_picker()
+		await get_tree().create_timer(0.2).timeout
+		if not is_inside_tree():
+			return
+		await Main.save_screenshot(get_tree(), "lobby_heroes.png")
+		_close_picker()
 		for page: Array in [[_difficulty_button, _difficulty, "lobby_difficulty.png"], [_custom_button, _custom_game, "lobby_custom.png"]]:
 			if not is_inside_tree():
 				return  # Autopilot already started the run.
@@ -122,6 +153,32 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("copy_invite") and Net.invite.copy_to_clipboard():
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
+	elif _picker.visible and event.is_action_pressed("ui_cancel"):
+		_close_picker()
+		get_viewport().set_input_as_handled()
+
+
+## The hero picker sub-screen (all four heroes; picking one goes back to the party).
+func _open_picker() -> void:
+	_center.hide()
+	_picker.show()
+	_cards[_my_character()].grab_focus()
+
+
+func _close_picker() -> void:
+	if not _picker.visible:
+		return
+	_picker.hide()
+	_center.show()
+	_party_signature = ""  # Rebuild now, so the card shows the new hero right away.
+	_refresh()
+	if _my_card != null:
+		_my_card.grab_focus()
+
+
+func _my_character() -> int:
+	var me := multiplayer.get_unique_id()
+	return _state.characters.get(me, RunSetup.character_for(me))
 
 
 ## Text summary for headless smoke tests.
@@ -140,7 +197,8 @@ func _autopilot_min_seconds() -> float:
 
 func _refresh() -> void:
 	var me := multiplayer.get_unique_id()
-	var mine: int = _state.characters.get(me, RunSetup.character_for(me))
+	var mine := _my_character()
+	_refresh_party(me)
 	for i: int in _cards.size():
 		_cards[i].button_pressed = i == mine
 		var portrait := _cards[i].get_node("Portrait") as CharacterPortrait
@@ -150,12 +208,6 @@ func _refresh() -> void:
 			if _state.characters[peer_id] == i:
 				pickers.append(_color_for(peer_id))
 		portrait.pickers = pickers
-	var lines := PackedStringArray()
-	for peer_id: int in _state.order:
-		var role := "host" if peer_id == 1 else ("ready" if _state.ready.get(peer_id, false) else "not ready")
-		var you := "  (you)" if peer_id == me else ""
-		lines.append("%s: %s, %s%s" % [_name_for(peer_id), Characters.get_character(_state.characters[peer_id]).display_name, role, you])
-	_players_label.text = "\n".join(lines)
 	_config_label.text = RunSetup.config.summary()
 	for i: int in _cards.size():
 		var hearts := maxi(Characters.get_character(i).max_hearts + RunSetup.config.hearts_bonus, 1)
@@ -173,10 +225,107 @@ func _refresh() -> void:
 		_status_label.text = "Pick a character and press Ready. The host starts the run."
 
 
-## Players are named by their slot color, in join order (same order the arena uses).
+## Rebuilds the party cards when someone joins, leaves, picks, readies or
+## their name arrives (not every frame: the portraits animate on their own).
+func _refresh_party(me: int) -> void:
+	var signature := "%s|%s|%s|%s|%d|%d" % [_state.order, _state.characters, _state.ready, Net.names, me,
+		RunSetup.config.hearts_bonus]
+	if signature == _party_signature:
+		return
+	_party_signature = signature
+	var had_focus := _my_card != null and _my_card.has_focus()
+	for child: Node in _party.get_children():
+		_party.remove_child(child)
+		child.queue_free()
+	_my_card = null
+	for peer_id: int in _state.order:
+		_party.add_child(_party_card(peer_id, me))
+	if had_focus and _my_card != null:
+		_my_card.grab_focus()
+
+
+## One player's card: name, hero walking on the spot, ability, hearts, ready state.
+## Your own card is a button that opens the hero picker.
+func _party_card(peer_id: int, me: int) -> Button:
+	var color := _color_for(peer_id)
+	var character := Characters.get_character(_state.characters[peer_id])
+	var mine := peer_id == me
+	var is_ready: bool = _state.ready.get(peer_id, false)
+	var card := Button.new()
+	card.custom_minimum_size = PARTY_CARD_SIZE
+	var box := StyleBoxFlat.new()
+	box.bg_color = CARD_BG
+	box.border_color = color.darkened(0.25)
+	box.set_border_width_all(1)
+	card.add_theme_stylebox_override("normal", box)
+	var hover := box.duplicate() as StyleBoxFlat
+	hover.bg_color = CARD_BG.lightened(0.08)
+	hover.border_color = color
+	card.add_theme_stylebox_override("hover", hover)
+	card.add_theme_stylebox_override("pressed", hover)
+	if mine:
+		_my_card = card
+		card.tooltip_text = "Change hero"
+		card.pressed.connect(_open_picker)
+	else:
+		card.focus_mode = Control.FOCUS_NONE
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var lines := VBoxContainer.new()
+	lines.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lines.offset_left = 6.0
+	lines.offset_top = 5.0
+	lines.offset_right = -6.0
+	lines.offset_bottom = -5.0
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_theme_constant_override("separation", 2)
+	card.add_child(lines)
+	var title := _name_for(peer_id)
+	var name_label := _card_label(title, color)
+	# Big letters when the name fits the card.
+	var wide := ThemeDB.fallback_font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	if wide <= PARTY_CARD_SIZE.x - 14.0:
+		name_label.add_theme_font_size_override("font_size", 18)
+	lines.add_child(name_label)
+	if mine and _state.order.size() > 1:
+		lines.add_child(_card_label("(you)", LABEL_COLOR))
+	var portrait := CharacterPortrait.new()
+	portrait.character_id = _state.characters[peer_id]
+	portrait.color = color
+	portrait.scale_factor = 3.0
+	portrait.custom_minimum_size = Vector2(0, 58)
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.walk_offset = _state.order.find(peer_id) * 0.7
+	portrait.animate = true
+	lines.add_child(portrait)
+	lines.add_child(_card_label(character.display_name, VALUE_COLOR))
+	var ability := _card_label("%s: %s" % [character.ability_name, character.ability_description], ABILITY_COLOR)
+	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ability.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lines.add_child(ability)
+	var hearts := maxi(character.max_hearts + RunSetup.config.hearts_bonus, 1)
+	lines.add_child(_card_label("%d hearts" % hearts, HEARTS_COLOR))
+	var status := "HOST" if peer_id == 1 else ("READY" if is_ready else "not ready")
+	var status_color := ABILITY_COLOR if peer_id == 1 else (READY_COLOR if is_ready else LABEL_COLOR)
+	if mine:
+		status += "  -  change hero"
+	lines.add_child(_card_label(status, status_color))
+	return card
+
+
+func _card_label(text: String, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 9)
+	label.add_theme_color_override("font_color", color)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+
+## A player's chosen name, or their slot color in join order (same order the arena uses).
 func _name_for(peer_id: int) -> String:
-	var index := maxi(_state.order.find(peer_id), 0)
-	return Player.SLOT_NAMES[index % Player.SLOT_NAMES.size()]
+	return Net.name_of(peer_id, maxi(_state.order.find(peer_id), 0))
 
 
 func _color_for(peer_id: int) -> Color:

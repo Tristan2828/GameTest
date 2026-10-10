@@ -80,7 +80,7 @@ func test_compendium_numbers_come_from_the_data() -> void:
 	var boss_id := Stages.get_stage(2).boss_type
 	assert_eq(Compendium.boss_stage(boss_id), 2)
 	assert_string_contains(Compendium.enemy_details(EnemyTypes.get_type(boss_id), 2),
-		"HP %d" % roundi(EnemyTypes.get_type(boss_id).max_hp * (1.0 + Arena.STAGE_HP_GROWTH)))
+		"HP %d" % roundi(EnemyTypes.get_type(boss_id).max_hp * Arena.BOSS_HP_BY_DEPTH[1]))
 	assert_true(Compendium.stages_with(EnemyTypes.Id.SHAMBLER).has(Stages.get_stage(1).title))
 
 

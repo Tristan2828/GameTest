@@ -64,14 +64,8 @@ func test_level_up_pauses_until_pick_then_applies_upgrade() -> void:
 	var choice: int = _arena._level_up._my_choices[0]
 	_arena._level_up._pick_locally(choice)
 	await wait_physics_frames(2)
-	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before play resumes")
+	assert_eq(_arena._phase, Arena.Phase.PLAYING, "solo resumes right away (no 3, 2, 1)")
 	assert_eq(_local_player().upgrade_ids, [choice])
-	clock = _arena._elapsed
-	await wait_seconds(Arena.RESUME_COUNTDOWN_SECONDS - 0.5)
-	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN)
-	assert_eq(_arena._elapsed, clock, "still frozen during the countdown")
-	await wait_seconds(0.8)
-	assert_eq(_arena._phase, Arena.Phase.PLAYING)
 
 
 func _ability_input(count: int) -> PlayerInput:
@@ -111,7 +105,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
 	_arena._shop._ready_locally()
 	await wait_physics_frames(2)
-	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before the next stage")
+	assert_eq(_arena._phase, Arena.Phase.PLAYING, "solo starts the next stage right away")
 	assert_eq(_arena._stage, 2)
 	assert_false(player.is_downed(), "downed players get back up")
 	assert_eq(player.health.hearts, player.health.max_hearts)
@@ -138,7 +132,16 @@ func test_later_stages_have_tougher_enemies() -> void:
 	var base := EnemyTypes.get_type(EnemyTypes.Id.SHAMBLER).max_hp
 	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), base)
 	_arena._stage = 3
-	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), roundi(base * 2.0))
+	assert_eq(_arena._scaled_hp(EnemyTypes.Id.SHAMBLER), roundi(base * Arena.ENEMY_HP_BY_DEPTH[2]))
+	var boss_id := Stages.get_stage(3).boss_type
+	assert_eq(_arena._scaled_hp(boss_id), roundi(EnemyTypes.get_type(boss_id).max_hp * Arena.BOSS_HP_BY_DEPTH[2]))
+	assert_gt(Arena.ENEMY_HP_BY_DEPTH[2], Arena.ENEMY_HP_BY_DEPTH[1], "each stage is tougher than the last")
+
+
+func test_later_stages_start_their_spawn_ramp_ahead() -> void:
+	_arena._stage = 2
+	_arena._setup_stage()
+	assert_eq(_arena._director.ramp_head_start, Arena.RAMP_HEAD_START_BY_DEPTH[1])
 
 
 func test_downed_player_cant_move_shoot_or_use_abilities() -> void:
@@ -175,7 +178,7 @@ func test_stage_clear_opens_shop_then_next_stage() -> void:
 	assert_true(_arena._shop.is_open_locally())
 	_arena._shop._ready_locally()
 	await wait_physics_frames(2)
-	assert_eq(_arena._phase, Arena.Phase.COUNTDOWN, "a short countdown before the next stage")
+	assert_eq(_arena._phase, Arena.Phase.PLAYING, "solo starts the next stage right away")
 	assert_eq(_arena._stage, 2)
 
 

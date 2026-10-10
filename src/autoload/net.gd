@@ -6,20 +6,48 @@ extends Node
 ## - Solo:   OfflineMultiplayerPeer. Acts like a host with nobody connected.
 ## - Host:   ENet server. The host is always peer id 1 and owns the game state.
 ## - Client: ENet client connected to a host by IP address.
+##
+## It also keeps everyone's display names (typed on the title menu): a client
+## sends its name to the host on connecting, and the host sends the full list to
+## everyone whenever it changes. (An autoload has the same node path on every
+## peer, so its RPCs work in the menu, the lobby and the arena alike.)
 
 const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 4
 
 ## Host only: public invite address and router port status.
 var invite: HostInvite = HostInvite.new()
+## peer id -> chosen display name ("" or missing = called by slot color).
+## The host's copy is the truth; clients get it from _receive_names.
+var names: Dictionary[int, String] = {}
+
+## The name list changed (someone joined, left or sent their name).
+signal names_changed
 
 
 func _ready() -> void:
 	add_child(invite)
+	multiplayer.connected_to_server.connect(func() -> void:
+		_register_name.rpc_id(1, Settings.player_name))
+	multiplayer.peer_disconnected.connect(func(peer_id: int) -> void:
+		if multiplayer.is_server() and names.erase(peer_id):
+			_broadcast_names())
+
+
+## A player's name as shown everywhere: their chosen name, or their slot color.
+func name_of(peer_id: int, slot: int) -> String:
+	return PlayerNames.display(names.get(peer_id, ""), slot)
+
+
+func _set_own_name() -> void:
+	names.clear()
+	names[1] = PlayerNames.sanitize(Settings.player_name)
+	names_changed.emit()
 
 
 func start_solo() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	_set_own_name()
 
 
 ## With `reach_internet`, also opens the router port and looks up the invite address.
@@ -29,6 +57,7 @@ func host_game(port: int, reach_internet: bool = true) -> Error:
 	if err != OK:
 		return err
 	multiplayer.multiplayer_peer = peer
+	_set_own_name()
 	if reach_internet:
 		invite.start(port)
 	return OK
@@ -50,6 +79,8 @@ func leave_game() -> void:
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	names.clear()
+	names_changed.emit()
 
 
 func is_online() -> bool:
@@ -79,3 +110,34 @@ func ping_ms() -> int:
 	if host_peer == null:
 		return 0
 	return int(host_peer.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME))
+
+
+# --- Names ---------------------------------------------------------------------
+
+func _broadcast_names() -> void:
+	var ids := PackedInt32Array()
+	var list := PackedStringArray()
+	for peer_id: int in names:
+		ids.append(peer_id)
+		list.append(names[peer_id])
+	names_changed.emit()
+	for peer_id: int in multiplayer.get_peers():
+		# The count keeps the call valid even if both arrays were empty.
+		_receive_names.rpc_id(peer_id, ids.size(), ids, list)
+
+
+## Client -> host, once on connecting.
+@rpc("any_peer", "call_remote", "reliable")
+func _register_name(chosen: String) -> void:
+	if not multiplayer.is_server():
+		return
+	names[multiplayer.get_remote_sender_id()] = PlayerNames.sanitize(chosen)
+	_broadcast_names()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_names(count: int, ids: PackedInt32Array, list: PackedStringArray) -> void:
+	names.clear()
+	for i: int in mini(count, mini(ids.size(), list.size())):
+		names[ids[i]] = list[i]
+	names_changed.emit()

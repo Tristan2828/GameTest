@@ -147,8 +147,9 @@ func is_dashing() -> bool:
 	return state.is_dashing()
 
 
+## The player's chosen name (title menu), or their slot color ("Red").
 func display_name() -> String:
-	return SLOT_NAMES[slot % SLOT_NAMES.size()]
+	return Net.name_of(peer_id, slot)
 
 
 ## Runs on every peer when the host announces this player's pick.
@@ -163,6 +164,10 @@ func take_hit(amount: int) -> bool:
 	var hearts_before := health.hearts
 	var landed := health.take_hit(amount, stats.hit_invulnerability)
 	hearts_lost += hearts_before - health.hearts
+	if LaunchOptions.invincible:
+		# Test flag: hits still count (balance numbers) but hearts refill.
+		health.hearts = health.max_hearts
+		return landed
 	if landed and health.is_downed():
 		times_downed += 1
 		print("Player %d downed" % peer_id)
@@ -225,8 +230,6 @@ func is_downed() -> bool:
 ## Checked when an enemy or enemy bullet touches this player. Dashing dodges
 ## hits. Works on clients too, using the latest known state.
 func can_be_hit() -> bool:
-	if LaunchOptions.invincible:
-		return false  # Test flag (performance and visual checks).
 	return not health.is_downed() and not health.is_invulnerable() and not is_dashing()
 
 
@@ -340,6 +343,8 @@ func _update_walk(delta: float) -> void:
 func _draw() -> void:
 	var color: Color = SLOT_COLORS[slot % SLOT_COLORS.size()]
 	_draw_heart_pips()
+	if not is_local() and Net.is_online():
+		_draw_name_tag(color)
 	if health.is_downed():
 		_draw_downed(color)
 		return
@@ -356,6 +361,17 @@ func _draw() -> void:
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
+
+
+## Teammates' names float over their heads (co-op), in their color.
+func _draw_name_tag(color: Color) -> void:
+	var text := display_name()
+	var font := ThemeDB.fallback_font
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var top := -24.0 if health.is_downed() else -2.0 - PixelArt.size_of(stats.sprite).y / 2.0 - 4.0
+	var at := Vector2(-width / 2.0, top).round()
+	draw_string(font, at + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, HITBOX_OUTLINE_COLOR)
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, color.lightened(0.25))
 
 
 ## Lying on the ground inside the revive circle, with a bobbing "+" asking for help.

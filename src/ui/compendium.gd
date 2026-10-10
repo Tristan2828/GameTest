@@ -1,6 +1,7 @@
 class_name Compendium
 extends ListScreen
-## The title menu's info pages: heroes, auto weapons, level-up upgrades, relics,
+## The title menu's "Game Guide" (called the Compendium until v0.18.0; the class
+## keeps the old name): info pages on heroes, auto weapons, level-up upgrades, relics,
 ## pickups, map events and quests, enemies and bosses. Everything is read from the game's own data
 ## (Characters, AutoWeapons, Upgrades, Relics, EnemyTypes, Stages), so it stays
 ## correct when numbers are tuned.
@@ -10,7 +11,7 @@ const HERO_COLOR: Color = Color(0.36, 0.78, 0.95)
 
 
 func _ready() -> void:
-	set_title("Compendium")
+	set_title("Game Guide")
 	add_tab("Heroes", _show_heroes)
 	add_tab("Weapons", _show_weapons)
 	add_tab("Upgrades", _show_upgrades)
@@ -153,7 +154,8 @@ func _show_enemies(bosses: bool) -> void:
 	if bosses:
 		add_heading("HP shown for a solo run in the boss's own stage. Each extra player adds the % shown.")
 	else:
-		add_heading("HP shown for stage 1. Every enemy gets +%d%% HP in each later stage." % roundi(Arena.STAGE_HP_GROWTH * 100.0))
+		add_heading("HP shown for stage 1. In a full run, enemies have x%s HP in stage 2 and x%s in stage 3." % [
+			str(Arena.ENEMY_HP_BY_DEPTH[1]), str(Arena.ENEMY_HP_BY_DEPTH[2])])
 	for type_id: int in EnemyTypes.ALL.size():
 		var type := EnemyTypes.get_type(type_id)
 		if type.is_boss != bosses:
@@ -169,7 +171,7 @@ func _show_enemies(bosses: bool) -> void:
 
 ## Stats line; HP as it is in stage `stage` (same growth as Arena._scaled_hp).
 static func enemy_details(type: EnemyType, stage: int = 1) -> String:
-	var hit_points := roundi(type.max_hp * (1.0 + Arena.STAGE_HP_GROWTH * (stage - 1)))
+	var hit_points := roundi(type.max_hp * Arena.hp_factor(type.is_boss, stage))
 	var parts := PackedStringArray(["HP %d" % hit_points, "Speed %d" % roundi(type.move_speed), "XP %d" % type.xp_value])
 	if type.shot_pattern >= 0 or type.is_boss:
 		parts.append("Shoots bullets")

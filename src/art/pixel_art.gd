@@ -1583,6 +1583,67 @@ const SPRITES: Dictionary[String, Array] = {
 		"kCCCCCCCCCk",
 		".kkkkkkkkk.",
 	],
+	# Minimap markers: tiny shapes in "P" (tinted with the marker's color); the
+	# minimap draws a dark outline around them.
+	"mm_champion": [
+		"P.P.P",
+		"PPPPP",
+		"PPPPP",
+	],
+	"mm_ritual": [
+		".PPP.",
+		"P...P",
+		"P...P",
+		"P...P",
+		".PPP.",
+	],
+	"mm_coin": [
+		".PPP.",
+		"PPPPP",
+		"PP.PP",
+		"PPPPP",
+		".PPP.",
+	],
+	"mm_chest": [
+		"PPPPP",
+		"P.P.P",
+		"PPPPP",
+		"PPPPP",
+	],
+	"mm_altar": [
+		"..P..",
+		"..P..",
+		"..P..",
+		".PPP.",
+		"..P..",
+	],
+	"mm_boss": [
+		".PPPPP.",
+		"PPPPPPP",
+		"P..P..P",
+		"PPPPPPP",
+		".PP.PP.",
+		".P.P.P.",
+	],
+	"mm_you": [
+		"..P..",
+		".PPP.",
+		"PPwPP",
+		".PPP.",
+		"..P..",
+	],
+	"mm_teammate": [
+		".P.",
+		"PPP",
+		".P.",
+	],
+	"mm_downed": [
+		"..P..",
+		"..P..",
+		"PPPPP",
+		"..P..",
+		"..P..",
+	],
 	"crown": [
 		"e..e..e",
 		"ee.e.ee",

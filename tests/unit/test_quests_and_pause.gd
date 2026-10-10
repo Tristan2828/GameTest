@@ -1,5 +1,5 @@
 extends GutTest
-## Shop quests (offers, picks, tracking, rewards) and the host pause.
+## Shop quests (offers, picks, tracking, rewards) and solo resuming without a countdown.
 
 const ARENA_SCENE: PackedScene = preload("res://src/arena/arena.tscn")
 
@@ -129,13 +129,8 @@ func test_heart_power_up_heals_and_bomb_clears_around() -> void:
 	assert_false(shambler.active)
 
 
-func test_host_pause_freezes_the_game_then_counts_down() -> void:
+func test_solo_resumes_without_a_countdown() -> void:
 	var arena := await _arena()
-	await wait_physics_frames(3)
-	arena.set_host_paused(true)
-	var paused_at := arena._elapsed
-	await wait_physics_frames(10)
-	assert_eq(arena._elapsed, paused_at, "nothing moves while paused")
-	arena.set_host_paused(false)
-	assert_eq(arena._phase, Arena.Phase.COUNTDOWN, "3, 2, 1 before play resumes")
-	assert_almost_eq(arena._resume_left, Arena.RESUME_COUNTDOWN_SECONDS, 0.01)
+	arena._phase = Arena.Phase.LEVEL_UP
+	arena._start_resume_countdown()
+	assert_eq(arena._phase, Arena.Phase.PLAYING, "solo skips the 3, 2, 1")

@@ -186,6 +186,29 @@ func find_hit(point: Vector2, hit_radius: float) -> Enemy:
 	return null
 
 
+## The first active enemy (closest to `from`) touched by a bullet of
+## `hit_radius` moving from `from` to `to`, skipping pool index `skip`, or null.
+func find_hit_on_path(from: Vector2, to: Vector2, hit_radius: float, skip: int = -1) -> Enemy:
+	var half := from.distance_to(to) / 2.0
+	_nearby.clear()
+	_grid.query((from + to) / 2.0, half + hit_radius + MAX_ENEMY_RADIUS, _nearby)
+	var best: Enemy = null
+	var best_along := INF
+	for index: int in _nearby:
+		var enemy := _pool[index]
+		if index == skip or not enemy.active:
+			continue
+		var closest := Geometry2D.get_closest_point_to_segment(enemy.position, from, to)
+		var reach := enemy.type.radius + hit_radius
+		if enemy.position.distance_squared_to(closest) > reach * reach:
+			continue
+		var along := from.distance_squared_to(closest)
+		if along < best_along:
+			best_along = along
+			best = enemy
+	return best
+
+
 ## Host: hex every active enemy within `radius` (Hex Snare).
 func hex_in_radius(center: Vector2, radius: float, seconds: float, multiplier: float) -> int:
 	var count := 0

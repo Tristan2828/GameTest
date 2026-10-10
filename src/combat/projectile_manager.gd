@@ -31,6 +31,13 @@ signal hit_at(at: Vector2)
 
 ## Bullets outside this rectangle are removed.
 var bounds: Rect2 = Rect2(-10000, -10000, 20000, 20000)
+## On its first tick a bullet checks for hits back this far behind where it
+## appeared (player bolts: back to the shooter's center, so an enemy standing on
+## top of you still gets hit; they appear at the muzzle, 9 px out).
+var spawn_backtrack: float = 0.0
+## Length of the last step(), so hits are checked along the path a bullet flew
+## this tick (fast bolts used to jump over enemies right next to the shooter).
+var _last_step: float = 0.0
 
 var _count: int = 0
 var _origins: PackedVector2Array = PackedVector2Array()
@@ -121,6 +128,7 @@ func freeze_all(seconds: float) -> void:
 
 ## Ages every bullet and removes expired or out-of-bounds ones.
 func step(delta: float) -> void:
+	_last_step = delta
 	var still_frozen := false
 	var i := 0
 	while i < _count:
@@ -172,8 +180,8 @@ func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 		if _ages[i] < 0.0:
 			i += 1
 			continue
-		var enemy := enemies.find_hit(position_of(i), hit_radius)
-		if enemy == null or enemy.pool_index == _last_hit[i]:
+		var enemy := enemies.find_hit_on_path(_path_start(i), position_of(i), hit_radius, _last_hit[i])
+		if enemy == null:
 			i += 1
 			continue
 		hit_at.emit(position_of(i))
@@ -187,6 +195,18 @@ func resolve_hits(enemies: EnemyManager, apply_damage: bool) -> void:
 			i += 1
 		else:
 			_remove(i)
+
+
+## Where bullet `i` was at the start of this tick (frozen bullets stand still).
+func _path_start(i: int) -> Vector2:
+	if _any_frozen and _frozen[i] > 0.0:
+		return position_of(i)
+	var previous_age := _ages[i] - _last_step
+	if previous_age > 0.0001:  # (Ages are 32-bit floats: a fresh bullet can be a hair above 0.)
+		return _origins[i] + _velocities[i] * previous_age
+	if _last_hit[i] >= 0:
+		return _origins[i]  # A ricochet restarted its path here.
+	return _origins[i] - _velocities[i].normalized() * spawn_backtrack
 
 
 ## Ricochet: aim bullet `i` at the closest other enemy near `hit`. Returns

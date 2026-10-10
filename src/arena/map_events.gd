@@ -47,7 +47,9 @@ const POPUP_RITUAL_SECONDS: float = 50.0
 const RUNNER_SECONDS: float = 20.0
 const RUNNER_COIN_INTERVAL: float = 1.5
 const RUNNER_SPAWN_DISTANCE: float = 230.0
-const CHEST_RADIUS: float = 12.0
+## A player opens a chest when their center is this close. v0.17.0 used 12 px:
+## brushing the chest with your sprite wasn't enough, so some chests "wouldn't open".
+const CHEST_RADIUS: float = 20.0
 ## Stage seconds when a pop-up event appears, and which kind.
 const POPUP_TIMES: Array[float] = [70.0, 140.0, 200.0]
 const POPUP_KINDS: Array[int] = [Kind.RUNNER, Kind.RITUAL, Kind.RUNNER]
@@ -115,11 +117,11 @@ func clear() -> void:
 	queue_redraw()
 
 
-## [world position, color, sprite] for every event, for edge arrows and the minimap.
+## [world position, color, sprite, kind] for every event, for edge arrows and the minimap.
 func markers() -> Array[Array]:
 	var result: Array[Array] = []
 	for event: MapEvent in _events:
-		result.append([event.position, color_of(event.kind), icon_of(event.kind)])
+		result.append([event.position, color_of(event.kind), icon_of(event.kind), event.kind])
 	return result
 
 

@@ -1,7 +1,7 @@
-# Playtest Review (v0.17.0)
+# Playtest Review (v0.18.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (312 unit tests, plus online host+client runs).
+Automated tests prove it *works* (321 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -52,7 +52,23 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
-### 3.0e Map events, quests, weapons, pickups, host pause (v0.17.0, your fourth list)
+### 3.0f Fixes and improvements from your fifth list (v0.18.0)
+- [ ] Title menu: type **Your name**. It shows on your lobby card, over your hero for friends, on their edge arrows, in "Waiting for..." lines and on the run summary. Friends see it too?
+- [ ] Title menu: **Exit Game** closes the game.
+- [ ] Lobby: the main page shows the whole party (one card per player, hero walking on the spot, ready state). Your card (or **Choose Hero**) opens the hero picker; picking goes straight back. Works with mouse and gamepad?
+- [ ] Run summary: the **Weapons** page no longer runs off the screen (it scrolls: wheel or Up / Down) and the tabs stay at the bottom. Esc / B goes back to Overview.
+- [ ] Run summary, beefed up: letters drop in, confetti (victory) or embers (defeat), the run's bosses as trophies (slain / the one that got you / not reached), team score, a crown on the MVP's card, a **Highlights** page. Exciting enough? Anything you'd add?
+- [ ] Solo: no "3, 2, 1" after a level-up or the shop (co-op still has it).
+- [ ] Host pause is gone: the host's Esc menu no longer freezes friends (solo still pauses). No more desyncs?
+- [ ] Shooting an enemy that's standing on top of you hits it now.
+- [ ] Champion chests open when you touch them (bigger pickup radius). Any chest that still won't open?
+- [ ] Minimap: each thing has its own shape (you = big diamond, teammates = small diamonds, downed teammate = blinking "+", boss = skull, altar = sword, champion = crown, ritual = ring, thief = coin, chest = chest). Easy to tell apart at a glance?
+- [ ] Edge arrows only point to map events and downed teammates now. Do you miss the arrows to healthy teammates?
+- [ ] Title menu: "Compendium" is now **Game Guide**. Clear?
+- [ ] **Balance:** stages 2 and 3 are much tougher (enemy HP x4 / x9, bosses x4.5 / x12, more enemies from the start, late level-ups cost more). Stage 2 should feel a bit harder than stage 1 and stage 3 like a real final test. Too much? Too little?
+  - *Tune: `CHEST_RADIUS` in `src/arena/map_events.gd`, `ALTAR_PICKUP_RADIUS` in `src/combat/weapon_system.gd`, `PlayerNames.MAX_LENGTH`; stage scaling: `ENEMY_HP_BY_DEPTH`, `BOSS_HP_BY_DEPTH`, `SPAWN_RATE_BY_DEPTH`, `RAMP_HEAD_START_BY_DEPTH` in `src/arena/arena.gd`; late levels: `LATE_LEVEL`, `LATE_XP_SQUARED` in `src/progression/team_progress.gd`.*
+
+### 3.0e Map events, quests, weapons, pickups (v0.17.0, your fourth list)
 - [ ] Champion lair: a dark crowned statue on a red ring somewhere on the map. It wakes when you get close. Fun to hunt down? Too tough or too easy?
 - [ ] Champion's chest: the first player to touch it gets an auto weapon (or a level). Worth the detour?
 - [ ] Ritual circle: standing in it calls waves; when the gold ring is full everyone inside heals and XP gems drop. Is 15 s the right length? Too dangerous or too safe?
@@ -63,7 +79,6 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] New weapons: Chain Lightning, Reaper's Scythe, Hellfire Trail, Bone Spears. Each one useful and visible? Any too strong?
 - [ ] Pickups: Heart, Soul Magnet, Holy Bomb, Frost Hourglass. Rare enough to be exciting, common enough to matter?
 - [ ] Frost Hourglass freezes enemy bullets in the air (they still hurt). Readable, or confusing?
-- [ ] Host pause: the host's Esc menu pauses everyone ("Paused" banner on friends' screens); closing it plays "3, 2, 1". Works for everyone?
   - *Tune: event numbers at the top of `src/arena/map_events.gd` (wake radius, ritual length, thief time, pop-up times) and `src/arena/arena.gd` (champion / thief coins, ritual XP share, wave size); champions in `src/enemies/types/*_champion.tres`; quests in `src/progression/quests.gd` (targets, rewards); weapons in `src/combat/weapons/*.tres`; pickups in `src/progression/power_ups.gd` (drop chance, cooldown, bomb damage, freeze time).*
 
 ### 3.0c In-game feedback (v0.16.0)
@@ -72,7 +87,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Typing in the boxes doesn't move your character or trigger other keys (R, F1, Esc)?
 
 ### 3.0d New upgrades (v0.16.0)
-- [ ] 16 new level-up upgrades (25 in total; see the Compendium's Upgrades page). Do the new ones show up and feel worth picking?
+- [ ] 16 new level-up upgrades (25 in total; see the Game Guide's Upgrades page). Do the new ones show up and feel worth picking?
 - [ ] Keen Edge: gold sparks on critical hits, visible but not too noisy?
 - [ ] Corpse Blast: green bursts where your kills die. Too strong with a crowd, or too weak? Still smooth with lots of kills in co-op?
 - [ ] Ricochet and Hunting Bolts: bolts bounce / curve toward enemies. Fun, and does it look right on a client?
@@ -94,7 +109,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Run summary: icons for weapons, upgrades and relics under "Build" (hover for names). Can you tell the icons apart?
 - [ ] Run summary: Weapons page (button at the bottom): damage, share, DPS and kills per weapon. Numbers believable? Anything else you want there?
 - [ ] Upgrade and relic icons on the level-up and shop cards. Do they help?
-- [ ] Compendium: Upgrades and Relics tabs show the icons; Pickups explains downed and revives. Anything out of date?
+- [ ] Game Guide: Upgrades and Relics tabs show the icons; Pickups explains downed and revives. Anything out of date?
 - [ ] Records (title menu): your best runs per hero on this PC, with a score. Shows after a real run? Does the score feel fair (kills, damage, bosses, victory, difficulty)?
 - [ ] Custom Game: Soundtrack (Classic / Metal / Metal boss fights / Shuffle). Do the metal tracks fit? Which stage track is best or worst?
 
@@ -103,11 +118,11 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
   - *Tune: `BASE_XP` / `XP_PER_LEVEL` in `src/progression/team_progress.gd`.*
 - [ ] After you pick, your card stays lit (gold border, others dimmed) with "You chose X. Waiting for ...". Clear?
 - [ ] Level pips on each card (filled = levels you have, blinking gold = this pick, hollow = left to max). Readable?
-- [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop. Long enough? Too long?
+- [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop (co-op only since v0.18.0). Long enough? Too long?
   - *Tune: `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`.*
 - [ ] Weapon icons with level pips under the hearts (HUD), on the run-end cards, and floating over altars. Can you tell the three apart?
 - [ ] Arrows at the screen edge point to off-screen teammates, in their color (pulsing with a "+" when they're down). Helpful? Distracting?
-- [ ] Lobby: portraits show **your** color (a friend in Red sees red heroes), and small color squares show who picked which hero.
+- [ ] Lobby: party cards show each player's color, and in the hero picker small color squares show who picked which hero.
 - [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
 - [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
 - [ ] Performance: the slowdown for 10-20 s after a boss appears (2 players) should be gone. Still any stutter? Who had it, host or friend?

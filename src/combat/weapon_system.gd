@@ -19,7 +19,7 @@ signal seeker_fired(shooter: Player, aim: float, level: int)
 const ALTAR_TIMES: Array[float] = [80.0, 160.0]
 const ALTAR_DISTANCE_MIN: float = 140.0
 const ALTAR_DISTANCE_MAX: float = 240.0
-const ALTAR_PICKUP_RADIUS: float = 12.0
+const ALTAR_PICKUP_RADIUS: float = 16.0
 ## Coins instead, when the weapon on the altar is already at max level.
 const MAXED_WEAPON_COINS: int = 10
 const ALTAR_BASE_COLOR: Color = Color(0.3, 0.27, 0.35)

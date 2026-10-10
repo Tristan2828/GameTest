@@ -18,9 +18,16 @@ const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
 ## A run is this many stages; beating the last boss is Victory.
 const STAGE_COUNT: int = 3
-## Each stage after the first: +35% spawn rate and +50% enemy HP (cumulative, linear).
-const STAGE_SPAWN_RATE_GROWTH: float = 0.35
-const STAGE_HP_GROWTH: float = 0.5
+## How much tougher each stage of a run is (index = run depth - 1; a single-stage
+## custom game always uses the first column). v0.18.0: the old +50% HP / +35%
+## spawns per stage made stages 2-3 easy, since a team's damage roughly triples
+## by stage 3 (measured with `[balance]` lines: boss fights went 65 s -> 8 s -> 4 s).
+const ENEMY_HP_BY_DEPTH: Array[float] = [1.0, 4.0, 9.0]
+const BOSS_HP_BY_DEPTH: Array[float] = [1.0, 4.5, 12.0]
+const SPAWN_RATE_BY_DEPTH: Array[float] = [1.0, 1.4, 1.8]
+## Later stages start their spawn ramp this many seconds in, so the opening
+## minute isn't a stroll for a team that's already strong.
+const RAMP_HEAD_START_BY_DEPTH: Array[float] = [0.0, 45.0, 90.0]
 ## Seconds the "Stage cleared" banner shows before the shop opens.
 const STAGE_CLEAR_DELAY: float = 4.0
 ## Coins every player gets for beating a stage's boss (more in later stages).
@@ -96,8 +103,6 @@ var _boss_seen: bool = false
 var _boss_banner_left: float = 0.0
 ## Seconds until play resumes (Phase.COUNTDOWN; clients get it from snapshots).
 var _resume_left: float = 0.0
-## The host's pause menu is open: nothing moves for anyone (synced in snapshots).
-var _paused: bool = false
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
@@ -170,6 +175,7 @@ func _ready() -> void:
 	# clients call it automatically with the same data when the spawn replicates.
 	_player_spawner.spawn_function = _spawn_player
 	_projectiles.bounds = BOUNDS
+	_projectiles.spawn_backtrack = Player.MUZZLE_DISTANCE
 	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_events.bounds = BOUNDS
@@ -249,12 +255,6 @@ func _exit_tree() -> void:
 func _physics_process(delta: float) -> void:
 	var is_host := multiplayer.is_server()
 	_team.player_count = maxi(_player_nodes().size(), 1)
-	if _paused:
-		# Host pause: everything stands still; clients still get snapshots (and the flag).
-		if is_host:
-			_tick += 1
-			_send_snapshots()
-		return
 	if _phase == Phase.PLAYING:
 		_elapsed += delta
 		_run_stats.run_seconds += delta
@@ -337,7 +337,9 @@ func _physics_process(delta: float) -> void:
 	elif is_host and LaunchOptions.autopilot:
 		# Only RUN_OVER / VICTORY reach here: the run is finished.
 		_time_since_stage_end += delta
-		if _time_since_stage_end >= AUTOPILOT_RESTART_DELAY:
+		# (Screenshot runs wait longer: the summary's three pages get a picture each.)
+		var delay := AUTOPILOT_RESTART_DELAY + (2.5 if not LaunchOptions.screenshot_dir.is_empty() else 0.0)
+		if _time_since_stage_end >= delay:
 			_time_since_stage_end = -INF
 			_request_restart()
 	if is_host:
@@ -380,6 +382,9 @@ func _play_phase_jingle() -> void:
 		_hud.run_summary._show_page(1)
 		await get_tree().create_timer(0.3).timeout
 		await Main.save_screenshot(get_tree(), "run_end_weapons.png")
+		_hud.run_summary._show_page(2)
+		await get_tree().create_timer(0.3).timeout
+		await Main.save_screenshot(get_tree(), "run_end_highlights.png")
 		_hud.run_summary._show_page(0)
 
 
@@ -409,7 +414,6 @@ func _process(delta: float) -> void:
 	GameCursor.set_in_game(not _is_between_stages())
 	_revive_screenshots()
 	_event_screenshots()
-	_test_pause(delta)
 	var t := PerfLog.start()
 	_update_hud()
 	PerfLog.stop(&"hud", t)
@@ -495,8 +499,8 @@ func debug_report() -> String:
 	var event_kinds := PackedStringArray()
 	for event: MapEvents.MapEvent in _events.events():
 		event_kinds.append("%s/%s" % [MapEvents.Kind.keys()[event.kind], MapEvents.State.keys()[event.state]])
-	lines.append("[report]   events: %s   power-ups on ground: %d   weapon effects: %s   paused: %s" % [
-		event_kinds, _power_ups.count(), _weapons.effect_counts(), _paused])
+	lines.append("[report]   events: %s   power-ups on ground: %d   weapon effects: %s" % [
+		event_kinds, _power_ups.count(), _weapons.effect_counts()])
 	if multiplayer.is_server():
 		lines.append("[report]   quests: %s   progress: %s" % [_quests.quest_of, _quests.progress])
 	var boss := _enemies.find_boss()
@@ -602,8 +606,9 @@ func _spawn_enemies(delta: float) -> void:
 	var alive_players := _alive_player_positions()
 	if alive_players.is_empty():
 		return
+	_balance_peak_alive = maxi(_balance_peak_alive, _enemies.active_count())
 	var rate := BOSS_FIGHT_SPAWN_RATE if _boss_spawned else 1.0
-	rate *= (1.0 + STAGE_SPAWN_RATE_GROWTH * (_run_depth() - 1)) * _config.enemy_count
+	rate *= by_depth(SPAWN_RATE_BY_DEPTH, _run_depth()) * _config.enemy_count
 	for type_id: int in _director.tick(delta, _elapsed, alive_players.size(), _enemies.active_count(), rate):
 		var point := _offscreen_spawn_point(alive_players)
 		if point.is_finite():
@@ -621,7 +626,17 @@ func _spawn_enemies(delta: float) -> void:
 func _scaled_hp(type_id: int) -> int:
 	var type := EnemyTypes.get_type(type_id)
 	var difficulty := _config.boss_health if type.is_boss else _config.enemy_health
-	return maxi(roundi(type.max_hp * (1.0 + STAGE_HP_GROWTH * (_run_depth() - 1)) * difficulty), 1)
+	return maxi(roundi(type.max_hp * hp_factor(type.is_boss, _run_depth()) * difficulty), 1)
+
+
+## A stage-scaling table's value at this run depth (1 = first stage).
+static func by_depth(table: Array[float], depth: int) -> float:
+	return table[clampi(depth - 1, 0, table.size() - 1)]
+
+
+## How much more HP enemies (or bosses) have at this run depth.
+static func hp_factor(is_boss: bool, depth: int) -> float:
+	return by_depth(BOSS_HP_BY_DEPTH if is_boss else ENEMY_HP_BY_DEPTH, depth)
 
 
 ## How far into the run this stage is (1 = first). Later stages are tougher.
@@ -763,30 +778,6 @@ func _event_screenshots() -> void:
 		Main.save_screenshot(get_tree(), "power_up.png")
 
 
-var _test_pause_left: float = -1.0
-var _paused_screenshot_taken: bool = false
-
-
-## --test-pause=<s>: the host pauses at that stage time for 3 s, then resumes
-## (with --screenshot-dir, a client saves paused_client.png).
-func _test_pause(delta: float) -> void:
-	if not multiplayer.is_server():
-		if _paused and not _paused_screenshot_taken and not LaunchOptions.screenshot_dir.is_empty():
-			_paused_screenshot_taken = true
-			Main.save_screenshot(get_tree(), "paused_client.png")
-		return
-	if LaunchOptions.test_pause_at >= 0.0 and _elapsed >= LaunchOptions.test_pause_at and _phase == Phase.PLAYING:
-		LaunchOptions.test_pause_at = -1.0
-		_test_pause_left = 3.0
-		set_host_paused(true)
-		print("Host paused (--test-pause) at %.1fs" % _elapsed)
-	elif _test_pause_left > 0.0:
-		_test_pause_left -= delta
-		if _test_pause_left <= 0.0:
-			set_host_paused(false)
-			print("Host resumed (--test-pause) at %.1fs" % _elapsed)
-
-
 func _is_spectating() -> bool:
 	var local := _local_player()
 	return local != null and local.is_downed() and _downed_seconds >= Revive.SPECTATE_DELAY \
@@ -806,7 +797,40 @@ func _update_phase() -> void:
 			_end_stage(Phase.STAGE_CLEAR)  # Custom game without a boss: survived the timer.
 
 
+## Host: numbers at the start of the stage and the busiest moment, for the
+## balance line printed when it ends (`_print_balance`).
+var _balance_start: PackedInt32Array = PackedInt32Array([0, 0, 0, 0])
+var _balance_boss_at: float = -1.0
+var _balance_peak_alive: int = 0
+
+
+## One line per stage for tuning difficulty: how long the waves and the boss
+## took, how hurt the team got, and how hard it hit. Compare stages with it.
+func _print_balance(phase: Phase) -> void:
+	var damage := 0
+	for peer_id: int in _enemies.damage_by_peer:
+		damage += _enemies.damage_by_peer[peer_id]
+	var hearts_lost := 0
+	var downs := 0
+	for player: Player in _player_nodes():
+		hearts_lost += player.hearts_lost
+		downs += player.times_downed
+	var now := PackedInt32Array([_run_stats.total(RunStats.Stat.KILLS), damage, hearts_lost, downs])
+	var boss_seconds := _elapsed - _balance_boss_at if _balance_boss_at >= 0.0 else 0.0
+	var max_hearts := 0
+	for player: Player in _player_nodes():
+		max_hearts += player.health.max_hearts
+	print("[balance] stage %d %s: time %.0fs (boss fight %.0fs)  team level %d  kills %d  dps %.0f  hearts lost %d of %d  downs %d  peak enemies %d  players %d" % [
+		_run_depth(), Phase.keys()[phase], _elapsed, boss_seconds, _team.level, now[0] - _balance_start[0],
+		(now[1] - _balance_start[1]) / maxf(_elapsed, 1.0), now[2] - _balance_start[2], max_hearts, now[3] - _balance_start[3],
+		_balance_peak_alive, _player_nodes().size()])
+	_balance_start = now
+	_balance_boss_at = -1.0
+	_balance_peak_alive = 0
+
+
 func _end_stage(phase: Phase) -> void:
+	_print_balance(phase)
 	if phase == Phase.STAGE_CLEAR and _run_depth() >= _stage_count():
 		phase = Phase.VICTORY
 	_phase = phase
@@ -883,6 +907,9 @@ func _receive_run_stats(data: Dictionary) -> void:
 	_final_stats = RunStats.decode(data)
 	var stage_in_run := _final_stats.stage_reached - _config.first_stage() + 1
 	_hud.run_summary.score_multiplier = _config.score_multiplier()
+	_hud.run_summary.difficulty_name = _config.difficulty_name()
+	_hud.run_summary.first_stage = _config.first_stage()
+	_hud.run_summary.bosses_enabled = _config.boss_enabled
 	_hud.run_summary.local_record_rank = _save_record(stage_in_run)
 	var is_host := multiplayer.is_server()
 	var restart_hint := "or press R / Select" if is_host else "Waiting for the host to return to character select..."
@@ -941,6 +968,7 @@ func _begin_next_stage() -> void:
 func _setup_stage() -> void:
 	var stage := Stages.get_stage(_stage)
 	_director = SpawnDirector.new(randi(), stage.spawns)
+	_director.ramp_head_start = by_depth(RAMP_HEAD_START_BY_DEPTH, _run_depth())
 	_boss_brain = BossBrain.new(stage.boss_phase_one, stage.boss_phase_two)
 	_boss_spin = 0.0
 	_events.champion_type = stage.champion_type
@@ -949,6 +977,7 @@ func _setup_stage() -> void:
 
 func _spawn_boss() -> void:
 	_boss_spawned = true
+	_balance_boss_at = _elapsed
 	var alive := _alive_player_positions()
 	var center := Vector2.ZERO
 	for point: Vector2 in alive:
@@ -1146,7 +1175,7 @@ func _on_power_up_collected(kind: int, collector_peer_id: int) -> void:
 		PowerUps.Kind.HEART:
 			player.health.heal(PowerUps.HEART_HEAL)
 		PowerUps.Kind.HOLY_BOMB:
-			var damage := roundi(PowerUps.BOMB_DAMAGE * (1.0 + STAGE_HP_GROWTH * (_run_depth() - 1)) * _config.enemy_health)
+			var damage := roundi(PowerUps.BOMB_DAMAGE * hp_factor(false, _run_depth()) * _config.enemy_health)
 			_enemies.smite(at, PowerUps.BOMB_RADIUS, damage, collector_peer_id, DamageSource.HOLY_BOMB)
 		PowerUps.Kind.FROST_HOURGLASS:
 			_enemies.freeze_all(PowerUps.FROST_SECONDS)
@@ -1371,18 +1400,12 @@ func _start_level_up() -> void:
 	_level_up.host_start(_player_nodes(), level, _ready_peer_list())
 
 
-## Solo / host: the pause menu opened or closed. Pausing freezes the game for
-## everyone; unpausing during play gives everyone a "3, 2, 1" first.
-func set_host_paused(value: bool) -> void:
-	if not multiplayer.is_server() or value == _paused:
-		return
-	_paused = value
-	if not value and (_phase == Phase.PLAYING or _phase == Phase.COUNTDOWN):
-		_start_resume_countdown()
-
-
-## Host: everyone has chosen; play resumes after a short "3, 2, 1".
+## Host: everyone has chosen; play resumes after a short "3, 2, 1" (online only:
+## solo has nobody to wait for, so it goes straight back to playing).
 func _start_resume_countdown() -> void:
+	if not Net.is_online():
+		_phase = Phase.PLAYING
+		return
 	_phase = Phase.COUNTDOWN
 	_resume_left = RESUME_COUNTDOWN_SECONDS
 
@@ -1776,10 +1799,6 @@ func _update_hud() -> void:
 		return player.display_name() if player != null else "someone"
 	_level_up.refresh_panel_status(name_of)
 	_shop.refresh_panel(local, name_of)
-	if _paused and not multiplayer.is_server() and (_phase == Phase.PLAYING or _phase == Phase.COUNTDOWN):
-		_hud.show_banner("Paused", "The host paused the game. It resumes after a 3, 2, 1.")
-		_hud.set_notice(_revive_notice(local))
-		return
 	match _phase:
 		Phase.SHOP:
 			if _shop.is_open_locally():
@@ -1838,10 +1857,13 @@ func _update_minimap(local: Player, boss: Enemy) -> void:
 	var teammates: Array[Array] = []
 	for player: Player in _player_nodes():
 		var color := Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()]
-		markers.append([player.world_position(), color, player.is_local()])
-		if not player.is_local() or player.spectate_target != null:
-			# While we watch a teammate, an arrow also points back to our own body.
-			teammates.append([player.world_position(), color, player.is_downed()])
+		markers.append([player.world_position(), color, player.is_local(), player.is_downed()])
+		# Edge arrows only for downed teammates (go revive them; v0.18.0, owner
+		# request: arrows to healthy teammates were clutter). While we watch a
+		# teammate, an arrow also points back to our own body.
+		if player.is_downed() and (not player.is_local() or player.spectate_target != null):
+			teammates.append([player.world_position(), color, player.is_downed(),
+				"You" if player.is_local() else player.display_name()])
 	var view := Rect2()
 	if local != null:
 		var screen := get_viewport_rect().size
@@ -1911,7 +1933,7 @@ func _send_snapshots() -> void:
 			countdown = _resume_left
 		for peer_id: int in peers:
 			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins, revive,
-				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown, _paused, quest_ids, quest_progress)
+				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown, quest_ids, quest_progress)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
 
@@ -1936,9 +1958,8 @@ func _notify_ready() -> void:
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
 		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
 		coins: PackedInt32Array, revive: PackedByteArray, elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
-		pause_waiting: PackedInt32Array, pause_countdown: float, paused: bool, quest_ids: PackedInt32Array,
+		pause_waiting: PackedInt32Array, pause_countdown: float, quest_ids: PackedInt32Array,
 		quest_progress: PackedInt32Array) -> void:
-	_paused = paused
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:

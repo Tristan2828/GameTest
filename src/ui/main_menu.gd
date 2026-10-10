@@ -1,7 +1,8 @@
 class_name MainMenu
 extends CanvasLayer
-## Title menu: play solo, host a game, or join a host by IP address. Also opens
-## Settings, the Compendium (info on heroes, weapons, items, enemies), Records
+## Title menu: your display name, play solo, host a game, or join a host by IP
+## address, and Exit Game. Also opens
+## Settings, the Game Guide (`Compendium`: info on heroes, weapons, items, enemies), Records
 ## (your best runs on this PC) and the
 ## Playtest Checklist (what still needs testing, from docs/PLAYTEST.md).
 ## In the exported game it also checks GitHub for a newer version and offers an
@@ -25,6 +26,8 @@ signal feedback_requested
 @onready var _checklist_button: Button = %ChecklistButton
 @onready var _records_button: Button = %RecordsButton
 @onready var _feedback_button: Button = %FeedbackButton
+@onready var _exit_button: Button = %ExitButton
+@onready var _name_edit: LineEdit = %NameEdit
 @onready var _panel: Control = $Center/Panel
 @onready var _backdrop: TextureRect = %Backdrop
 var compendium: Compendium = null
@@ -47,6 +50,11 @@ func _ready() -> void:
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)
 	_settings_button.pressed.connect(open_settings)
+	_exit_button.pressed.connect(func() -> void: get_tree().quit())
+	_name_edit.max_length = PlayerNames.MAX_LENGTH
+	_name_edit.text = PlayerNames.sanitize(Settings.player_name)
+	_name_edit.text_changed.connect(_on_name_changed)
+	_name_edit.text_submitted.connect(func(_text: String) -> void: _solo_button.grab_focus())
 	_feedback_button.pressed.connect(func() -> void:
 		_panel.hide()
 		feedback_requested.emit())
@@ -75,6 +83,12 @@ func _ready() -> void:
 	_update_button.pressed.connect(updater.update)
 	_page_button.pressed.connect(updater.open_release_page)
 	_refresh_update()
+
+
+## Saved as you type (the feedback screen uses the same name).
+func _on_name_changed(text: String) -> void:
+	Settings.player_name = PlayerNames.sanitize(text)
+	Settings.save()
 
 
 ## The update line under the menu buttons, from the updater's state.
@@ -118,6 +132,7 @@ func _refresh_update() -> void:
 func show_menu(message: String = "") -> void:
 	show()
 	_panel.show()
+	_name_edit.text = PlayerNames.sanitize(Settings.player_name)  # The feedback screen can change it too.
 	_settings.hide()
 	compendium.hide()
 	checklist.hide()

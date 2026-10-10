@@ -1,7 +1,8 @@
 class_name TeammateArrows
 extends Control
-## Arrows at the screen edge pointing at teammates who are off screen, in their
-## player color. Downed teammates' arrows pulse with a "+" (go revive them).
+## Arrows at the screen edge pointing at downed teammates who are off screen (go
+## revive them): in their player color, pulsing, with a "+" and their name.
+## (Healthy teammates got arrows too until v0.18.0; the minimap shows them now.)
 ## Map events (champion lairs, rituals, thieves, chests) get an arrow with their icon.
 ## Fills the whole HUD; the arena pushes
 ## in the local view and the teammates' positions every frame.
@@ -15,7 +16,7 @@ const REVIVE_COLOR: Color = Color(0.55, 0.95, 0.5)
 
 ## The local player's view of the world (empty = draw nothing).
 var _view: Rect2 = Rect2()
-## [world position, color, is_downed] per teammate.
+## [world position, color, is_downed, name] per teammate (the name is optional).
 var _teammates: Array[Array] = []
 ## [world position, color, sprite] per map event.
 var _events: Array[Array] = []
@@ -74,10 +75,24 @@ func _draw() -> void:
 		if downed:
 			color = color.lerp(Color.WHITE, 0.4 + 0.4 * sin(Time.get_ticks_msec() / 150.0))
 		_draw_arrow(tip.round(), direction, color)
+		if teammate.size() > 3:
+			_draw_name(tip, direction, teammate[3], teammate[1])
 		if downed:
 			var dot := (tip - direction * 13.0).round()
 			draw_rect(Rect2(dot + Vector2(-1, -3), Vector2(3, 7)), REVIVE_COLOR)
 			draw_rect(Rect2(dot + Vector2(-3, -1), Vector2(7, 3)), REVIVE_COLOR)
+
+
+## The teammate's name just inside the arrow, kept on screen.
+func _draw_name(tip: Vector2, direction: Vector2, text: String, color: Color) -> void:
+	var font := get_theme_default_font()
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var at := tip - direction * 24.0
+	at.x = clampf(at.x - width / 2.0, 2.0, size.x - width - 2.0)
+	at.y = clampf(at.y + 3.0, 10.0, size.y - 3.0)
+	at = at.round()
+	draw_string(font, at + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, OUTLINE_COLOR)
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, color)
 
 
 ## A small arrowhead with a dark outline, plus a dot behind it (unless `dot` is false).

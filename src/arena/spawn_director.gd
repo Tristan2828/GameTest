@@ -20,6 +20,9 @@ const PACK_INTERVAL_MAX: float = 50.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var spawns: Array[SpawnEntry] = []
+## Seconds of ramp already "done" when the stage starts (later stages start busier).
+## Only the spawn rate uses it; which enemies appear still follows the stage clock.
+var ramp_head_start: float = 0.0
 
 var _budget: float = 0.0
 var _next_pack_time: float = 0.0
@@ -41,7 +44,7 @@ static func spawns_per_second(elapsed: float, player_count: int) -> float:
 ## `rate_multiplier` scales the spawn rate (e.g. lower during the boss fight).
 func tick(delta: float, elapsed: float, player_count: int, alive: int, rate_multiplier: float = 1.0) -> Array[int]:
 	var result: Array[int] = []
-	_budget += spawns_per_second(elapsed, player_count) * rate_multiplier * delta
+	_budget += spawns_per_second(elapsed + ramp_head_start, player_count) * rate_multiplier * delta
 	while _budget >= 1.0:
 		_budget -= 1.0
 		if alive + result.size() < MAX_ALIVE:

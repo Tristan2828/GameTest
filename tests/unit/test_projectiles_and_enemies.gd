@@ -62,6 +62,25 @@ func test_host_hit_damages_enemy_and_credits_shooter() -> void:
 	assert_eq(_enemies.damage_by_peer[42], 7)
 
 
+func test_enemy_on_top_of_the_shooter_still_gets_hit() -> void:
+	# The bolt appears at the muzzle (9 px out) and flies away from the enemy
+	# standing on the shooter; the first tick checks back to the shooter's center.
+	var enemy := _spawn_shambler(Vector2(300, 300))
+	_projectiles.spawn_backtrack = Player.MUZZLE_DISTANCE
+	_projectiles.spawn(Vector2(309, 300), Vector2(420, 0), 7, 5.0, 42)
+	_projectiles.step(1.0 / 60.0)
+	_projectiles.resolve_hits(_enemies, true)
+	assert_eq(enemy.hp, enemy.type.max_hp - 7)
+
+
+func test_fast_bolt_does_not_skip_over_an_enemy() -> void:
+	var enemy := _spawn_shambler(Vector2(330, 300))
+	_projectiles.spawn(Vector2(300, 300), Vector2(3000, 0), 7, 5.0, 42)
+	_projectiles.step(1.0 / 60.0)  # 300 -> 350 in one tick, past the enemy at 330.
+	_projectiles.resolve_hits(_enemies, true)
+	assert_eq(enemy.hp, enemy.type.max_hp - 7)
+
+
 func test_client_hit_removes_bullet_without_damage() -> void:
 	var enemy := _spawn_shambler(Vector2(300, 300))
 	_projectiles.spawn(Vector2(300, 300), Vector2.ZERO, 7, 5.0, 42)

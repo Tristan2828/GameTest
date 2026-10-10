@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-09 (v0.17.0)
+> Last updated: 2026-10-10 (v0.18.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -77,6 +77,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 ### In-run
 - **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades. Each card shows its level as pips (owned / this pick / left to max) and the player's real stat before -> after taking it.
+  - **Late levels (v0.18.0):** from level 15 on, a level also costs 1.5·(n−15)² more, so teams stop snowballing through stages 2–3 (an invincible solo autopilot used to reach level 44–53 by the end; now ~40).
   - **Pacing (v0.15.0):** level n costs 10 + 9·(n−1) XP, times +40% per extra player (spawns grow 60%, so bigger teams level slightly faster). History: v0.13 cost 5 + 5·(n−1) with no team factor (a 2-player team got ~30 level-ups in stage 1: too many pauses); v0.14.0 cost 16 + 14·(n−1) × the spawn factor, which left the team too weak to beat stage 1. Measured with the autopilot (solo, it can't dodge or collect everything): level 13 by the boss and the horde under control, vs level 7 and an overrun arena in v0.14. Sharpened Bolts went +3 → +4 damage and Quick Hands 12% → 15%.
   - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
   - **v0.16.0: 25 upgrades** (owner asked for more, a mix of stats and new mechanics, a couple of trade-offs and one per hero). New:
@@ -102,11 +103,12 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Players | 1–4 |
 | Friendly fire | Off |
 | XP | **Shared** team XP bar; each player picks their **own** upgrade |
-| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted. Play resumes after a **3-second "3, 2, 1" countdown** (also after the shop) |
+| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted. Online, play resumes after a **3-second "3, 2, 1" countdown** (also after the shop); solo resumes right away (v0.18.0) |
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
-| Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 hearts you lie in a circle (30 px) and can't move, shoot or use your ability. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max hearts (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Fire / Ability cycles, ending on your own body). Teammates see a pulsing arrow with a "+" and a "Red is down!" line. Run ends if everyone is down at once |
+| Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 hearts you lie in a circle (30 px) and can't move, shoot or use your ability. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max hearts (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Fire / Ability cycles, ending on your own body). Teammates see a pulsing edge arrow with a "+" and the name, a blinking "+" on the minimap and a "Red is down!" line. (Since v0.18.0 only downed teammates get edge arrows; healthy ones are on the minimap.) Run ends if everyone is down at once |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
-| Pause | **The host's pause menu freezes the game for everyone** (v0.17.0, owner request); friends see a "Paused" banner, and closing it plays the "3, 2, 1" countdown. A friend's Esc menu doesn't pause (only blocks their own controls). Solo pauses too, also with the countdown |
+| Pause | Solo: the Esc menu pauses the game. Online: nobody can pause; the Esc menu only blocks your own controls. (v0.17.0's host pause that froze everyone was removed in v0.18.0: the owner saw the game desync and it wasn't worth it) |
+| Names | Each player types a display name on the title menu (saved on their PC, max 12 characters, only characters the pixel font draws). Without one you're called by your slot color ("Red"). Shown on lobby cards, over teammates' heroes, on edge arrows, in toasts and "Waiting for..." lines, and on the run summary. Clients send it to the host on connecting; the host sends the list to everyone (`Net.names`) |
 | Map events and quests | Events are shared (anyone can wake a champion, hold a ritual, catch a thief); a chest goes to whoever touches it first. Quests are personal (each player picks their own) |
 
 ## 6. Art & audio
@@ -149,8 +151,7 @@ Decisions made by Claude while the owner was away. **Revisit in the next playtes
 ### Milestone 4: Multi-stage run, ghosts, coins & shop, relics, auto weapons ✅ (shop seen in the solo playtest: too many coins, fixed in v0.12.0; the rest not yet playtested)
 Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
 - **Run = 3 stages** in the same crypt arena (distinct stages/themes come in M5). Each stage is harder:
-  - Spawn rate +35% per stage.
-  - Enemy and boss HP +50% per stage.
+  - ~~Spawn rate +35% per stage. Enemy and boss HP +50% per stage.~~ Far too gentle (owner, v0.17: "stage 2 and 3 are super easy"). **v0.18.0:** enemy HP x1 / x4 / x9, boss HP x1 / x4.5 / x12, spawn rate x1 / x1.4 / x1.8, and stages 2 and 3 start their spawn ramp 45 s / 90 s in (see Playtest 5 changes).
   - Beating the stage 3 boss = **Victory**.
 - **Between stages:** a **shop break**. The run keeps your team level, upgrades, relics, weapons and coins.
 - ~~**Ghosts:** a downed player becomes a ghost until the next stage (floats around, collects gems and coins).~~ Replaced in v0.15.0 by revives (see Co-op rules). Everyone still respawns with full hearts and a ready ability at the start of the next stage.
@@ -171,6 +172,7 @@ The owner approved the plan; details below are Claude's defaults. **Revisit in t
   - Solo/Host/Join leads to a lobby: pick a character, press Ready, and the host starts (solo starts right away).
   - After Victory or Run over, the host returns everyone to the lobby.
   - Friends joining mid-run still drop in, as the Wanderer.
+  - **Party page + hero picker (v0.18.0, owner request):** the lobby's main page shows the whole party, one card per player (name, their hero walking on the spot, ability, hearts, ready state; 3 players = 3 cards). Your own card or **Choose Hero** opens a sub-screen with the four heroes; picking one goes back.
   - **Difficulty and Custom Game pages (v0.14.0, owner request; defaults by Claude, revisit):** the host sets them in the lobby; friends see them read-only, and a summary line shows the current choice. Saved on the host's PC.
     - *Difficulty:* sliders for enemy health, boss health, enemy count (spawn rate), XP gain, coin drops (25%–300%), and bonus hearts (−2 to +3). Presets: Easy / Normal / Hard.
     - *Custom Game:* full run or a **single stage** on a chosen map (won by clearing it; it always has first-stage toughness whichever map), wave length (1–10 min), boss on/off (off = survive the timer to win), starting level-ups (0–10), start with every auto weapon.
@@ -274,12 +276,32 @@ The owner asked for map events (a reason to explore), arrows to them, quests pic
    - **Bone Spears:** every 2 s (faster per level) 2 (+1/level) random enemies within 220 px get a closing warning ring, then a spear strikes 0.45 s later for 30 damage (+12/level) in 14 px.
    - Networking: only the host deals damage. Scythe throws, lightning paths and spear spots are small events; every peer draws Hellfire from where it sees each player walk.
 4. **Power-ups** (a third pickup pool): 1.2% of regular kills drop one (at most one per 10 s), plus one from every champion. Heart (heal 1; 35% of drops), Soul Magnet (every XP gem on the map flies to you; 25%), Holy Bomb (400 damage × stage HP growth to every regular enemy within 260 px, clears enemy bullets there; bosses spared; 20%), Frost Hourglass (regular enemies and every enemy bullet already flying freeze for 4 s; frozen bullets still hurt; 20%). The Holy Bomb is its own line on the run summary's Weapons page.
-5. **Host pause** (see Co-op rules). Test aid: `--test-pause=<s>` (the host pauses for 3 s at that stage time).
+5. **Host pause** (removed again in v0.18.0, see Co-op rules).
 6. Compendium: an **Events** tab (events and every quest), the new pickups and weapons; champions and the Grave Robber on the Enemies tab.
 
 Decisions made by Claude (**revisit in the next playtest**): every number above, the champion designs (recolored stage enemies with a crown instead of new sprites), pop-up times, the quest list and rewards, the weapon and pickup numbers, freezing bullets in place rather than clearing them, and that the Grave Robber does no contact damage.
 
-### Where things stand (2026-10-10, v0.16.0 released with in-game feedback and 16 upgrades; v0.17.0 adds map events, quests, 4 weapons, 4 pickups and host pause)
+### Playtest 5 changes (v0.18.0, owner's fifth list)
+1. **Shooting enemies on top of you:** a friend reported enemies inside your hitbox couldn't be hit. Bolts appear at the muzzle (9 px out) and fast ones moved ~6 px a tick, checked only where they landed, so they jumped over enemies right next to you. Now each tick checks the whole path the bolt flew, and a new bolt checks back to the shooter's center (`EnemyManager.find_hit_on_path`). Not a design choice, a bug.
+2. **Exit Game** on the title menu.
+3. **Host pause removed** (it desynced; see Co-op rules).
+4. **Run summary fixes:** the Weapons page ran off the bottom of the screen and took the page tabs with it, so you couldn't go back. The cards now sit in a scroll box sized to the screen (wheel or Up / Down), weapon rows are one compact line each (hover for every number; unused weapons as dim icons), and Esc / B returns to Overview.
+5. **Run summary, beefed up:** letters drop in and shimmer, gold confetti (victory) or rising embers (defeat), the run's bosses as trophies (slain on a gold plinth / the one that ended the run in red / unreached as silhouettes), a team score chip (hover: difficulty multiplier), a crown and "MVP" on the top scorer's card, victory heroes walk on the spot, ticking count-up, and a third **Highlights** page (MVP, deadliest weapon, kill rate, coins, XP, and co-op leaders).
+6. **Lobby party page + hero picker** (see Milestone 5, Lobby).
+7. **Display names** (see Co-op rules).
+8. **Solo skips the "3, 2, 1"** after level-ups and the shop.
+9. **Chests that wouldn't open:** opening needed your center within 12 px of the chest's, so brushing it with your sprite did nothing. Now 20 px (altars 12 -> 16 px). No other cause found (every champion death goes through the same kill path).
+10. **Minimap shapes** (owner: "instead of just squares"): you = a big diamond, teammates = small diamonds, a downed teammate = blinking green "+", boss = skull, weapon altar = sword, champion = crown, ritual = ring, Grave Robber = coin, chest = chest; each with a dark outline. Enemies stay dots.
+11. **Edge arrows only for map events and downed teammates** (owner request: arrows to every teammate were clutter).
+12. **"Compendium" renamed "Game Guide"** (the owner didn't know the word).
+13. **Stages 2–3 rebalanced** (owner: "super easy after you defeat stage 1"). Measured with a new `[balance]` line the host prints at every stage end, on solo invincible autopilot runs (`--invincible` now lets hits land and counts them, but refills hearts) with all four heroes, fast-forwarded with `--fixed-fps 60`:
+    - Before: hits taken 36–93 / 9–10 / 15–25 per stage, boss fights 38–66 s / 8–36 s / 3–7 s. The team's damage roughly triples by stage 3 (levels 44–53, every weapon, relics) while enemies only had +50% / +100% HP, and each stage's spawn ramp started from zero.
+    - After (see Milestone 4 and Progression for the numbers): hits 41 / 52 / 125 on average, boss fights 61 / 76 / 101 s. Stage 2 is a little harder than stage 1, stage 3 is the real test. The Holy Bomb and the Game Guide's HP numbers follow the same tables.
+    - *Not measured:* co-op (the per-player factors are unchanged, so the curve should hold) and real humans, who dodge far better than the autopilot. **Watch** in the next playtest: if stage 3 is a wall, lower `ENEMY_HP_BY_DEPTH[2]` / `BOSS_HP_BY_DEPTH[2]` in `src/arena/arena.gd` first.
+
+Decisions made by Claude (**revisit in the next playtest**): names on the title menu (not the lobby), 12 characters, name tags only over teammates; the party card layout; the Highlights lines; the chest radius; the minimap shapes; "Game Guide" as the new name; every balance number in item 13.
+
+### Where things stand (2026-10-10, v0.17.0 adds map events, quests, 4 weapons, 4 pickups; v0.18.0 implements the fifth list)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
 ### Before that (v0.14.1, released on GitHub)
