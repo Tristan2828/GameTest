@@ -1,7 +1,7 @@
 class_name CustomGameScreen
 extends RunConfigScreen
 ## Lobby page: full run or a custom single-stage game, the map, wave length,
-## boss on/off, starting boosts and the soundtrack.
+## boss on/off, starting boosts, Ember boosts on/off and the soundtrack.
 
 
 func _ready() -> void:
@@ -23,6 +23,7 @@ func _build_rows() -> void:
 	_toggle("boss_enabled", "Boss", "Off: survive the timer to win")
 	_slider("bonus_levels", "Starting level-ups", "Upgrades everyone picks at the start", func(value: int) -> String: return str(value))
 	_toggle("start_with_weapons", "All weapons", "Start with every auto weapon")
+	_toggle("ember_boosts", "Ember boosts", "Off: nobody's Ember Shrine boosts count")
 	_cycle("Soundtrack", "Music during the run (for everyone)", Tracks.SOUNDTRACKS,
 		func() -> int: return config.soundtrack,
 		func(index: int) -> void: config.set_value("soundtrack", index))

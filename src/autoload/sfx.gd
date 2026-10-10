@@ -102,6 +102,8 @@ func _build_sounds() -> void:
 		Synth.voice(W.SAW, 98.0, 92.0, 2.2, 0.12, 0.25, 1.0, 0.25, 5.0, 0.015),
 		Synth.voice(W.SAW, 104.0, 97.0, 2.2, 0.12, 0.25, 1.0, 0.25, 5.0, 0.015)]), 0.28, 0.35, 3))
 	_add(&"dash", Synth.voice(W.NOISE, 4000.0, 700.0, 0.12, 0.16, 0.003, 1.5, 0.7))
+	# Your ability is ready again: a quiet two-note chime.
+	_add(&"ability_ready", Synth.echo(_arpeggio([79, 86], 0.05, 0.16, W.TRIANGLE, 0.8), 0.07, 0.3, 2))
 	# Hex Snare: an eerie falling whistle with a wobble, ringing out.
 	_add(&"hex", Synth.echo(Synth.mix([
 		Synth.voice(W.SINE, 1400.0, 420.0, 0.45, 0.3, 0.01, 1.3, 1.0, 9.0, 0.05),

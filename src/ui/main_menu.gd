@@ -3,7 +3,7 @@ extends CanvasLayer
 ## Title menu: your display name, play solo, host a game, or join a host by IP
 ## address, and Exit Game. Also opens
 ## Settings, the Game Guide (`Compendium`: info on heroes, weapons, items, enemies), Records
-## (your best runs on this PC) and the
+## (your best runs on this PC), the Ember Shrine (permanent boosts) and the
 ## Playtest Checklist (what still needs testing, from docs/PLAYTEST.md).
 ## In the exported game it also checks GitHub for a newer version and offers an
 ## Update button (see Updater).
@@ -25,6 +25,7 @@ signal feedback_requested
 @onready var _compendium_button: Button = %CompendiumButton
 @onready var _checklist_button: Button = %ChecklistButton
 @onready var _records_button: Button = %RecordsButton
+@onready var _shrine_button: Button = %ShrineButton
 @onready var _feedback_button: Button = %FeedbackButton
 @onready var _exit_button: Button = %ExitButton
 @onready var _name_edit: LineEdit = %NameEdit
@@ -38,6 +39,7 @@ var updater: Updater = null
 @onready var _page_button: Button = %PageButton
 var checklist: PlaytestChecklist = null
 var records: RecordsScreen = null
+var shrine: EmberShrine = null
 
 
 func _ready() -> void:
@@ -64,7 +66,9 @@ func _ready() -> void:
 	compendium = Compendium.new()
 	checklist = PlaytestChecklist.new()
 	records = RecordsScreen.new()
-	for page: Array in [[compendium, _compendium_button], [records, _records_button], [checklist, _checklist_button]]:
+	shrine = EmberShrine.new()
+	for page: Array in [[compendium, _compendium_button], [records, _records_button], [shrine, _shrine_button],
+			[checklist, _checklist_button]]:
 		var screen: ListScreen = page[0]
 		var button: Button = page[1]
 		add_child(screen)
@@ -137,6 +141,7 @@ func show_menu(message: String = "") -> void:
 	compendium.hide()
 	checklist.hide()
 	records.hide()
+	shrine.hide()
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()

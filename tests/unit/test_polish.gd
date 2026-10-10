@@ -64,7 +64,8 @@ func test_settings_round_trip() -> void:
 
 func test_every_sound_is_synthesized() -> void:
 	for sound: StringName in [&"shoot", &"hit", &"death", &"hurt", &"gem", &"coin", &"level_up", &"pickup",
-			&"bomb", &"boss", &"dash", &"enemy_shot", &"victory", &"defeat", &"countdown", &"countdown_go"]:
+			&"bomb", &"boss", &"dash", &"enemy_shot", &"victory", &"defeat", &"countdown", &"countdown_go",
+			&"ability_ready"]:
 		assert_true(Sfx.has_sound(sound), str(sound))
 
 

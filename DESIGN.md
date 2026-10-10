@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-10 (v0.20.0)
+> Last updated: 2026-10-10 (v0.21.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -64,6 +64,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Aiming:** manual 360° aim with the mouse or right stick.
 - **Defense:**
   - **One character ability** on one button, on a cooldown (owner decision after the first playtest; replaces the separate dash and bomb). Dash and a bomb-like blast are abilities of specific characters.
+  - **Ready marker (playtest request):** over your own hero's head, a small bar fills while the ability recharges, then a pulsing gold gem shows it's ready; a ring and a quiet chime play the moment it comes back. Only for cooldowns of 3s or more (not the Wanderer's Dash: it would flicker). Teammates don't see your marker.
 
 ### Weapons
 - **Main weapon (v0.19.0):** each hero has their own, always aimed with the mouse / right stick and used by holding fire (owner decision: unique weapons instead of everyone shooting bolts; every hero keeps aiming so the twin-stick feel stays). See *Hero main weapons (v0.19.0)* in Milestones.
@@ -94,7 +95,11 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Shop between stages:** spend coins on items.
 
 ### Meta
-- **None.** Each run stands alone, with no unlocks or permanent upgrades.
+- ~~**None.** Each run stands alone, with no unlocks or permanent upgrades.~~ Changed (owner decision, v0.21.0): a **very light** permanent stat shop.
+- **Embers (permanent progression):** every finished run earns Embers on your own PC (`user://embers.cfg`; headless and autopilot runs don't count). The title menu's **Ember Shrine** sells small permanent boosts. Owner choices: a tiny stat shop (not unlocks or cosmetics), a fully upgraded hero is only ~5-10% stronger, about 100 runs to buy everything, earned from progress (bosses, victory, a little from kills), no extra hearts, a free **Refund all** button, and each player can switch their own boosts off. Records scores ignore boosts.
+  - Earning: 8 per boss killed + 6 for a victory + 1 per 100 of your kills (max 10), times the run's score multiplier (clamped 0.25-2). A victory is ~40, dying in stage 2 ~15.
+  - Boosts (3 ranks each, prices 50 / 100 / 175, ~1950 in total): **Keen Eye** +2% main-weapon crit chance, **Swiftness** +2% move speed, **Focus** -3% ability cooldown, **Greed** +5% chance a coin you pick up is worth 1 more, **Reach** +6% pickup radius, **Resolve** +0.05 s invulnerability after a hit. (A +% XP boost was dropped: XP is shared by the team.)
+  - Co-op: everyone brings their own boosts (sent to the host on connecting, applied to that player's stats on every peer through the spawn data). The host can turn them off for everyone in Custom Game (**Ember boosts** On/Off).
 - **Records (v0.15.0):** each PC keeps its own best runs (top 10 per hero, `user://records.cfg`) with a score: 10 per kill + 1 per 10 damage + 3000 per boss + 5000 for a victory, times the difficulty (enemy/boss health and enemy count; bonus hearts, starting levels, extra XP and all weapons lower it). Shown on the title menu's Records page and as "Score" on the run summary. Bragging rights only, no unlocks.
 
 ## 5. Co-op rules
@@ -326,6 +331,10 @@ Decisions made by Claude (**revisit in the next playtest**): which weapon goes t
 1. **Quieter floor decorations** (owner: tombstones and other props were distracting, the same size as monsters). Owner chose "smaller + flatter": every prop sprite is redrawn at about half size (grave 6x6 instead of 9x11; a Shambler is 13x12) without the black outline creatures have, and baked at 55% opacity and 80% brightness so the floor shows through. Candles and candelabras stay fully lit.
 2. **Hero names** (owner picked the dark-fantasy set): **Kael** the Wanderer, **Mortimer** the Gravekeeper, **Morwen** the Hexblade Witch, **Vesper** the Necromancer (`CharacterStats.hero_name`; `full_name()` = "Kael the Wanderer"). The name leads in the hero picker, party cards, Game Guide, Records tabs and run summary; hero-only upgrades say "Kael only". Logs and reports still use the class.
 3. **Watch demos** (owner asked for a video when picking a hero; chose a Watch button per hero and weapon + ability). The game has no video files, so `HeroDemo` is a tiny scripted scene drawn in code at the game's 1x scale with the hero's real numbers and sprites: ~4 s of their main weapon against Shamblers, then their ability (Dash through a fan of bullets / Grave Blast / Hex Snare / Bone Effigy), ~8 s loop, fixed 60 steps a second so it plays the same every time. `HeroDemoPopup` shows it with the hero's name, class, the weapon and ability text (the one playing lights up) and Pick / Back buttons. Local only, nothing networked.
+
+### v0.21.0: ability ready marker and Embers
+1. **Ability ready marker** (owner feedback: wanted an indicator near the character when the ability is up). Over your own hero's head: a small bar fills while the ability recharges, then a pulsing gold gem; a ring and a quiet chime when it comes back. Only for cooldowns of 3 s or more, so not the Wanderer's Dash. Claude's call: the position (where teammates show names), the look and the chime.
+2. **Embers + Ember Shrine** (owner asked for very light permanent progression; decided in a Q&A round, see *Meta*). Claude's calls: the earning formula and prices, Keen Eye (crit) instead of +% damage (whole-number damage would round small bonuses away), Resolve instead of +% XP (XP is shared by the team), autopilot runs play without boosts and earn none.
 
 ### Where things stand (2026-10-10, v0.17.0 adds map events, quests, 4 weapons, 4 pickups; v0.18.0 implements the fifth list; v0.19.0 gives each hero their own main weapon)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.

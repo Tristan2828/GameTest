@@ -11,6 +11,8 @@ extends Node
 ## sends its name to the host on connecting, and the host sends the full list to
 ## everyone whenever it changes. (An autoload has the same node path on every
 ## peer, so its RPCs work in the menu, the lobby and the arena alike.)
+## Each client's Ember Shrine boost ranks travel with its name; only the host
+## keeps them (the arena puts them in the player's spawn data).
 
 const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 4
@@ -20,6 +22,8 @@ var invite: HostInvite = HostInvite.new()
 ## peer id -> chosen display name ("" or missing = called by slot color).
 ## The host's copy is the truth; clients get it from _receive_names.
 var names: Dictionary[int, String] = {}
+## Host only: peer id -> that player's Ember boost ranks (Embers.Boost order).
+var boosts: Dictionary[int, PackedInt32Array] = {}
 
 ## The name list changed (someone joined, left or sent their name).
 signal names_changed
@@ -28,8 +32,9 @@ signal names_changed
 func _ready() -> void:
 	add_child(invite)
 	multiplayer.connected_to_server.connect(func() -> void:
-		_register_name.rpc_id(1, Settings.player_name))
+		_register_name.rpc_id(1, Settings.player_name, _own_boosts()))
 	multiplayer.peer_disconnected.connect(func(peer_id: int) -> void:
+		boosts.erase(peer_id)
 		if multiplayer.is_server() and names.erase(peer_id):
 			_broadcast_names())
 
@@ -39,10 +44,23 @@ func name_of(peer_id: int, slot: int) -> String:
 	return PlayerNames.display(names.get(peer_id, ""), slot)
 
 
+## Host: a player's Ember boost ranks (none if they never sent any).
+func boosts_of(peer_id: int) -> PackedInt32Array:
+	return boosts.get(peer_id, PackedInt32Array())
+
+
+## This PC's boosts for the next run. Autopilot (test) runs play without them,
+## so balance checks don't depend on what the dev PC bought.
+func _own_boosts() -> PackedInt32Array:
+	return PackedInt32Array() if LaunchOptions.autopilot else Embers.load_saved().active_ranks()
+
+
 func _set_own_name() -> void:
 	names.clear()
 	names[1] = PlayerNames.sanitize(Settings.player_name)
 	names_changed.emit()
+	boosts.clear()
+	boosts[1] = _own_boosts()
 
 
 func start_solo() -> void:
@@ -81,6 +99,7 @@ func leave_game() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	names.clear()
 	names_changed.emit()
+	boosts.clear()
 
 
 func is_online() -> bool:
@@ -126,11 +145,12 @@ func _broadcast_names() -> void:
 		_receive_names.rpc_id(peer_id, ids.size(), ids, list)
 
 
-## Client -> host, once on connecting.
+## Client -> host, once on connecting: name and Ember boost ranks.
 @rpc("any_peer", "call_remote", "reliable")
-func _register_name(chosen: String) -> void:
+func _register_name(chosen: String, boost_ranks: PackedInt32Array) -> void:
 	if not multiplayer.is_server():
 		return
+	boosts[multiplayer.get_remote_sender_id()] = Embers.clean_ranks(boost_ranks)
 	names[multiplayer.get_remote_sender_id()] = PlayerNames.sanitize(chosen)
 	_broadcast_names()
 

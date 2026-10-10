@@ -52,6 +52,18 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0j Embers and the Ember Shrine (v0.21.0)
+- [ ] Finish a run: the run summary says "+N Embers". Title menu > **Ember Shrine**: buy a boost, see the rank pips fill. Clear? Works with mouse and gamepad?
+- [ ] Earning pace: about 40 for a victory and about 15 for dying in stage 2; everything costs about 1950 (around 100 runs). Feels rewarding enough, or too slow?
+  - *Tune: `PER_BOSS`, `PER_VICTORY`, `KILLS_PER_EMBER`, `PRICES` and the per-rank amounts in `src/progression/embers.gd`.*
+- [ ] Boosts feel small but noticeable (a maxed hero is only a few percent stronger)? Any boost useless or missing?
+- [ ] **My boosts: Off** and **Refund all** work? Host: Custom Game > **Ember boosts Off** turns everyone's off (the lobby summary says "no Ember boosts")?
+- [ ] Co-op: a friend's boosts work for them (e.g. Swiftness makes only them faster, with no rubber-banding)?
+
+### 3.0i Ability ready marker (v0.21.0)
+- [ ] Play the Gravekeeper, Witch or Necromancer: over your head a small bar fills while your ability recharges, then a gold gem pulses when it's ready (with a ring and a soft chime). Easy to notice without looking at the corner? Too much clutter, or is the chime annoying?
+  - *Tune: `ABILITY_MARKER_MIN_COOLDOWN`, `ABILITY_PING_SECONDS` and `_draw_ability_marker()` in `src/player/player.gd`; the chime is `ability_ready` in `src/autoload/sfx.gd`.*
+
 ### 3.0h Hero names, Watch demos, quieter floors (v0.20.0, your sixth list)
 - [ ] Heroes have names: Kael (Wanderer), Mortimer (Gravekeeper), Morwen (Hexblade Witch), Vesper (Necromancer). Do they fit? Want different ones?
 - [ ] In Choose Hero, press **Watch** under a hero: a looping demo shows their main weapon, then their ability. Does it explain the hero well? Anything missing or confusing?

@@ -23,6 +23,7 @@ const LABEL_COLOR: Color = Color(0.6, 0.57, 0.68)
 const VALUE_COLOR: Color = Color(0.95, 0.93, 1.0)
 const AWARD_COLOR: Color = Color(0.95, 0.78, 0.4)
 const DIVIDER_COLOR: Color = Color(0.3, 0.24, 0.4)
+const EMBER_COLOR: Color = Color(0.98, 0.6, 0.25)
 const CARD_BG: Color = Color(0.1, 0.08, 0.14, 1.0)
 const COUNT_UP_SECONDS: float = 1.2
 ## Card width by player count (index = players - 1); fits 640 px wide.
@@ -53,6 +54,8 @@ var difficulty_name: String = ""
 var first_stage: int = 1
 var bosses_enabled: bool = true
 var local_record_rank: int = -1
+## Embers this PC's player earned (-1 = not counted, e.g. test runs).
+var local_embers: int = -1
 
 var _stage_in_run: int = 1
 var _stage_count: int = 1
@@ -353,6 +356,8 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 		_pulse(best)
 	elif player.is_local() and local_record_rank > 0:
 		lines.add_child(_label("#%d of your %s runs" % [local_record_rank + 1, player.stats.hero_name], 9, LABEL_COLOR, true))
+	if player.is_local() and local_embers >= 0:
+		lines.add_child(_label("+%d Embers (spend them at the Ember Shrine)" % local_embers, 9, EMBER_COLOR, true))
 
 	# Build: auto weapons, upgrades and relics as icons (hover for names).
 	lines.add_child(_divider())

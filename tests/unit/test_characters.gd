@@ -92,3 +92,10 @@ func test_spawn_data_carries_the_character_to_every_peer() -> void:
 	assert_eq(RunSetup.character_for(42), Characters.Id.HEXBLADE_WITCH)
 	assert_eq(RunSetup.character_for(7), Characters.Id.WANDERER, "unchosen = Wanderer")
 	RunSetup.characters.clear()
+
+
+func test_ability_marker_only_for_slow_abilities() -> void:
+	assert_false(Player.shows_ability_marker(Characters.get_character(Characters.Id.WANDERER).ability_cooldown),
+		"Dash is too quick: the marker would flicker")
+	for id: int in [Characters.Id.GRAVEKEEPER, Characters.Id.NECROMANCER, Characters.Id.HEXBLADE_WITCH]:
+		assert_true(Player.shows_ability_marker(Characters.get_character(id).ability_cooldown), str(id))

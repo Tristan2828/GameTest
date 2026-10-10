@@ -57,8 +57,10 @@ var bonus_levels: int = 0
 var start_with_weapons: bool = false
 ## Music during the run (Tracks.SOUNDTRACKS index): classic, metal, ...
 var soundtrack: int = 0
+## Off: nobody's Ember Shrine boosts are used this run.
+var ember_boosts: bool = true
 
-const FLAGS: Array[String] = ["single_stage", "boss_enabled", "start_with_weapons"]
+const FLAGS: Array[String] = ["single_stage", "boss_enabled", "start_with_weapons", "ember_boosts"]
 
 
 ## Sets a numeric setting, clamped and snapped to its slider step.
@@ -122,6 +124,8 @@ func summary() -> String:
 		extras += "   +%d levels" % bonus_levels
 	if start_with_weapons:
 		extras += "   all weapons"
+	if not ember_boosts:
+		extras += "   no Ember boosts"
 	if soundtrack != 0:
 		extras += "   %s music" % Tracks.SOUNDTRACKS[clampi(soundtrack, 0, Tracks.SOUNDTRACKS.size() - 1)]
 	return "Difficulty: %s   %s   %d:%02d waves%s" % [difficulty_name(), mode, whole / 60, whole % 60, extras]

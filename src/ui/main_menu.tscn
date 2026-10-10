@@ -114,6 +114,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Records"
 
+[node name="ShrineButton" type="Button" parent="Center/Panel/InfoRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ember Shrine"
+tooltip_text = "Spend Embers from your runs on small permanent boosts"
+
 [node name="ChecklistButton" type="Button" parent="Center/Panel/InfoRow"]
 unique_name_in_owner = true
 layout_mode = 2

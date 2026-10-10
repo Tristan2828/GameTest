@@ -78,6 +78,8 @@ enum MainWeapon { BOLTS, SCYTHE, LIGHTNING, SPEARS }
 @export var hitbox_radius: float = 2.0
 ## XP gems within this distance fly to the player.
 @export var pickup_radius: float = 40.0
+## Chance (0..1) that a coin this player picks up is worth 1 more (Ember Shrine's Greed).
+@export var coin_luck: float = 0.0
 
 @export_group("Main weapon")
 @export var main_weapon: MainWeapon = MainWeapon.BOLTS

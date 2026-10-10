@@ -107,6 +107,10 @@ func _screenshot_info_pages() -> void:
 	await get_tree().create_timer(0.2).timeout
 	await save_screenshot(get_tree(), "records.png")
 	_menu.records.close()
+	_menu.shrine.open()
+	await get_tree().create_timer(0.2).timeout
+	await save_screenshot(get_tree(), "ember_shrine.png")
+	_menu.shrine.close()
 	_menu.open_settings()
 	await get_tree().create_timer(0.2).timeout
 	await save_screenshot(get_tree(), "settings.png")

@@ -402,6 +402,21 @@ const SPRITES: Dictionary[String, Array] = {
 		"kgOOk",
 		".kkk.",
 	],
+	# Ember Shrine currency.
+	"ember": [
+		"....k....",
+		"...kok...",
+		"...koOk..",
+		"..koyok..",
+		"..koyyok.",
+		".koyeyok.",
+		".koyeeyok",
+		"koyeweyok",
+		"koyeeeyok",
+		".koyyyok.",
+		"..kOOOk..",
+		"...kkk...",
+	],
 	"coin_big": [
 		"..kkk..",
 		".kyyyk.",

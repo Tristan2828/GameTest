@@ -46,6 +46,14 @@ const REMOTE_SNAP_DISTANCE: float = 48.0
 const REVIVE_COLOR: Color = Color(0.55, 0.95, 0.5)
 ## How quickly the camera glides to a spectated teammate (higher = faster).
 const SPECTATE_PAN_SPEED: float = 6.0
+## Your own hero shows an ability marker over their head (charging bar, then a
+## glowing gem when ready). Abilities quicker than this (Dash) don't get one: it
+## would flicker all the time.
+const ABILITY_MARKER_MIN_COOLDOWN: float = 3.0
+const ABILITY_READY_COLOR: Color = Color(0.95, 0.78, 0.4)
+const ABILITY_CHARGING_COLOR: Color = Color(0.6, 0.57, 0.68)
+## Seconds the "ready again" ring takes to spread out and fade.
+const ABILITY_PING_SECONDS: float = 0.45
 
 @export var stats: CharacterStats
 
@@ -104,13 +112,17 @@ var _last_move: Vector2 = Vector2.RIGHT
 var _last_drawn_position: Vector2 = Vector2.ZERO
 var _shake: float = 0.0
 var _remote_dashing: bool = false
+var _ability_was_ready: bool = true
+## Counts down while the "ability ready" ring plays.
+var _ability_ping: float = 0.0
 
 @onready var _camera: Camera2D = $Camera2D
 
 
 ## Called by the arena's spawn function, before the node enters the tree.
 func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_bounds: Rect2,
-		character: int = Characters.Id.WANDERER, hearts_bonus: int = 0) -> void:
+		character: int = Characters.Id.WANDERER, hearts_bonus: int = 0,
+		boost_ranks: PackedInt32Array = PackedInt32Array()) -> void:
 	peer_id = owner_peer_id
 	slot = player_slot
 	bounds = arena_bounds
@@ -119,6 +131,7 @@ func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_
 	# Each player gets its own copy so upgrades only change this player.
 	stats = Characters.get_character(character).duplicate()
 	stats.max_hearts = maxi(stats.max_hearts + hearts_bonus, 1)  # Difficulty setting.
+	Embers.apply(boost_ranks, stats)  # This player's Ember Shrine boosts (empty when off).
 	health.reset(stats.max_hearts)
 	state.position = spawn_position
 	position = spawn_position
@@ -223,6 +236,11 @@ func ability_ready_ratio() -> float:
 	return 1.0 - clampf(state.ability_cooldown_left / stats.ability_cooldown, 0.0, 1.0)
 
 
+## True if a hero with this cooldown gets the over-the-head ability marker.
+static func shows_ability_marker(cooldown: float) -> bool:
+	return cooldown >= ABILITY_MARKER_MIN_COOLDOWN
+
+
 func is_downed() -> bool:
 	return health.is_downed()
 
@@ -308,6 +326,8 @@ func _process(delta: float) -> void:
 		Sfx.play(&"dash", -6.0)
 	_was_dashing = dashing
 	_last_seen_hearts = health.hearts
+	if is_local():
+		_update_ability_ping(delta)
 	if _shake > 0.0:
 		_shake = maxf(_shake - delta * 20.0, 0.0)
 		_camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake)).round()
@@ -326,6 +346,17 @@ func _process(delta: float) -> void:
 		position = position.lerp(_remote_target, 1.0 - exp(-REMOTE_SMOOTHING * delta))
 	_update_walk(delta)
 	queue_redraw()
+
+
+## Local player: ring + chime the moment the ability is back.
+func _update_ability_ping(delta: float) -> void:
+	_ability_ping = maxf(_ability_ping - delta, 0.0)
+	var now_ready := ability_ready_ratio() >= 1.0
+	if now_ready and not _ability_was_ready and not health.is_downed() \
+			and shows_ability_marker(stats.ability_cooldown):
+		_ability_ping = ABILITY_PING_SECONDS
+		Sfx.play(&"ability_ready", -8.0)
+	_ability_was_ready = now_ready
 
 
 func _update_walk(delta: float) -> void:
@@ -361,6 +392,8 @@ func _draw() -> void:
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
+	if is_local() and shows_ability_marker(stats.ability_cooldown):
+		_draw_ability_marker()
 
 
 ## Teammates' names float over their heads (co-op), in their color.
@@ -372,6 +405,33 @@ func _draw_name_tag(color: Color) -> void:
 	var at := Vector2(-width / 2.0, top).round()
 	draw_string(font, at + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, HITBOX_OUTLINE_COLOR)
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, color.lightened(0.25))
+
+
+## Over your own head (where teammates show names): a small bar filling while
+## the ability recharges, then a gently pulsing gem once it's ready. A ring
+## spreads out from the hero the moment it comes back.
+func _draw_ability_marker() -> void:
+	var top := roundf(-2.0 - PixelArt.size_of(stats.sprite).y / 2.0 - 4.0 - _bob)
+	var ratio := ability_ready_ratio()
+	if ratio < 1.0:
+		var width := 9.0
+		draw_rect(Rect2(-width / 2.0 - 1.0, top - 1.0, width + 2.0, 4.0), HITBOX_OUTLINE_COLOR)
+		draw_rect(Rect2(-width / 2.0, top, floorf(width * ratio), 2.0), ABILITY_CHARGING_COLOR)
+	else:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 220.0)
+		var gem := Vector2(0, top - 2.0 - roundf(pulse))
+		# A 5x5 diamond with a dark outline (plus shapes stacked into a diamond).
+		draw_rect(Rect2(gem + Vector2(-1, -3), Vector2(3, 7)), HITBOX_OUTLINE_COLOR)
+		draw_rect(Rect2(gem + Vector2(-2, -2), Vector2(5, 5)), HITBOX_OUTLINE_COLOR)
+		draw_rect(Rect2(gem + Vector2(-3, -1), Vector2(7, 3)), HITBOX_OUTLINE_COLOR)
+		var glow := ABILITY_READY_COLOR.lightened(0.3 * pulse)
+		draw_rect(Rect2(gem + Vector2(0, -2), Vector2(1, 5)), glow)
+		draw_rect(Rect2(gem + Vector2(-1, -1), Vector2(3, 3)), glow)
+		draw_rect(Rect2(gem + Vector2(-2, 0), Vector2(5, 1)), glow)
+		draw_rect(Rect2(gem + Vector2(-1, -1), Vector2(1, 1)), Color.WHITE)
+	if _ability_ping > 0.0:
+		var t := 1.0 - _ability_ping / ABILITY_PING_SECONDS
+		draw_arc(Vector2.ZERO, 6.0 + 18.0 * t, 0.0, TAU, 32, Color(ABILITY_READY_COLOR, 0.8 * (1.0 - t)), 1.0)
 
 
 ## Lying on the ground inside the revive circle, with a bobbing "+" asking for help.

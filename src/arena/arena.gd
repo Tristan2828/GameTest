@@ -549,8 +549,9 @@ func _alive_player_positions() -> Array[Vector2]:
 
 
 func _add_player(peer_id: int) -> void:
+	var boosts := Net.boosts_of(peer_id) if _config.ember_boosts else PackedInt32Array()
 	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id),
-		"hearts_bonus": _config.hearts_bonus})
+		"hearts_bonus": _config.hearts_bonus, "boosts": boosts})
 	if _config.start_with_weapons:
 		for weapon_id: int in AutoWeapons.PICKUPS:
 			_weapons.grant(peer_id, weapon_id, _ready_peer_list())
@@ -586,7 +587,9 @@ func _spawn_player(data: Variant) -> Node:
 	if not Characters.is_valid_id(character):
 		character = Characters.Id.WANDERER
 	var player: Player = PLAYER_SCENE.instantiate()
-	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character, int(info.get("hearts_bonus", 0)))
+	var boosts: Variant = info.get("boosts", PackedInt32Array())
+	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character, int(info.get("hearts_bonus", 0)),
+		boosts if boosts is PackedInt32Array else PackedInt32Array())
 	player.shot_requested.connect(_on_player_shot_requested)
 	player.ability_used.connect(_on_player_ability_used)
 	player.hurt.connect(_on_player_hurt)
@@ -921,6 +924,7 @@ func _receive_run_stats(data: Dictionary) -> void:
 	_hud.run_summary.first_stage = _config.first_stage()
 	_hud.run_summary.bosses_enabled = _config.boss_enabled
 	_hud.run_summary.local_record_rank = _save_record(stage_in_run)
+	_hud.run_summary.local_embers = _earn_embers()
 	var is_host := multiplayer.is_server()
 	var restart_hint := "or press R / Select" if is_host else "Waiting for the host to return to character select..."
 	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, _stage_count(),
@@ -937,6 +941,18 @@ func _save_record(stage_in_run: int) -> int:
 	var entry := RunRecords.entry_for(_final_stats, local.peer_id, local.character_id, _config, stage_in_run,
 		map_title, _player_nodes().size())
 	return RunRecords.add(entry)
+
+
+## Adds this PC's player's Embers for the run (Ember Shrine). Returns how many
+## (-1 = not counted: test runs, like Records).
+func _earn_embers() -> int:
+	var local := _local_player()
+	if local == null or DisplayServer.get_name() == "headless" or LaunchOptions.autopilot:
+		return -1
+	var amount := Embers.earned_for(_final_stats.bosses_defeated, _final_stats.victory,
+		_final_stats.get_stat(local.peer_id, RunStats.Stat.KILLS), _config.score_multiplier())
+	Embers.add_earned(amount)
+	return amount
 
 
 func _settle_stage_rewards() -> void:
@@ -1356,6 +1372,8 @@ func _receive_ritual_done(at: Vector2) -> void:
 func _on_coin_collected(value: int, collector_peer_id: int) -> void:
 	var player := _player_by_id(collector_peer_id)
 	if player != null:
+		if player.stats.coin_luck > 0.0 and _rng.randf() < player.stats.coin_luck:
+			value += 1  # Greed (Ember Shrine).
 		player.coins += value
 		_run_stats.add(collector_peer_id, RunStats.Stat.COINS_EARNED, value)
 		_quest_count(collector_peer_id, Quests.Id.GOLD_DIGGER, value)
