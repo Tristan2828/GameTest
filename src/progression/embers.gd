@@ -23,10 +23,10 @@ const PRICES: Array[int] = [50, 100, 175]
 const BOOSTS: Array[Array] = [
 	["Keen Eye", "up_keen_edge", "+2% main weapon crit chance", 0.02],
 	["Swiftness", "up_fleet_foot", "+2% move speed", 0.02],
-	["Focus", "up_shadow_step", "-3% ability cooldown", 0.03],
+	["Focus", "up_shadow_step", "-3% auto weapon cooldowns", 0.03],
 	["Greed", "coin_big", "+5% chance a coin you pick up is worth 1 more", 0.05],
 	["Reach", "up_grave_magnet", "+6% pickup radius", 0.06],
-	["Resolve", "up_steady_nerves", "+0.05s safe time after a hit", 0.05],
+	["Resolve", "up_steady_nerves", "+0.05s safe from bullets after one hits you", 0.05],
 ]
 
 ## Earning: per boss killed, for a victory, per 100 of your kills (capped).
@@ -142,7 +142,7 @@ static func apply(boost_ranks: PackedInt32Array, stats: CharacterStats) -> void:
 			Boost.SWIFTNESS:
 				stats.move_speed *= 1.0 + amount
 			Boost.FOCUS:
-				stats.ability_cooldown *= 1.0 - amount
+				stats.auto_cooldown_scale *= 1.0 - amount
 			Boost.GREED:
 				stats.coin_luck += amount
 			Boost.REACH:

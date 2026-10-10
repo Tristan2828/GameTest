@@ -49,28 +49,27 @@ func _show_heroes() -> void:
 	for stats: CharacterStats in Characters.ALL:
 		var text := _entry(stats.sprite, stats.full_name(), stats.blurb, hero_details(stats))
 		text.add_child(label("Main weapon - %s: %s" % [stats.main_weapon_name, main_weapon_text(stats)], 9, TITLE_COLOR, true))
-		text.add_child(label("Ability - %s: %s" % [stats.ability_name, stats.ability_description], 9, TITLE_COLOR, true))
+		text.add_child(label("Perk - %s: %s" % [stats.perk_name, stats.perk_description], 9, TITLE_COLOR, true))
 
 
 static func hero_details(stats: CharacterStats) -> String:
 	var count := ""
 	if stats.projectile_count > 1:
 		count = "  %s %d" % [Upgrades.COUNT_NAMES[stats.main_weapon], stats.projectile_count]
-	return "Hearts %d   Speed %d   Damage %d   Attacks/s %.1f%s   Ability cooldown %.1fs" % [
-		stats.max_hearts, roundi(stats.move_speed), stats.bullet_damage, 1.0 / stats.fire_interval, count,
-		stats.ability_cooldown]
+	return "HP %d   Speed %d   Damage %d   Attacks/s %.1f%s" % [
+		stats.max_hp, roundi(stats.move_speed), stats.bullet_damage, 1.0 / stats.fire_interval, count]
 
 
-## What the hero's main weapon does (hold fire, aim with the mouse or right stick).
+## What the hero's main weapon does (it fires by itself; see AutoAim).
 static func main_weapon_text(stats: CharacterStats) -> String:
 	match stats.main_weapon:
 		CharacterStats.MainWeapon.SCYTHE:
-			return "Throw a scythe where you aim. It flies out and comes back, cutting everything twice."
+			return "Throws a scythe the way you face (your last move) and one behind you. They fly out and come back, cutting everything twice."
 		CharacterStats.MainWeapon.LIGHTNING:
-			return "Lightning strikes the enemy closest to your aim, then leaps to the next ones."
+			return "Lightning strikes a random enemy near you, then leaps to the next ones."
 		CharacterStats.MainWeapon.SPEARS:
-			return "A row of bone spears bursts from the ground along your aim after a short warning."
-	return "Fires a steady stream of bolts where you aim."
+			return "A row of bone spears bursts from the ground toward a random enemy near you, after a short warning."
+	return "Fires a steady stream of bolts at the closest enemy."
 
 
 func _show_weapons() -> void:
@@ -101,6 +100,13 @@ static func weapon_details(weapon: AutoWeapon) -> String:
 				text += " every %.1fs, flames last %.0fs" % [weapon.interval_at(level), weapon.duration]
 			AutoWeapon.Kind.ERUPTION:
 				text += ", %d spears every %.1fs" % [weapon.count_at(level), weapon.interval_at(level)]
+			AutoWeapon.Kind.BLAST:
+				text += " every %.1fs, radius %d" % [weapon.interval_at(level), roundi(weapon.radius_at(level))]
+			AutoWeapon.Kind.HEX:
+				text = "Lv %d: every %.1fs, radius %d, %.0fs" % [level, weapon.interval_at(level), roundi(weapon.radius_at(level)),
+					weapon.duration]
+			AutoWeapon.Kind.EFFIGY:
+				text += " burst every %.1fs, radius %d" % [weapon.interval_at(level), roundi(weapon.radius_at(level))]
 		parts.append(text)
 	return "   ".join(parts)
 
@@ -109,6 +115,8 @@ func _show_upgrades() -> void:
 	clear_list()
 	add_heading("Each level-up, every player picks 1 of 3. Squares on the card show how many you have.")
 	for upgrade: Upgrade in Upgrades.ALL:
+		if upgrade.retired:
+			continue
 		var limit := "No limit" if upgrade.max_stacks <= 0 else "Up to %d times" % upgrade.max_stacks
 		if upgrade.stat == Upgrade.Stat.HEAL:
 			limit = "Only offered when you're hurt"
@@ -139,8 +147,8 @@ func _show_pickups() -> void:
 	for kind: int in PowerUps.TITLES.size():
 		_entry(PowerUps.SPRITES[kind], PowerUps.TITLES[kind], PowerUps.DESCRIPTIONS[kind],
 			"Rare drop from enemies (at most one every %ds); champions always drop one. Whoever grabs it uses it." % roundi(PowerUps.DROP_COOLDOWN))
-	_entry("wanderer", "Downed and revives", "At 0 hearts you're downed: you lie in a circle and can't move or shoot. A teammate standing in the circle revives you in %ds (faster with more helpers), with half your hearts back." % roundi(Revive.SECONDS),
-		"While down, your screen follows a teammate (Fire / Ability switches). Everyone gets up at the next stage. The run ends when everyone is down.")
+	_entry("wanderer", "Downed and revives", "At 0 HP you're downed: you lie in a circle and can't move or attack. A teammate standing in the circle revives you in %ds (faster with more helpers), with half your HP back." % roundi(Revive.SECONDS),
+		"While down, your screen follows a teammate (Space / A switches). Everyone gets up at the next stage. The run ends when everyone is down.")
 
 
 func _show_events() -> void:
@@ -151,7 +159,7 @@ func _show_events() -> void:
 		MapEvents.CHAMPION_COLOR)
 	_entry("chest", "Champion's chest", "First player to touch it gets an auto weapon they can still level up (or %d coins if they're all maxed)." % Arena.CHEST_COINS_WHEN_MAXED,
 		"", MapEvents.CHEST_COLOR)
-	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills; with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d." % [roundi(Arena.RITUAL_XP_SHARE * 100.0), Arena.RITUAL_HEAL],
+	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills; with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d%% of their HP." % [roundi(Arena.RITUAL_XP_SHARE * 100.0), roundi(Arena.RITUAL_HEAL_SHARE * 100.0)],
 		"%ds to fill. One is placed at the start of each stage, another pops up later and fades if nobody starts it." % roundi(MapEvents.RITUAL_SECONDS),
 		MapEvents.RITUAL_COLOR)
 	_entry("grave_robber", "Grave Robber", "A thief who runs from you, dropping stolen coins. Catch it within %ds for a shower of coins." % roundi(MapEvents.RUNNER_SECONDS),

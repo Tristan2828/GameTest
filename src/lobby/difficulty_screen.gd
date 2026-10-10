@@ -32,7 +32,7 @@ func _build_rows() -> void:
 	_slider("enemy_count", "Enemy count", "How fast the horde spawns", RunConfigScreen.percent)
 	_slider("xp_rate", "XP gain", "Higher = level up more often", RunConfigScreen.percent)
 	_slider("coin_rate", "Coin drops", "Chance enemies drop coins", RunConfigScreen.percent)
-	_slider("hearts_bonus", "Bonus hearts", "Extra max hearts for every hero", RunConfigScreen.signed)
+	_slider("hp_bonus", "Bonus HP", "Extra max HP for every hero", RunConfigScreen.signed)
 	_changed_refresh_only()
 
 

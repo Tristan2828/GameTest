@@ -162,13 +162,13 @@ layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Ability" type="Label" parent="Picker/Box/Cards/Card0/Lines"]
+[node name="Perk" type="Label" parent="Picker/Box/Cards/Card0/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Hearts" type="Label" parent="Picker/Box/Cards/Card0/Lines"]
+[node name="Health" type="Label" parent="Picker/Box/Cards/Card0/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
 horizontal_alignment = 1
@@ -216,13 +216,13 @@ layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Ability" type="Label" parent="Picker/Box/Cards/Card1/Lines"]
+[node name="Perk" type="Label" parent="Picker/Box/Cards/Card1/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Hearts" type="Label" parent="Picker/Box/Cards/Card1/Lines"]
+[node name="Health" type="Label" parent="Picker/Box/Cards/Card1/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
 horizontal_alignment = 1
@@ -270,13 +270,13 @@ layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Ability" type="Label" parent="Picker/Box/Cards/Card2/Lines"]
+[node name="Perk" type="Label" parent="Picker/Box/Cards/Card2/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Hearts" type="Label" parent="Picker/Box/Cards/Card2/Lines"]
+[node name="Health" type="Label" parent="Picker/Box/Cards/Card2/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
 horizontal_alignment = 1
@@ -324,13 +324,13 @@ layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Ability" type="Label" parent="Picker/Box/Cards/Card3/Lines"]
+[node name="Perk" type="Label" parent="Picker/Box/Cards/Card3/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Hearts" type="Label" parent="Picker/Box/Cards/Card3/Lines"]
+[node name="Health" type="Label" parent="Picker/Box/Cards/Card3/Lines"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.45, 0.5, 1)
 horizontal_alignment = 1

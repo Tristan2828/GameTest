@@ -1,11 +1,12 @@
 class_name AutoWeapon
 extends Resource
-## An automatic weapon (found on altars during stages). Each is a `.tres` file in
+## An automatic weapon (found on altars and in chests during stages). Each is a `.tres` file in
 ## `src/combat/weapons/`, registered in AutoWeapons.ALL (index = network id).
 ## Numbers grow with the weapon's level (1..AutoWeapons.MAX_LEVEL).
 
 ## Sent as numbers in .tres files: only add new kinds at the end.
-enum Kind { ORBIT, SEEKER, AURA, CHAIN, BOOMERANG, TRAIL, ERUPTION }
+## BLAST, HEX and EFFIGY were the heroes' button abilities until v0.22.0.
+enum Kind { ORBIT, SEEKER, AURA, CHAIN, BOOMERANG, TRAIL, ERUPTION, BLAST, HEX, EFFIGY }
 
 @export var title: String = "Weapon"
 @export_multiline var description: String = ""
@@ -24,17 +25,20 @@ enum Kind { ORBIT, SEEKER, AURA, CHAIN, BOOMERANG, TRAIL, ERUPTION }
 @export var interval: float = 1.0
 ## Each level multiplies the interval by this (0.8 = 20% faster per level).
 @export var interval_scale_per_level: float = 1.0
-## Orbit: skull size. Aura, Trail, Eruption: damage radius. Boomerang: hit size.
-## Chain: how far the lightning jumps to the next enemy.
+## Orbit: skull size. Aura, Trail, Eruption, Blast: damage radius. Boomerang: hit
+## size. Chain: how far the lightning jumps to the next enemy. Hex: hex size.
+## Effigy: burst size.
 @export var radius: float = 4.0
 @export var radius_per_level: float = 0.0
 ## Orbit: radians per second. Seeker: bolt speed in px/s.
 @export var speed: float = 3.0
-## Orbit: distance from the player. Seeker, Chain, Eruption: targeting range.
-## Boomerang: how far the scythe flies out.
+## Orbit: distance from the player. Seeker, Chain, Eruption, Hex: targeting range.
+## Boomerang: how far the scythe flies out. Blast: how far it clears enemy
+## bullets. Effigy: how far it lures enemies.
 @export var reach: float = 28.0
 ## Boomerang: seconds out and back. Trail: how long a flame burns.
-## Eruption: warning before the spear strikes.
+## Eruption: warning before the spear strikes. Blast: seconds you can't be hurt.
+## Hex: how long enemies stay bound. Effigy: how long it stands.
 @export var duration: float = 1.0
 
 

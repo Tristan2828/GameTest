@@ -6,7 +6,7 @@
 script = ExtResource("1_upgrade")
 title = "Arcane Focus"
 icon = "up_arcane_focus"
-description = "Your ability is 20% stronger"
+description = "Your auto weapons deal 15% more damage"
 stat = 9
-amount = 0.2
+amount = 0.15
 max_stacks = 3

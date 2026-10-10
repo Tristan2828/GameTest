@@ -62,6 +62,12 @@ func test_scythes_fan_out_around_the_aim() -> void:
 	assert_almost_eq(three[2] - three[0], deg_to_rad(MainWeapons.SCYTHE_SPREAD_DEGREES * 2.0), 0.0001)
 
 
+func test_main_scythe_also_throws_behind_you() -> void:
+	var angles := MainWeapons.scythe_throw_angles(2, 0.0)
+	assert_eq(angles.size(), 4)
+	assert_almost_eq(angles[2] - angles[0], PI, 0.0001)
+
+
 func test_spear_row_runs_outward_along_the_aim() -> void:
 	var row := MainWeapons.spear_row(Vector2(100, 100), 0.0, 4)
 	assert_eq(row.size(), 4)
@@ -75,7 +81,7 @@ func test_shards_are_the_same_on_every_peer() -> void:
 	assert_ne(MainWeapons.shard_angles(42, 3), MainWeapons.shard_angles(43, 3))
 
 
-func test_lightning_prefers_what_you_aim_at() -> void:
+func test_lightning_prefers_the_enemy_it_picked() -> void:
 	var from := Vector2.ZERO
 	assert_lt(MainWeapons.lightning_score(from, 0.0, Vector2(100, 0), 150.0), 0.0 + 101.0)
 	assert_eq(MainWeapons.lightning_score(from, 0.0, Vector2(200, 0), 150.0), -1.0, "out of reach")
@@ -97,7 +103,7 @@ func test_scythe_cuts_on_the_way_out_and_back() -> void:
 	var keeper := _hero_player(Characters.Id.GRAVEKEEPER)
 	var target := _ghoul(Vector2(560, 500))
 	_fire(keeper)
-	assert_eq(_weapons.effect_counts()["scythes"], 1)
+	assert_eq(_weapons.effect_counts()["scythes"], 2, "one ahead, one behind")
 	_run(keeper, keeper.stats.weapon_duration + 0.05)
 	assert_eq(target.max_hp - target.hp, keeper.stats.bullet_damage * 2, "two cuts")
 	assert_eq(_weapons.effect_counts()["scythes"], 0, "caught again")
@@ -107,7 +113,7 @@ func test_twin_scythes_throws_two() -> void:
 	var keeper := _hero_player(Characters.Id.GRAVEKEEPER)
 	keeper.apply_upgrade(_upgrade_id("Twin Scythes"))
 	_fire(keeper)
-	assert_eq(_weapons.effect_counts()["scythes"], 2)
+	assert_eq(_weapons.effect_counts()["scythes"], 4, "two ahead, two behind")
 
 
 func test_lightning_strikes_the_aimed_enemy_and_jumps() -> void:

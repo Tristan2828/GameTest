@@ -15,8 +15,8 @@ const DROP_CHANCE: float = 0.012
 const DROP_COOLDOWN: float = 10.0
 ## Relative odds of each Kind for a random drop (same order as Kind).
 const WEIGHTS: Array[int] = [35, 25, 20, 20]
-## Hearts healed by a Heart.
-const HEART_HEAL: int = 1
+## A Heart heals this share of max HP.
+const HEART_HEAL_SHARE: float = 0.3
 ## Holy Bomb: reach (about a screen) and damage to every regular enemy in it
 ## (times the stage's health growth, so it stays a near-certain kill).
 const BOMB_RADIUS: float = 260.0
@@ -28,7 +28,7 @@ const FROST_COLOR: Color = Color(0.55, 0.85, 1.0)
 const TITLES: Array[String] = ["Heart", "Soul Magnet", "Holy Bomb", "Frost Hourglass"]
 const SPRITES: Array[String] = ["pickup_heart", "pickup_magnet", "pickup_bomb", "pickup_frost"]
 const DESCRIPTIONS: Array[String] = [
-	"Heals 1 heart for whoever grabs it.",
+	"Heals 30% of max HP for whoever grabs it.",
 	"Pulls every XP gem on the map to you.",
 	"Smites every regular enemy around you and wipes out nearby enemy bullets. Bosses are spared.",
 	"Freezes regular enemies and every enemy bullet in the air for 4 seconds.",

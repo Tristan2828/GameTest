@@ -19,7 +19,7 @@ const DESCRIPTIONS: Array[String] = [
 	"Be in the circle when a ritual is completed.",
 	"Help catch a Grave Robber.",
 	"Kill %d enemies yourself.",
-	"Go %d seconds without losing a heart.",
+	"Go %d seconds without getting hurt.",
 	"Pick up %d coins.",
 	"Deal %d damage with auto weapons.",
 	"Grab %d power-ups.",

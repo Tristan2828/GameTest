@@ -4,10 +4,11 @@ extends RefCounted
 ## sends one message at the end (`encode()` / `decode()`); every peer shows them.
 
 ## Per-player counters. Sent as numbers: only add new ones at the end.
-enum Stat { KILLS, DAMAGE, BOSS_DAMAGE, HEARTS_LOST, DOWNS, COINS_EARNED, XP_GATHERED, REVIVES }
+## HP_LOST counted hearts until v0.22.0.
+enum Stat { KILLS, DAMAGE, BOSS_DAMAGE, HP_LOST, DOWNS, COINS_EARNED, XP_GATHERED, REVIVES }
 
 ## Row labels for the panel, same order as Stat.
-const STAT_LABELS: Array[String] = ["Kills", "Damage", "Boss damage", "Hearts lost", "Downed", "Coins earned", "XP gathered", "Revives"]
+const STAT_LABELS: Array[String] = ["Kills", "Damage", "Boss damage", "Damage taken", "Downed", "Coins earned", "XP gathered", "Revives"]
 
 ## Co-op awards: the player who leads in this stat gets the title.
 const AWARDS: Dictionary[Stat, String] = {
@@ -19,7 +20,7 @@ const AWARDS: Dictionary[Stat, String] = {
 }
 
 ## Stats where less is better (the star goes to the lowest).
-const LOWER_IS_BETTER: Array[Stat] = [Stat.HEARTS_LOST, Stat.DOWNS]
+const LOWER_IS_BETTER: Array[Stat] = [Stat.HP_LOST, Stat.DOWNS]
 
 ## peer id -> one int per Stat
 var by_peer: Dictionary[int, PackedInt32Array] = {}

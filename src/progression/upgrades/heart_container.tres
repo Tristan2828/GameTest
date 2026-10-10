@@ -6,7 +6,7 @@
 script = ExtResource("1_upgrade")
 title = "Heart Container"
 icon = "up_heart_container"
-description = "+1 max heart (and heal 1)"
+description = "+20 max HP (and heal 20)"
 stat = 3
-amount = 1.0
+amount = 20.0
 max_stacks = 3

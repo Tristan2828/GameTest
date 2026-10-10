@@ -38,35 +38,29 @@ func _offered_ever(stats: CharacterStats, id: int) -> bool:
 
 # --- Rolling ---
 
-func test_every_hero_has_exactly_one_hero_upgrade() -> void:
-	for character: CharacterStats in Characters.ALL:
-		var count := 0
-		for upgrade: Upgrade in Upgrades.ALL:
-			if upgrade.for_ability == character.ability:
-				count += 1
-		assert_eq(count, 1, character.display_name)
+func test_old_ability_upgrades_are_retired() -> void:
+	for title: String in ["Afterimage", "Hallowed Blast", "Deep Hex", "Ossuary"]:
+		var id := _id_of(title)
+		assert_true(Upgrades.get_upgrade(id).retired, title)
+		for index: int in Characters.ALL.size():
+			assert_false(_offered_ever(_hero(index), id), "%s offered to %s" % [title, _hero(index).display_name])
 
 
-func test_hero_upgrades_only_go_to_their_hero() -> void:
-	var afterimage := _id_of("Afterimage")
-	var wanderer := _hero(0)
-	assert_eq(wanderer.ability, CharacterStats.Ability.DASH)
-	assert_true(_offered_ever(wanderer, afterimage))
-	for index: int in range(1, Characters.ALL.size()):
-		assert_false(_offered_ever(_hero(index), afterimage), _hero(index).display_name)
-	assert_false(_offered_ever(null, afterimage), "no stats: no hero upgrades")
+func test_auto_weapon_boosts_wait_for_an_auto_weapon() -> void:
+	var focus := Upgrades.get_upgrade(_id_of("Arcane Focus"))
+	assert_true(Upgrades.is_offered(focus, 0, true, _hero(0), true))
+	assert_false(Upgrades.is_offered(focus, 0, true, _hero(0), false))
 
 
-func test_heart_cutting_upgrade_not_offered_at_one_max_heart() -> void:
+func test_hp_cutting_upgrade_not_offered_when_too_low() -> void:
 	var glass_cannon := _id_of("Glass Cannon")
 	var stats := _hero(0)
 	assert_true(_offered_ever(stats, glass_cannon))
-	stats.max_hearts = 1
+	stats.max_hp = 40
 	assert_false(_offered_ever(stats, glass_cannon))
 
 
 func test_hero_text_names_the_hero() -> void:
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Deep Hex"))), "Morwen only")
 	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Ricochet"))), "Kael only", "a bolt upgrade")
 	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Twin Scythes"))), "Mortimer only")
 	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Sharpened Edge"))), "")
@@ -77,36 +71,30 @@ func test_hero_text_names_the_hero() -> void:
 func test_trade_off_applies_both_effects_and_previews_both() -> void:
 	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	health.reset(stats.max_hearts)
+	health.reset(stats.max_hp)
 	var id := _id_of("Glass Cannon")
-	assert_eq(Upgrades.preview_text(id, stats, health), "Damage 10 -> 20\nMax hearts 3 -> 2")
+	assert_eq(Upgrades.preview_text(id, stats, health), "Damage 10 -> 20\nMax HP 100 -> 80")
 	Upgrades.apply(id, stats, health)
 	assert_eq(stats.bullet_damage, 20)
-	assert_eq(stats.max_hearts, 2)
-	assert_eq(health.hearts, 2)
+	assert_eq(stats.max_hp, 80)
+	assert_eq(health.hp, 80)
 
 
-func test_hero_upgrades_change_their_ability() -> void:
+func test_auto_weapon_upgrades_and_recovery() -> void:
+	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	var keeper := _hero(1)
-	var damage := keeper.blast_damage
-	var heal := keeper.blast_heal
-	Upgrades.apply(_id_of("Hallowed Blast"), keeper, health)
-	assert_gt(keeper.blast_damage, damage)
-	assert_eq(keeper.blast_heal, heal + 1)
-	var witch := _hero(2)
-	var seconds := witch.hex_duration
-	Upgrades.apply(_id_of("Deep Hex"), witch, health)
-	assert_almost_eq(witch.hex_duration, seconds + 1.0, 0.001)
-	var wanderer := _hero(0)
-	Upgrades.apply(_id_of("Afterimage"), wanderer, health)
-	assert_gt(wanderer.dash_grace, 0.0)
+	Upgrades.apply(_id_of("Shadow Step"), stats, health)
+	assert_almost_eq(stats.auto_cooldown_scale, 0.88, 0.0001)
+	Upgrades.apply(_id_of("Arcane Focus"), stats, health)
+	assert_almost_eq(stats.auto_power, 1.15, 0.0001)
+	Upgrades.apply(_id_of("Ghoul Blood"), stats, health)
+	assert_almost_eq(stats.recovery, 0.4, 0.0001)
 
 
 func test_relic_effects_still_apply() -> void:
 	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	health.reset(stats.max_hearts)
+	health.reset(stats.max_hp)
 	for id: int in Relics.ALL.size():
 		Relics.apply(id, stats, health)
 	assert_gt(stats.bullet_damage, 10, "Cursed Skull still adds damage")

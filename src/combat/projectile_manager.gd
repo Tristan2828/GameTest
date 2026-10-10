@@ -226,9 +226,9 @@ func _bounce(i: int, enemies: EnemyManager, hit: Enemy) -> bool:
 	return true
 
 
-## Enemy bullets vs players. Bullets pass through players who can't be hit right
-## now (dashing, invulnerable, downed). Host: hits cost hearts. Clients: the
-## bullet just vanishes; hearts arrive in the next snapshot.
+## Enemy bullets vs players. Bullets pass through players who can't be shot right
+## now (just hit, invulnerable, downed). Host: hits cost HP. Clients: the
+## bullet just vanishes; HP arrives in the next snapshot.
 func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
 	# Read each hittable player's position and reach once, not once per bullet
 	# (hundreds of bullets x up to 4 players every tick).
@@ -236,7 +236,7 @@ func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
 	var spots := PackedVector2Array()
 	var reaches_squared := PackedFloat32Array()
 	for player: Player in players:
-		if player.can_be_hit():
+		if player.can_be_shot():
 			var reach := player.stats.hitbox_radius + hit_radius
 			targets.append(player)
 			spots.append(player.world_position())
@@ -259,9 +259,9 @@ func resolve_player_hits(players: Array[Player], is_host: bool) -> void:
 			continue
 		var hit_player := targets[hit]
 		if is_host:
-			hit_player.take_hit(_damages[i])
+			hit_player.take_bullet(_damages[i])
 		_remove(i)
-		if not hit_player.can_be_hit():
+		if not hit_player.can_be_shot():
 			reaches_squared[hit] = -1.0  # Invulnerable or down now: later bullets pass through.
 
 

@@ -71,18 +71,18 @@ func test_delayed_bullet_cannot_hit_before_it_appears() -> void:
 	bullets.spawn(Vector2(100, 100), Vector2.ZERO, 1, 5.0, 0, 0, -1.0)
 	var players: Array[Player] = [player]
 	bullets.resolve_player_hits(players, true)
-	assert_eq(player.health.hearts, player.health.max_hearts)
+	assert_eq(player.health.hp, player.health.max_hp)
 
 
 # --- Hitting players ---
 
-func test_host_bullet_hit_costs_a_heart_and_is_consumed() -> void:
+func test_host_bullet_hit_costs_its_damage_and_is_consumed() -> void:
 	var bullets := _bullets()
 	var player := _player_at(Vector2(100, 100))
-	bullets.spawn(Vector2(101, 100), Vector2.ZERO, 1, 5.0, 0)
+	bullets.spawn(Vector2(101, 100), Vector2.ZERO, 15, 5.0, 0)
 	var players: Array[Player] = [player]
 	bullets.resolve_player_hits(players, true)
-	assert_eq(player.health.hearts, player.health.max_hearts - 1)
+	assert_eq(player.health.hp, player.health.max_hp - 15)
 	assert_eq(bullets.count(), 0)
 
 
@@ -93,7 +93,7 @@ func test_tiny_hitbox_lets_bullets_graze_past() -> void:
 	bullets.spawn(Vector2(105, 100), Vector2.ZERO, 1, 5.0, 0)
 	var players: Array[Player] = [player]
 	bullets.resolve_player_hits(players, true)
-	assert_eq(player.health.hearts, player.health.max_hearts)
+	assert_eq(player.health.hp, player.health.max_hp)
 	assert_eq(bullets.count(), 1)
 
 
@@ -104,7 +104,7 @@ func test_bullets_pass_through_invulnerable_players() -> void:
 	bullets.spawn(Vector2(100, 100), Vector2.ZERO, 1, 5.0, 0)
 	var players: Array[Player] = [player]
 	bullets.resolve_player_hits(players, true)
-	assert_eq(player.health.hearts, player.health.max_hearts)
+	assert_eq(player.health.hp, player.health.max_hp)
 	assert_eq(bullets.count(), 1, "not consumed")
 
 
@@ -115,7 +115,7 @@ func test_client_bullet_vanishes_without_damage() -> void:
 	var players: Array[Player] = [player]
 	bullets.resolve_player_hits(players, false)
 	assert_eq(bullets.count(), 0)
-	assert_eq(player.health.hearts, player.health.max_hearts)
+	assert_eq(player.health.hp, player.health.max_hp)
 
 
 func test_clear_near_only_removes_nearby_bullets() -> void:

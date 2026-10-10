@@ -15,5 +15,5 @@ description = "Hex lasts 1s longer; hexed foes take +25%"
 stat = 24
 amount = 1.0
 max_stacks = 3
-for_ability = 3
+retired = true
 extra_effects = Array[Resource]([SubResource("effect_0")])

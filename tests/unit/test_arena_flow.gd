@@ -49,7 +49,7 @@ func test_boss_attacks_fire_enemy_bullets() -> void:
 
 
 func test_everyone_down_ends_the_run() -> void:
-	_local_player().health.take_hit(99, 1.0)
+	_local_player().health.take_bullet(9999, 1.0)
 	_arena._update_phase()
 	assert_eq(_arena._phase, Arena.Phase.RUN_OVER)
 
@@ -68,26 +68,6 @@ func test_level_up_pauses_until_pick_then_applies_upgrade() -> void:
 	assert_eq(_local_player().upgrade_ids, [choice])
 
 
-func _ability_input(count: int) -> PlayerInput:
-	var input := PlayerInput.new()
-	input.ability_count = count
-	return input
-
-
-func test_ability_press_fires_once_then_waits_for_cooldown() -> void:
-	var player := _local_player()
-	watch_signals(player)
-	player._simulate(_ability_input(1), 1.0 / 60.0)
-	player._simulate(_ability_input(1), 1.0 / 60.0)
-	assert_signal_emit_count(player, "ability_used", 1, "holding doesn't re-trigger")
-	player._simulate(_ability_input(2), 1.0 / 60.0)
-	assert_signal_emit_count(player, "ability_used", 1, "still on cooldown")
-	for i: int in 60:
-		player._simulate(_ability_input(2), 1.0 / 60.0)
-	player._simulate(_ability_input(3), 1.0 / 60.0)
-	assert_signal_emit_count(player, "ability_used", 2)
-
-
 func _clear_current_stage() -> void:
 	_arena._spawn_boss()
 	var boss := _arena._enemies.find_boss()
@@ -100,7 +80,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	_clear_current_stage()
 	assert_eq(_arena._phase, Arena.Phase.STAGE_CLEAR)
 	# (In solo, going down would end the run; here we just check downed players respawn.)
-	player.health.take_hit(99, 0.0)
+	player.health.take_bullet(9999, 0.0)
 	assert_true(player.is_downed())
 	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
 	_arena._shop._ready_locally()
@@ -108,8 +88,7 @@ func test_stage_clear_leads_to_next_stage_with_everyone_respawned() -> void:
 	assert_eq(_arena._phase, Arena.Phase.PLAYING, "solo starts the next stage right away")
 	assert_eq(_arena._stage, 2)
 	assert_false(player.is_downed(), "downed players get back up")
-	assert_eq(player.health.hearts, player.health.max_hearts)
-	assert_eq(player.state.ability_cooldown_left, 0.0, "ability ready again")
+	assert_eq(player.health.hp, player.health.max_hp)
 	assert_almost_eq(_arena._elapsed, 0.0, 0.5)
 
 
@@ -144,26 +123,24 @@ func test_later_stages_start_their_spawn_ramp_ahead() -> void:
 	assert_eq(_arena._director.ramp_head_start, Arena.RAMP_HEAD_START_BY_DEPTH[1])
 
 
-func test_downed_player_cant_move_shoot_or_use_abilities() -> void:
+func test_downed_player_cant_move_or_attack() -> void:
 	var player := _local_player()
-	player.health.take_hit(99, 0.0)
+	player.health.take_bullet(9999, 0.0)
 	watch_signals(player)
 	var start := player.state.position
 	for i: int in 30:
 		var input := PlayerInput.new()
 		input.move = Vector2.RIGHT
 		input.fire = true
-		input.ability_count = 1
 		player._simulate(input, 1.0 / 60.0)
 	assert_eq(player.state.position, start, "lies still until revived")
 	assert_signal_not_emitted(player, "shot_requested")
-	assert_signal_not_emitted(player, "ability_used")
-	assert_false(player.can_be_hit())
+	assert_false(player.can_be_shot())
 
 
 func test_downed_players_still_pull_in_nearby_gems() -> void:
 	var player := _local_player()
-	player.health.take_hit(99, 0.0)
+	player.health.take_bullet(9999, 0.0)
 	_arena._gems.spawn_host(player.state.position + Vector2(10, 0), 3)
 	for i: int in 30:
 		_arena._tick_gems(1.0 / 60.0, true)
@@ -214,22 +191,22 @@ func test_killed_enemies_sometimes_drop_coins() -> void:
 func test_run_end_shows_stats_table() -> void:
 	var player := _local_player()
 	_arena._run_stats.add(1, RunStats.Stat.KILLS, 12)
-	var hearts := player.health.hearts
-	player.take_hit(99)
+	var hp := player.health.hp
+	player.take_bullet(9999)
 	_arena._update_phase()
 	assert_eq(_arena._phase, Arena.Phase.RUN_OVER)
 	var stats: RunStats = _arena._final_stats
 	assert_not_null(stats)
 	assert_eq(stats.get_stat(1, RunStats.Stat.KILLS), 12)
 	assert_eq(stats.get_stat(1, RunStats.Stat.DOWNS), 1)
-	assert_eq(stats.get_stat(1, RunStats.Stat.HEARTS_LOST), hearts)
+	assert_eq(stats.get_stat(1, RunStats.Stat.HP_LOST), hp)
 	assert_false(stats.victory)
 	assert_eq(stats.stage_reached, 1)
 	assert_true(_arena._hud.run_summary.visible, "run summary screen is shown")
 
 
 func test_run_summary_button_returns_to_character_select_once() -> void:
-	_local_player().take_hit(99)
+	_local_player().take_bullet(9999)
 	_arena._update_phase()
 	var buttons: Array[Button] = []
 	for node: Node in _arena._hud.run_summary.find_children("*", "Button", true, false):
@@ -244,29 +221,21 @@ func test_run_summary_button_returns_to_character_select_once() -> void:
 
 func test_run_end_names_the_boss_that_won() -> void:
 	_arena._spawn_boss()
-	_local_player().take_hit(99)
+	_local_player().take_bullet(9999)
 	_arena._update_phase()
 	assert_eq(_arena._final_stats.fell_to, EnemyTypes.get_type(Stages.get_stage(1).boss_type).display_name)
 
 
-# --- Character abilities ---
-
-func _use_ability_as(character: int) -> Player:
-	var player := _local_player()
-	player.stats = Characters.get_character(character).duplicate()
-	player.state.aim = 0.0  # Aim right.
-	_arena._on_player_ability_used(player)
-	return player
-
+# --- The old hero abilities, now auto weapons anyone can find ---
 
 func test_hex_snare_roots_enemies_and_they_take_extra_damage() -> void:
 	var player := _local_player()
-	var witch := Characters.get_character(Characters.Id.HEXBLADE_WITCH)
-	var at := player.state.position + Vector2(witch.hex_range, 0.0)
+	var hex := AutoWeapons.get_weapon(AutoWeapons.Id.HEX_SNARE)
+	var at := player.state.position + Vector2(80.0, 0.0)
 	var enemy := _arena._enemies.spawn(0, at)
 	var far := _arena._enemies.spawn(0, at + Vector2(400.0, 0.0))
 	_arena._enemies.rebuild_grid()
-	_use_ability_as(Characters.Id.HEXBLADE_WITCH)
+	_arena._on_ability_cast(player, AutoWeapons.Id.HEX_SNARE, 1, at)
 	assert_true(enemy.hexed, "enemy in the sigil is hexed")
 	assert_false(far.hexed, "enemy outside is not")
 	var targets: Array[Vector2] = [player.state.position]
@@ -274,15 +243,15 @@ func test_hex_snare_roots_enemies_and_they_take_extra_damage() -> void:
 	assert_almost_eq(enemy.position.x, at.x, 0.5, "rooted enemies don't move")
 	var hp_before := enemy.hp
 	_arena._enemies.damage(enemy, 4, 1)
-	assert_eq(hp_before - enemy.hp, roundi(4 * witch.hex_damage_multiplier))
-	_arena._enemies.tick_host(witch.hex_duration, targets)
+	assert_eq(hp_before - enemy.hp, roundi(4 * AutoWeapons.HEX_DAMAGE_MULTIPLIER))
+	_arena._enemies.tick_host(hex.duration, targets)
 	assert_false(enemy.hexed, "the hex wears off")
 
 
 func test_bone_effigy_lures_enemies_then_bursts() -> void:
 	var player := _local_player()
-	var necro := Characters.get_character(Characters.Id.NECROMANCER)
-	_use_ability_as(Characters.Id.NECROMANCER)
+	var effigy := AutoWeapons.get_weapon(AutoWeapons.Id.BONE_EFFIGY)
+	_arena._on_ability_cast(player, AutoWeapons.Id.BONE_EFFIGY, 1, player.state.position + Vector2(40.0, 0.0))
 	assert_eq(_arena._effigies.size(), 1)
 	var effigy_at: Vector2 = _arena._effigies[0].position
 	# An enemy on the far side of the effigy walks toward it, away from the player.
@@ -294,7 +263,63 @@ func test_bone_effigy_lures_enemies_then_bursts() -> void:
 	var hp_before := enemy.hp
 	enemy.position = effigy_at + Vector2(10.0, 0.0)
 	_arena._enemies.rebuild_grid()
-	_arena._tick_effigies(necro.effigy_duration + 0.1)
+	_arena._tick_effigies(effigy.duration + 0.1)
 	assert_eq(_arena._effigies.size(), 0, "effigy is gone after bursting")
 	assert_true(not enemy.active or enemy.hp < hp_before, "the burst hurt the enemy")
 
+
+
+func test_grave_blast_heals_protects_and_clears_bullets() -> void:
+	var player := _local_player()
+	player.health.hp = 10
+	var at := player.state.position
+	_arena._enemy_bullets.spawn(at + Vector2(30, 0), Vector2.ZERO, 15, 5.0, 0, 0, 0.0)
+	var enemy := _arena._enemies.spawn(0, at + Vector2(20, 0))
+	_arena._enemies.rebuild_grid()
+	_arena._on_ability_cast(player, AutoWeapons.Id.GRAVE_BLAST, 1, at)
+	assert_gt(player.health.hp, 10, "heals a share of max HP")
+	assert_true(player.health.is_invulnerable())
+	assert_eq(_arena._enemy_bullets.count(), 0, "nearby enemy bullets are wiped out")
+	assert_true(not enemy.active or enemy.hp < enemy.max_hp)
+
+
+func test_ability_weapons_fire_by_themselves_at_a_crowd() -> void:
+	var player := _local_player()
+	player.gain_weapon(AutoWeapons.Id.HEX_SNARE)
+	var crowd := player.state.position + Vector2(70, 0)
+	for i: int in 5:
+		_arena._enemies.spawn(0, crowd + Vector2(i * 3, 0))
+	_arena._enemies.rebuild_grid()
+	watch_signals(_arena._weapons)
+	for i: int in 60 * 8:
+		_arena._weapons.tick_host(1.0 / 60.0, 1.0, _arena._player_nodes(), _arena._enemies, [])
+	assert_signal_emitted(_arena._weapons, "ability_cast")
+	var args: Array = get_signal_parameters(_arena._weapons, "ability_cast")
+	assert_lt((args[3] as Vector2).distance_to(crowd + Vector2(6, 0)), 12.0, "aimed at the crowd")
+
+
+func test_touching_enemies_drain_hp_and_bullets_give_bullet_safety() -> void:
+	var player := _local_player()
+	var max_hp := player.health.max_hp
+	var shambler := EnemyTypes.get_type(EnemyTypes.Id.SHAMBLER)
+	_arena._enemies.spawn(EnemyTypes.Id.SHAMBLER, player.state.position)
+	_arena._enemies.spawn(EnemyTypes.Id.SHAMBLER, player.state.position + Vector2(1, 0))
+	_arena._enemies.rebuild_grid()
+	_arena._apply_contact_damage()
+	assert_eq(player.health.hp, max_hp - 2 * shambler.contact_damage, "two Shamblers drain together")
+	_arena._apply_contact_damage()
+	assert_eq(player.health.hp, max_hp - 2 * shambler.contact_damage, "only every half second")
+	player.health.tick(PlayerHealth.CONTACT_INTERVAL)
+	_arena._apply_contact_damage()
+	assert_eq(player.health.hp, max_hp - 4 * shambler.contact_damage)
+	assert_true(player.take_bullet(15))
+	assert_false(player.take_bullet(15), "safe from bullets right after one hit")
+	_arena._stage = 3
+	assert_eq(_arena._scaled_damage(10), roundi(10 * Arena.DAMAGE_BY_DEPTH[2]), "later stages hit harder")
+
+
+func test_level_ups_heal_a_little() -> void:
+	var player := _local_player()
+	player.health.hp = 10
+	_arena._on_gem_collected(TeamProgress.xp_to_next(1), 1)
+	assert_eq(player.health.hp, 10 + roundi(player.health.max_hp * Arena.LEVEL_UP_HEAL_SHARE))

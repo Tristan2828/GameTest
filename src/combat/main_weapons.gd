@@ -6,6 +6,9 @@ extends RefCounted
 
 ## Angle between the scythes of one throw (Twin Scythes).
 const SCYTHE_SPREAD_DEGREES: float = 25.0
+## Reaper's Scythe also throws the same fan straight behind you (v0.22.0): it
+## flies the way you face, and while you run from a crowd you face away from it.
+const SCYTHE_BACK_THROW: bool = true
 ## Bone Spears: the first spear rises this far ahead, the rest this far apart.
 const SPEAR_START: float = 22.0
 const SPEAR_SPACING: float = 22.0
@@ -28,6 +31,15 @@ static func scythe_angles(count: int, aim: float) -> PackedFloat32Array:
 	var result := PackedFloat32Array()
 	for i: int in count:
 		result.append(aim + deg_to_rad((i - (count - 1) / 2.0) * SCYTHE_SPREAD_DEGREES))
+	return result
+
+
+## Every scythe of one main-weapon throw: the fan toward `aim`, and the same fan
+## behind you (SCYTHE_BACK_THROW).
+static func scythe_throw_angles(count: int, aim: float) -> PackedFloat32Array:
+	var result := scythe_angles(count, aim)
+	if SCYTHE_BACK_THROW:
+		result.append_array(scythe_angles(count, aim + PI))
 	return result
 
 

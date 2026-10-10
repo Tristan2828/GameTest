@@ -3,12 +3,28 @@ extends RefCounted
 ## Registry of automatic weapons, plus the pure math every peer shares.
 ## The index in ALL is the network id: only add new weapons at the end.
 
-enum Id { ORBITING_SKULLS, SEEKING_BOLTS, HOLY_AURA, CHAIN_LIGHTNING, REAPERS_SCYTHE, HELLFIRE_TRAIL, BONE_SPEARS }
+enum Id {
+	ORBITING_SKULLS, SEEKING_BOLTS, HOLY_AURA, CHAIN_LIGHTNING, REAPERS_SCYTHE, HELLFIRE_TRAIL, BONE_SPEARS,
+	GRAVE_BLAST, HEX_SNARE, BONE_EFFIGY,
+}
 
 const MAX_LEVEL: int = 3
 ## Weapons found on altars and in chests. Reaper's Scythe, Chain Lightning and
-## Bone Spears are heroes' main weapons now (see MainWeapons), so they're left out.
-const PICKUPS: Array[int] = [Id.ORBITING_SKULLS, Id.SEEKING_BOLTS, Id.HOLY_AURA, Id.HELLFIRE_TRAIL]
+## Bone Spears are heroes' main weapons now (see MainWeapons), so they're left
+## out. Grave Blast, Hex Snare and Bone Effigy were heroes' abilities until v0.22.0.
+const PICKUPS: Array[int] = [
+	Id.ORBITING_SKULLS, Id.SEEKING_BOLTS, Id.HOLY_AURA, Id.HELLFIRE_TRAIL, Id.GRAVE_BLAST, Id.HEX_SNARE, Id.BONE_EFFIGY,
+]
+## Grave Blast heals this share of your max HP.
+const BLAST_HEAL_SHARE: float = 0.1
+## Hex Snare: hexed enemies take this much damage (1.5 = +50%).
+const HEX_DAMAGE_MULTIPLIER: float = 1.5
+## Bone Effigy rises this far from you, toward the crowd.
+const EFFIGY_DISTANCE: float = 40.0
+## Grave Blast goes off once an enemy is this close (times its damage radius).
+const BLAST_WAKE_FACTOR: float = 1.2
+## Enemies within this distance of each other count as one crowd.
+const CROWD_RADIUS: float = 40.0
 ## Angle between bolts in a Seeking Bolts volley.
 const SEEKER_SPREAD_DEGREES: float = 10.0
 
@@ -20,6 +36,9 @@ const ALL: Array[AutoWeapon] = [
 	preload("res://src/combat/weapons/reapers_scythe.tres"),
 	preload("res://src/combat/weapons/hellfire_trail.tres"),
 	preload("res://src/combat/weapons/bone_spears.tres"),
+	preload("res://src/combat/weapons/grave_blast.tres"),
+	preload("res://src/combat/weapons/hex_snare.tres"),
+	preload("res://src/combat/weapons/bone_effigy.tres"),
 ]
 
 
@@ -29,6 +48,29 @@ static func get_weapon(id: int) -> AutoWeapon:
 
 static func is_valid_id(id: int) -> bool:
 	return id >= 0 and id < ALL.size()
+
+
+## The middle of the biggest crowd among `points` within `reach` of `from`: the
+## enemy with the most others within CROWD_RADIUS, nudged to the average of that
+## group. Vector2.INF if nobody is in reach. Hex Snare and Bone Effigy aim here.
+static func crowd_center(from: Vector2, points: PackedVector2Array, reach: float) -> Vector2:
+	var inside := PackedVector2Array()
+	for point: Vector2 in points:
+		if from.distance_squared_to(point) <= reach * reach:
+			inside.append(point)
+	var best := Vector2.INF
+	var best_count := 0
+	for point: Vector2 in inside:
+		var sum := Vector2.ZERO
+		var count := 0
+		for other: Vector2 in inside:
+			if point.distance_squared_to(other) <= CROWD_RADIUS * CROWD_RADIUS:
+				sum += other
+				count += 1
+		if count > best_count:
+			best_count = count
+			best = sum / count
+	return best
 
 
 ## Where each orbiting skull is, from the player's position and the shared stage

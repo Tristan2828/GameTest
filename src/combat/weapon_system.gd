@@ -18,6 +18,9 @@ signal weapon_gained(peer_id: int, weapon_id: int)
 signal seeker_fired(shooter: Player, aim: float, level: int)
 ## Everyone: a Bone Spear with Splinters struck; the arena spawns its shards.
 signal shards_requested(owner_id: int, at: Vector2, angles: PackedFloat32Array, damage: int)
+## Host: Grave Blast, Hex Snare or Bone Effigy goes off at `at` (the arena
+## resolves it and shows it everywhere).
+signal ability_cast(caster: Player, weapon_id: int, level: int, at: Vector2)
 
 ## Stage times (seconds) when an altar appears.
 const ALTAR_TIMES: Array[float] = [80.0, 160.0]
@@ -441,7 +444,7 @@ func _others(shooter: Player) -> Array[int]:
 
 func _throw_main_scythes(thrower: Player, aim: float) -> void:
 	var stats := thrower.stats
-	for angle: float in MainWeapons.scythe_angles(stats.projectile_count, aim):
+	for angle: float in MainWeapons.scythe_throw_angles(stats.projectile_count, aim):
 		var scythe := Scythe.new()
 		scythe.owner_id = thrower.peer_id
 		scythe.angle = angle
@@ -519,6 +522,9 @@ func _lightning_target(from: Vector2, aim: float, reach: float, enemies: EnemyMa
 func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, clock: float, enemies: EnemyManager) -> void:
 	var weapon := AutoWeapons.get_weapon(weapon_id)
 	var retry_key := "%d:%d" % [player.peer_id, weapon_id]
+	# Relics and the Ember Shrine make every auto weapon faster and stronger.
+	var interval := weapon.interval_at(level) * player.stats.auto_cooldown_scale
+	var damage := power(player, weapon.damage_at(level))
 	match weapon.kind:
 		AutoWeapon.Kind.ORBIT:
 			for skull: Vector2 in AutoWeapons.orbit_positions(player.state.position, level, clock):
@@ -528,10 +534,10 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 				var key := "%d:%d" % [player.peer_id, enemy.pool_index]
 				if _orbit_ready_at.get(key, -1.0) > clock:
 					continue
-				_orbit_ready_at[key] = clock + weapon.interval_at(level)
-				enemies.damage(enemy, weapon.damage_at(level), player.peer_id, DamageSource.of_weapon(weapon_id))
+				_orbit_ready_at[key] = clock + interval
+				enemies.damage(enemy, damage, player.peer_id, DamageSource.of_weapon(weapon_id))
 		AutoWeapon.Kind.SEEKER:
-			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
+			if _cooldown_done(player, weapon_id, delta, interval):
 				var target := enemies.find_nearest(player.state.position, weapon.reach)
 				if target != null:
 					seeker_fired.emit(player, (target.position - player.state.position).angle(), level)
@@ -539,11 +545,11 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					# Nothing in range: try again soon instead of waiting a full interval.
 					_timers[retry_key] = 0.2
 		AutoWeapon.Kind.AURA:
-			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
-				enemies.damage_in_radius(player.state.position, weapon.radius_at(level), weapon.damage_at(level), player.peer_id,
+			if _cooldown_done(player, weapon_id, delta, interval):
+				enemies.damage_in_radius(player.state.position, weapon.radius_at(level), damage, player.peer_id,
 					DamageSource.of_weapon(weapon_id))
 		AutoWeapon.Kind.CHAIN:
-			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
+			if _cooldown_done(player, weapon_id, delta, interval):
 				var path := _chain_strike(player, weapon, level, enemies)
 				if path.size() < 2:
 					_timers[retry_key] = 0.2
@@ -553,7 +559,7 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					for peer_id: int in _ready_peers:
 						_receive_bolt.rpc_id(peer_id, path, seed_value)
 		AutoWeapon.Kind.BOOMERANG:
-			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
+			if _cooldown_done(player, weapon_id, delta, interval):
 				if enemies.find_nearest(player.state.position, weapon.reach * 1.5) == null:
 					_timers[retry_key] = 0.2
 				else:
@@ -561,10 +567,10 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					for peer_id: int in _ready_peers:
 						_receive_scythes.rpc_id(peer_id, player.peer_id, player.state.aim, level)
 		AutoWeapon.Kind.TRAIL:
-			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
-				_burn(player.peer_id, weapon.damage_at(level), enemies)
+			if _cooldown_done(player, weapon_id, delta, interval):
+				_burn(player.peer_id, damage, enemies)
 		AutoWeapon.Kind.ERUPTION:
-			if _cooldown_done(player, weapon_id, delta, weapon.interval_at(level)):
+			if _cooldown_done(player, weapon_id, delta, interval):
 				var spots := _spear_spots(player.state.position, weapon.reach, weapon.count_at(level), enemies)
 				if spots.is_empty():
 					_timers[retry_key] = 0.2
@@ -572,6 +578,38 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					_add_spears(player.peer_id, spots, level)
 					for peer_id: int in _ready_peers:
 						_receive_spears.rpc_id(peer_id, player.peer_id, spots, level)
+		AutoWeapon.Kind.BLAST, AutoWeapon.Kind.HEX, AutoWeapon.Kind.EFFIGY:
+			if _cooldown_done(player, weapon_id, delta, interval):
+				var at := _ability_spot(player, weapon, level, enemies)
+				if at.is_finite():
+					ability_cast.emit(player, weapon_id, level, at)
+				else:
+					_timers[retry_key] = 0.2
+
+
+## An auto weapon's damage for this player (relics raise it).
+static func power(player: Player, amount: int) -> int:
+	return roundi(amount * player.stats.auto_power)
+
+
+## Host: where Grave Blast / Hex Snare / Bone Effigy should go off now, or
+## Vector2.INF to wait (nothing worth it nearby).
+func _ability_spot(player: Player, weapon: AutoWeapon, level: int, enemies: EnemyManager) -> Vector2:
+	var at := player.state.position
+	if weapon.kind == AutoWeapon.Kind.BLAST:
+		var wake := weapon.radius_at(level) * AutoWeapons.BLAST_WAKE_FACTOR
+		return at if enemies.find_nearest(at, wake) != null else Vector2.INF
+	var positions := PackedVector2Array()
+	for enemy: Enemy in enemies.enemies_in_radius(at, weapon.reach):
+		if not enemy.type.is_boss or weapon.kind == AutoWeapon.Kind.HEX:
+			positions.append(enemy.position)
+	var crowd := AutoWeapons.crowd_center(at, positions, weapon.reach)
+	if not crowd.is_finite():
+		return Vector2.INF
+	if weapon.kind == AutoWeapon.Kind.EFFIGY:
+		crowd = at + (crowd - at).limit_length(AutoWeapons.EFFIGY_DISTANCE)
+	var inner := bounds.grow(-8.0)
+	return crowd.clamp(inner.position, inner.end)
 
 
 ## Host: lightning hits the nearest enemy, then jumps on to the closest ones it

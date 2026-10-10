@@ -67,30 +67,57 @@ func test_pack_comes_once_per_interval() -> void:
 
 # --- PlayerHealth ---
 
-func test_hit_removes_heart_and_grants_invulnerability() -> void:
+func test_bullet_hit_costs_hp_and_gives_bullet_safety() -> void:
 	var health := PlayerHealth.new()
-	health.reset(3)
-	assert_true(health.take_hit(1, 1.0))
-	assert_eq(health.hearts, 2)
-	assert_false(health.take_hit(1, 1.0), "invulnerable right after a hit")
-	health.tick(1.1)
-	assert_true(health.take_hit(1, 1.0))
-	assert_eq(health.hearts, 1)
+	health.reset(100)
+	assert_true(health.take_bullet(15, 0.5))
+	assert_eq(health.hp, 85)
+	assert_false(health.take_bullet(15, 0.5), "safe from bullets right after a hit")
+	assert_true(health.take_contact(5), "but touching enemies still hurts")
+	assert_eq(health.hp, 80)
+	health.tick(0.6)
+	assert_true(health.take_bullet(15, 0.5))
+	assert_eq(health.hp, 65)
 
 
-func test_zero_hearts_is_downed_and_ignores_heals() -> void:
+func test_contact_drains_every_interval() -> void:
 	var health := PlayerHealth.new()
-	health.reset(1)
-	health.take_hit(5, 1.0)
+	health.reset(100)
+	assert_true(health.take_contact(10))
+	assert_false(health.take_contact(10), "once per interval")
+	health.tick(PlayerHealth.CONTACT_INTERVAL)
+	assert_true(health.take_contact(10))
+	assert_eq(health.hp, 80)
+	health.invulnerable_left = 1.0
+	health.tick(PlayerHealth.CONTACT_INTERVAL)
+	assert_false(health.take_contact(10), "invulnerable (revive, Grave Blast) blocks touches too")
+
+
+func test_zero_hp_is_downed_and_ignores_heals() -> void:
+	var health := PlayerHealth.new()
+	health.reset(10)
+	health.take_bullet(50, 1.0)
 	assert_true(health.is_downed())
-	assert_eq(health.hearts, 0)
-	health.heal(1)
+	assert_eq(health.hp, 0)
+	health.heal(5)
 	assert_true(health.is_downed())
 
 
 func test_heal_caps_at_max() -> void:
 	var health := PlayerHealth.new()
-	health.reset(3)
-	health.take_hit(1, 0.0)
-	health.heal(5)
-	assert_eq(health.hearts, 3)
+	health.reset(100)
+	health.take_bullet(10, 0.0)
+	health.heal(50)
+	assert_eq(health.hp, 100)
+	health.take_bullet(50, 0.0)
+	health.heal_share(0.3)
+	assert_eq(health.hp, 80)
+
+
+func test_recovery_regenerates_whole_hp_over_time() -> void:
+	var health := PlayerHealth.new()
+	health.reset(100)
+	health.take_bullet(50, 0.0)
+	for i: int in 63:  # A little over a second (float sums).
+		health.tick(1.0 / 60.0, 2.0)
+	assert_eq(health.hp, 52)

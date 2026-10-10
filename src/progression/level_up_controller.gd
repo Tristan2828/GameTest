@@ -67,8 +67,8 @@ func host_start(players: Array[Player], level: int, ready_peers: Array[int]) -> 
 		var reachable := player.peer_id == multiplayer.get_unique_id() or ready_peers.has(player.peer_id)
 		if not reachable:
 			continue
-		var is_hurt := player.health.hearts < player.health.max_hearts
-		var choices := Upgrades.roll(_rng, player.upgrade_ids, is_hurt, player.stats)
+		var is_hurt := player.health.hp < player.health.max_hp
+		var choices := Upgrades.roll(_rng, player.upgrade_ids, is_hurt, player.stats, not player.weapon_levels.is_empty())
 		if not choices.is_empty():
 			offered[player.peer_id] = choices
 	_session.start(offered)

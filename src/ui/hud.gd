@@ -2,7 +2,7 @@ class_name Hud
 extends CanvasLayer
 ## In-game overlay. The arena pushes values in; the HUD only displays them.
 
-@onready var _hearts: HeartsDisplay = %Hearts
+@onready var _health: HealthBar = %Health
 @onready var minimap: Minimap = %Minimap
 @onready var teammate_arrows: TeammateArrows = %TeammateArrows
 @onready var _hurt_flash: ColorRect = %HurtFlash
@@ -22,16 +22,16 @@ extends CanvasLayer
 @onready var run_summary: RunSummaryPanel = %RunSummary
 @onready var _coins_label: Label = %CoinsLabel
 @onready var _weapon_icons: WeaponIcons = %WeaponIcons
-@onready var _ability_label: Label = %AbilityLabel
 
 
-func flash_hurt() -> void:
-	_hurt_flash.color.a = 0.28
+## A red flash over the screen (`strength` = how opaque it starts).
+func flash_hurt(strength: float = 0.28) -> void:
+	_hurt_flash.color.a = maxf(_hurt_flash.color.a, strength)
 	create_tween().tween_property(_hurt_flash, "color:a", 0.0, 0.35)
 
 
-func set_hearts(current: int, maximum: int) -> void:
-	_hearts.set_hearts(current, maximum)
+func set_health(current: int, maximum: int) -> void:
+	_health.set_health(current, maximum)
 
 
 ## Auto weapon icons with level pips (weapon id -> level).
@@ -41,20 +41,6 @@ func set_weapons(levels: Dictionary[int, int]) -> void:
 
 func set_coins(count: int) -> void:
 	_coins_label.text = "%d coins" % count
-
-
-const ABILITY_READY_COLOR: Color = Color(0.95, 0.78, 0.4)
-const ABILITY_WAITING_COLOR: Color = Color(0.6, 0.57, 0.68)
-
-
-## "Dash: READY" in gold, or "Dash 1.2s" greyed while recharging.
-func set_ability(ability_name: String, ready_ratio: float, seconds_left: float) -> void:
-	if ready_ratio >= 1.0:
-		_ability_label.text = "%s: READY" % ability_name
-		_ability_label.modulate = ABILITY_READY_COLOR
-	else:
-		_ability_label.text = "%s: %.1fs" % [ability_name, seconds_left]
-		_ability_label.modulate = ABILITY_WAITING_COLOR
 
 
 func set_progress(level: int, ratio: float) -> void:
@@ -98,7 +84,7 @@ const QUEST_DONE_COLOR: Color = Color(0.55, 0.95, 0.5)
 func set_quest(text: String, done: bool) -> void:
 	if _quest_label == null:
 		_quest_label = Label.new()
-		_quest_label.position = Vector2(8, 78)
+		_quest_label.position = Vector2(8, 65)
 		_quest_label.size = Vector2(240, 12)
 		_quest_label.add_theme_font_size_override("font_size", 9)
 		_quest_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

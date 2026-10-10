@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_weapon")
 title = "Reaper's Scythe"
-description = "A spinning scythe flies out where you aim and comes back, cutting everything twice"
+description = "A spinning scythe flies out the way you face and comes back, cutting everything twice"
 icon = "icon_reapers_scythe"
 kind = 4
 color = Color(0.8, 0.85, 0.95, 1)

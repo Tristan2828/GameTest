@@ -5,13 +5,13 @@
 [sub_resource type="Resource" id="effect_0"]
 script = ExtResource("1_upgrade")
 stat = 3
-amount = -1.0
+amount = -20.0
 
 [resource]
 script = ExtResource("1_upgrade")
 title = "Glass Cannon"
 icon = "up_glass_cannon"
-description = "+10 damage, but -1 max heart"
+description = "+10 damage, but -20 max HP"
 stat = 0
 amount = 10.0
 max_stacks = 1

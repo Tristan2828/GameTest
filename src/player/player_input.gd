@@ -7,9 +7,8 @@ extends RefCounted
 var seq: int = 0
 ## Movement direction, length 0..1.
 var move: Vector2 = Vector2.ZERO
-## Aim angle in radians.
+## Where the main weapon attacks, in radians. Nobody aims by hand: AutoAim picks
+## it on the player's own computer from what that screen shows.
 var aim: float = 0.0
+## True when AutoAim found something to attack.
 var fire: bool = false
-## Total ability presses so far. A counter (not a "pressed this tick" flag) means
-## a lost network packet can never swallow a press.
-var ability_count: int = 0

@@ -36,7 +36,8 @@ func _run(seconds: float) -> void:
 
 func test_weapons_get_stronger_with_level() -> void:
 	for weapon: AutoWeapon in AutoWeapons.ALL:
-		assert_gt(weapon.damage_at(3), weapon.damage_at(1), weapon.title)
+		if weapon.kind != AutoWeapon.Kind.HEX:  # Hex Snare binds instead of hurting.
+			assert_gt(weapon.damage_at(3), weapon.damage_at(1), weapon.title)
 		assert_true(weapon.interval_at(3) <= weapon.interval_at(1), weapon.title)
 
 
@@ -90,7 +91,7 @@ func test_orbiting_skulls_bite_with_a_cooldown() -> void:
 
 func test_ghosts_weapons_stay_quiet() -> void:
 	_player.gain_weapon(AutoWeapons.Id.HOLY_AURA)
-	_player.health.take_hit(99, 0.0)
+	_player.health.take_bullet(9999, 0.0)
 	var near := _enemies.spawn(EnemyTypes.Id.GHOUL, Vector2(520, 500))
 	_run(1.0)
 	assert_eq(near.hp, near.max_hp)

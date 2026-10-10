@@ -6,7 +6,7 @@
 script = ExtResource("1_upgrade")
 title = "Blood Draught"
 icon = "up_blood_draught"
-description = "Heal 1 heart"
+description = "Heal 40 HP"
 stat = 8
-amount = 1.0
+amount = 40.0
 max_stacks = 0

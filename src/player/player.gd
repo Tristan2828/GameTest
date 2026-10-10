@@ -12,10 +12,8 @@ extends Node2D
 ## physics loop, so the order of updates is always the same.
 
 signal shot_requested(shooter: Player, input_seq: int)
-## Every peer: this player just lost hearts (for effects).
-signal hurt(victim: Player)
-## Host: this player used their ability (the movement part already happened).
-signal ability_used(user: Player)
+## Every peer: this player just lost HP (for effects; `amount` = how much).
+signal hurt(victim: Player, amount: int)
 ## Every peer: this player got back up (revived by a teammate, or a new stage).
 signal revived(player: Player)
 
@@ -34,8 +32,10 @@ const MAX_QUEUED_INPUTS: int = 6
 const CATCH_UP_THRESHOLD: int = 3
 const REMOTE_SMOOTHING: float = 18.0
 const CORRECTION_SMOOTHING: float = 10.0
-const HEART_COLOR: Color = Color(0.9, 0.2, 0.3)
-const HEART_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
+const HP_COLOR: Color = Color(0.9, 0.2, 0.3)
+const HP_EMPTY_COLOR: Color = Color(0.25, 0.15, 0.18)
+## The little HP bar under every hero.
+const HP_BAR_WIDTH: float = 14.0
 const HITBOX_OUTLINE_COLOR: Color = Color(0.1, 0.05, 0.12)
 ## Steps per second of the walk cycle (matches the bob).
 const WALK_STEPS_PER_SECOND: float = 7.6
@@ -46,14 +46,6 @@ const REMOTE_SNAP_DISTANCE: float = 48.0
 const REVIVE_COLOR: Color = Color(0.55, 0.95, 0.5)
 ## How quickly the camera glides to a spectated teammate (higher = faster).
 const SPECTATE_PAN_SPEED: float = 6.0
-## Your own hero shows an ability marker over their head (charging bar, then a
-## glowing gem when ready). Abilities quicker than this (Dash) don't get one: it
-## would flicker all the time.
-const ABILITY_MARKER_MIN_COOLDOWN: float = 3.0
-const ABILITY_READY_COLOR: Color = Color(0.95, 0.78, 0.4)
-const ABILITY_CHARGING_COLOR: Color = Color(0.6, 0.57, 0.68)
-## Seconds the "ready again" ring takes to spread out and fade.
-const ABILITY_PING_SECONDS: float = 0.45
 
 @export var stats: CharacterStats
 
@@ -79,8 +71,8 @@ var coins: int = 0
 var kills_toward_heal: int = 0
 ## Host: how many times this player went down this run.
 var times_downed: int = 0
-## Host: hearts lost to hits this run.
-var hearts_lost: int = 0
+## Host: HP lost to hits this run.
+var hp_lost: int = 0
 ## Downed: how full the revive circle is, 0..1 (host-owned, synced in snapshots).
 var revive_progress: float = 0.0
 ## This stage's quest (Quests id, -1 = none) and its progress (host-owned, synced in snapshots).
@@ -102,26 +94,21 @@ var _predictor: ClientPredictor = ClientPredictor.new()
 ## Drawn offset from the simulated position; shrinks to zero so corrections look smooth.
 var _visual_offset: Vector2 = Vector2.ZERO
 var _remote_target: Vector2 = Vector2.ZERO
-var _last_seen_hearts: int = -1
-var _was_dashing: bool = false
-## Walk bob height in pixels, and the last movement direction (for dash trails).
+var _last_seen_hp: int = -1
+## Walk bob height in pixels, and the last movement direction (the hero faces it).
 var _bob: float = 0.0
 var _walk_time: float = 0.0
 var _walking: bool = false
 var _last_move: Vector2 = Vector2.RIGHT
 var _last_drawn_position: Vector2 = Vector2.ZERO
 var _shake: float = 0.0
-var _remote_dashing: bool = false
-var _ability_was_ready: bool = true
-## Counts down while the "ability ready" ring plays.
-var _ability_ping: float = 0.0
 
 @onready var _camera: Camera2D = $Camera2D
 
 
 ## Called by the arena's spawn function, before the node enters the tree.
 func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_bounds: Rect2,
-		character: int = Characters.Id.WANDERER, hearts_bonus: int = 0,
+		character: int = Characters.Id.WANDERER, hp_bonus: int = 0,
 		boost_ranks: PackedInt32Array = PackedInt32Array()) -> void:
 	peer_id = owner_peer_id
 	slot = player_slot
@@ -130,9 +117,9 @@ func setup(owner_peer_id: int, player_slot: int, spawn_position: Vector2, arena_
 	name = str(owner_peer_id)
 	# Each player gets its own copy so upgrades only change this player.
 	stats = Characters.get_character(character).duplicate()
-	stats.max_hearts = maxi(stats.max_hearts + hearts_bonus, 1)  # Difficulty setting.
+	stats.max_hp = maxi(stats.max_hp + hp_bonus, 1)  # Difficulty setting.
 	Embers.apply(boost_ranks, stats)  # This player's Ember Shrine boosts (empty when off).
-	health.reset(stats.max_hearts)
+	health.reset(stats.max_hp)
 	state.position = spawn_position
 	position = spawn_position
 	_remote_target = spawn_position
@@ -154,12 +141,6 @@ func is_local() -> bool:
 	return peer_id == multiplayer.get_unique_id()
 
 
-func is_dashing() -> bool:
-	if _shows_remote_state():
-		return _remote_dashing
-	return state.is_dashing()
-
-
 ## The player's chosen name (title menu), or their slot color ("Red").
 func display_name() -> String:
 	return Net.name_of(peer_id, slot)
@@ -172,14 +153,24 @@ func apply_upgrade(upgrade_id: int) -> void:
 	queue_redraw()
 
 
-## Host: an enemy or enemy bullet hit this player. Returns true if it landed.
-func take_hit(amount: int) -> bool:
-	var hearts_before := health.hearts
-	var landed := health.take_hit(amount, stats.hit_invulnerability)
-	hearts_lost += hearts_before - health.hearts
+## Host: an enemy bullet hit this player. Returns true if it landed.
+func take_bullet(amount: int) -> bool:
+	var before := health.hp
+	return _after_hit(before, health.take_bullet(amount, stats.hit_invulnerability))
+
+
+## Host: enemies are touching this player (`amount` = all of them together).
+## Drains every PlayerHealth.CONTACT_INTERVAL. Returns true if it landed.
+func take_contact(amount: int) -> bool:
+	var before := health.hp
+	return _after_hit(before, health.take_contact(amount))
+
+
+func _after_hit(hp_before: int, landed: bool) -> bool:
+	hp_lost += hp_before - health.hp
 	if LaunchOptions.invincible:
-		# Test flag: hits still count (balance numbers) but hearts refill.
-		health.hearts = health.max_hearts
+		# Test flag: hits still count (balance numbers) but HP refills.
+		health.hp = health.max_hp
 		return landed
 	if landed and health.is_downed():
 		times_downed += 1
@@ -187,10 +178,10 @@ func take_hit(amount: int) -> bool:
 	return landed
 
 
-## Host: a teammate filled the revive circle. Back up with some hearts and a
+## Host: a teammate filled the revive circle. Back up with some HP and a
 ## moment of safety, right where they fell.
 func revive() -> void:
-	health.hearts = Revive.hearts_after(health.max_hearts)
+	health.hp = Revive.hp_after(health.max_hp)
 	health.invulnerable_left = Revive.INVULNERABILITY
 	revive_progress = 0.0
 	print("Player %d revived" % peer_id)
@@ -198,11 +189,9 @@ func revive() -> void:
 
 ## Host: back to full strength at a new spot (start of a stage).
 func respawn(at: Vector2) -> void:
-	health.reset(stats.max_hearts)
+	health.reset(stats.max_hp)
 	revive_progress = 0.0
 	state.position = at
-	state.dash_time_left = 0.0
-	state.ability_cooldown_left = 0.0
 	state.fire_cooldown_left = 0.0
 	position = at
 
@@ -229,26 +218,14 @@ func register_kill() -> void:
 		health.heal(1)
 
 
-## 0 = just used, 1 = ready (for the HUD).
-func ability_ready_ratio() -> float:
-	if stats.ability_cooldown <= 0.0:
-		return 1.0
-	return 1.0 - clampf(state.ability_cooldown_left / stats.ability_cooldown, 0.0, 1.0)
-
-
-## True if a hero with this cooldown gets the over-the-head ability marker.
-static func shows_ability_marker(cooldown: float) -> bool:
-	return cooldown >= ABILITY_MARKER_MIN_COOLDOWN
-
-
 func is_downed() -> bool:
 	return health.is_downed()
 
 
-## Checked when an enemy or enemy bullet touches this player. Dashing dodges
-## hits. Works on clients too, using the latest known state.
-func can_be_hit() -> bool:
-	return not health.is_downed() and not health.is_invulnerable() and not is_dashing()
+## Checked when an enemy bullet touches this player (bullets pass through
+## otherwise). Works on clients too, using the latest known state.
+func can_be_shot() -> bool:
+	return not health.is_downed() and not health.is_bullet_safe()
 
 
 ## Best known position of this player on this peer: simulated on the host and
@@ -269,26 +246,25 @@ func muzzle_position() -> Vector2:
 ## Advances this player by one physics tick (only while the run is being played).
 func tick(delta: float) -> void:
 	if multiplayer.is_server():
-		health.tick(delta)
-	if multiplayer.is_server():
+		health.tick(delta, stats.recovery)
 		if is_local():
 			_simulate(_read_local_input(), delta)
 		else:
 			_simulate_queued_inputs(delta)
 	elif is_local():
 		var input := _read_local_input()
-		_submit_input.rpc_id(1, input.seq, input.move, input.aim, input.fire, input.ability_count)
+		_submit_input.rpc_id(1, input.seq, input.move, input.aim, input.fire)
 		_simulate(input, delta)
 		_predictor.record(input.seq, state.position)
 
 
 ## Client: apply this player's entry from a host snapshot.
-func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack_seq: int,
-		hearts: int, max_hearts: int, invulnerable: bool) -> void:
-	health.max_hearts = max_hearts
-	health.hearts = hearts
-	# Only used for the flashing effect on clients.
-	health.invulnerable_left = 1.0 if invulnerable else 0.0
+func apply_server_state(server_position: Vector2, aim: float, ack_seq: int,
+		hp: int, max_hp: int, bullet_safe: bool) -> void:
+	health.max_hp = max_hp
+	health.hp = hp
+	# Lets bullets pass through on this screen too, and makes the hero flash.
+	health.bullet_safe_left = 1.0 if bullet_safe else 0.0
 	if is_local():
 		var error := _predictor.reconcile(ack_seq, server_position)
 		if error == Vector2.ZERO:
@@ -306,7 +282,6 @@ func apply_server_state(server_position: Vector2, aim: float, dashing: bool, ack
 			position = server_position
 		_remote_target = server_position
 		state.aim = aim
-		_remote_dashing = dashing
 
 
 ## Local player only: shake the camera (strength in pixels, fades quickly).
@@ -316,18 +291,13 @@ func add_shake(strength: float) -> void:
 
 
 func _process(delta: float) -> void:
-	if _last_seen_hearts >= 0 and health.hearts < _last_seen_hearts:
-		hurt.emit(self)
-		add_shake(5.0)
-	elif _last_seen_hearts == 0 and health.hearts > 0:
+	if _last_seen_hp >= 0 and health.hp < _last_seen_hp:
+		var lost := _last_seen_hp - health.hp
+		hurt.emit(self, lost)
+		add_shake(clampf(1.5 + lost / 4.0, 2.0, 6.0))
+	elif _last_seen_hp == 0 and health.hp > 0:
 		revived.emit(self)
-	var dashing := is_dashing()
-	if dashing and not _was_dashing and is_local():
-		Sfx.play(&"dash", -6.0)
-	_was_dashing = dashing
-	_last_seen_hearts = health.hearts
-	if is_local():
-		_update_ability_ping(delta)
+	_last_seen_hp = health.hp
 	if _shake > 0.0:
 		_shake = maxf(_shake - delta * 20.0, 0.0)
 		_camera.offset = Vector2(randf_range(-_shake, _shake), randf_range(-_shake, _shake)).round()
@@ -348,17 +318,6 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-## Local player: ring + chime the moment the ability is back.
-func _update_ability_ping(delta: float) -> void:
-	_ability_ping = maxf(_ability_ping - delta, 0.0)
-	var now_ready := ability_ready_ratio() >= 1.0
-	if now_ready and not _ability_was_ready and not health.is_downed() \
-			and shows_ability_marker(stats.ability_cooldown):
-		_ability_ping = ABILITY_PING_SECONDS
-		Sfx.play(&"ability_ready", -8.0)
-	_ability_was_ready = now_ready
-
-
 func _update_walk(delta: float) -> void:
 	var moved := position - _last_drawn_position
 	_last_drawn_position = position
@@ -373,27 +332,23 @@ func _update_walk(delta: float) -> void:
 
 func _draw() -> void:
 	var color: Color = SLOT_COLORS[slot % SLOT_COLORS.size()]
-	_draw_heart_pips()
 	if not is_local() and Net.is_online():
 		_draw_name_tag(color)
 	if health.is_downed():
 		_draw_downed(color)
 		return
+	_draw_hp_bar()
 	_draw_weapons()
-	var aim_direction := Vector2.from_angle(state.aim)
 	var modulate := Color.WHITE
-	# Blink while invulnerable after a hit.
-	if health.is_invulnerable() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
+	# Blink while safe from bullets after a hit (or after a revive).
+	if health.is_bullet_safe() and int(Time.get_ticks_msec() / 80.0) % 2 == 0:
 		modulate = Color(1, 1, 1, 0.3)
 	var sprite := PixelArt.walk_frame(stats.sprite, _bob > 0.0 or _walking, _walk_time * WALK_STEPS_PER_SECOND)
-	if is_dashing():
-		PixelArt.draw(self, sprite, -_last_move * 6.0, color, false, aim_direction.x < 0.0, 1.0, Color(1, 1, 1, 0.3))
-	PixelArt.draw(self, sprite, Vector2(0, -2 - _bob), color, false, aim_direction.x < 0.0, 1.0, modulate)
+	# Heroes face the way they last moved (nobody aims any more).
+	PixelArt.draw(self, sprite, Vector2(0, -2 - _bob), color, false, _last_move.x < 0.0, 1.0, modulate)
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
-	if is_local() and shows_ability_marker(stats.ability_cooldown):
-		_draw_ability_marker()
 
 
 ## Teammates' names float over their heads (co-op), in their color.
@@ -405,33 +360,6 @@ func _draw_name_tag(color: Color) -> void:
 	var at := Vector2(-width / 2.0, top).round()
 	draw_string(font, at + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, HITBOX_OUTLINE_COLOR)
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, color.lightened(0.25))
-
-
-## Over your own head (where teammates show names): a small bar filling while
-## the ability recharges, then a gently pulsing gem once it's ready. A ring
-## spreads out from the hero the moment it comes back.
-func _draw_ability_marker() -> void:
-	var top := roundf(-2.0 - PixelArt.size_of(stats.sprite).y / 2.0 - 4.0 - _bob)
-	var ratio := ability_ready_ratio()
-	if ratio < 1.0:
-		var width := 9.0
-		draw_rect(Rect2(-width / 2.0 - 1.0, top - 1.0, width + 2.0, 4.0), HITBOX_OUTLINE_COLOR)
-		draw_rect(Rect2(-width / 2.0, top, floorf(width * ratio), 2.0), ABILITY_CHARGING_COLOR)
-	else:
-		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 220.0)
-		var gem := Vector2(0, top - 2.0 - roundf(pulse))
-		# A 5x5 diamond with a dark outline (plus shapes stacked into a diamond).
-		draw_rect(Rect2(gem + Vector2(-1, -3), Vector2(3, 7)), HITBOX_OUTLINE_COLOR)
-		draw_rect(Rect2(gem + Vector2(-2, -2), Vector2(5, 5)), HITBOX_OUTLINE_COLOR)
-		draw_rect(Rect2(gem + Vector2(-3, -1), Vector2(7, 3)), HITBOX_OUTLINE_COLOR)
-		var glow := ABILITY_READY_COLOR.lightened(0.3 * pulse)
-		draw_rect(Rect2(gem + Vector2(0, -2), Vector2(1, 5)), glow)
-		draw_rect(Rect2(gem + Vector2(-1, -1), Vector2(3, 3)), glow)
-		draw_rect(Rect2(gem + Vector2(-2, 0), Vector2(5, 1)), glow)
-		draw_rect(Rect2(gem + Vector2(-1, -1), Vector2(1, 1)), Color.WHITE)
-	if _ability_ping > 0.0:
-		var t := 1.0 - _ability_ping / ABILITY_PING_SECONDS
-		draw_arc(Vector2.ZERO, 6.0 + 18.0 * t, 0.0, TAU, 32, Color(ABILITY_READY_COLOR, 0.8 * (1.0 - t)), 1.0)
 
 
 ## Lying on the ground inside the revive circle, with a bobbing "+" asking for help.
@@ -453,13 +381,13 @@ func _draw_downed(color: Color) -> void:
 	draw_rect(Rect2(top + Vector2(-3, -1), Vector2(7, 3)), REVIVE_COLOR)
 
 
-func _draw_heart_pips() -> void:
-	var spacing := 4.0
-	var start_x := -(health.max_hearts - 1) * spacing / 2.0
-	for i: int in health.max_hearts:
-		var filled := i < health.hearts
-		draw_circle(Vector2(start_x + i * spacing, stats.body_radius + 5.0), 1.5,
-			HEART_COLOR if filled else HEART_EMPTY_COLOR)
+## A small HP bar under the hero (everyone's, so teammates see who's hurting).
+func _draw_hp_bar() -> void:
+	var top := stats.body_radius + 4.0
+	var left := -HP_BAR_WIDTH / 2.0
+	draw_rect(Rect2(left - 1.0, top - 1.0, HP_BAR_WIDTH + 2.0, 4.0), HITBOX_OUTLINE_COLOR)
+	draw_rect(Rect2(left, top, HP_BAR_WIDTH, 2.0), HP_EMPTY_COLOR)
+	draw_rect(Rect2(left, top, ceilf(HP_BAR_WIDTH * health.ratio()), 2.0), HP_COLOR)
 
 
 ## Character silhouette details, drawn over the body in a darker shade.
@@ -503,24 +431,17 @@ func _simulate_queued_inputs(delta: float) -> void:
 func _simulate(input: PlayerInput, delta: float) -> void:
 	last_processed_seq = input.seq
 	if health.is_downed():
-		# Downed players lie still until revived: no moving, shooting or ability.
+		# Downed players lie still until revived: no moving or attacking.
 		input.move = Vector2.ZERO
 		input.fire = false
-		state.last_ability_count = input.ability_count
-		state.dash_time_left = 0.0
 	var result := PlayerMotor.step(state, input, stats, bounds, delta)
 	if result & PlayerMotor.FIRED:
 		shot_requested.emit(self, input.seq)
-	if result & PlayerMotor.ABILITY_USED:
-		if multiplayer.is_server():
-			ability_used.emit(self)
-		if is_local() and stats.ability == CharacterStats.Ability.BLINK:
-			Sfx.play(&"dash", -4.0, 1.6)
 
 
 ## Client -> host, every tick. Unreliable: a lost packet is cheaper than a delay.
 @rpc("any_peer", "call_remote", "unreliable_ordered", 2)
-func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, ability_count: int) -> void:
+func _submit_input(seq: int, move: Vector2, aim: float, fire: bool) -> void:
 	if not multiplayer.is_server() or multiplayer.get_remote_sender_id() != peer_id:
 		return
 	if seq <= _newest_received_seq:
@@ -531,7 +452,6 @@ func _submit_input(seq: int, move: Vector2, aim: float, fire: bool, ability_coun
 	input.move = move.limit_length(1.0)
 	input.aim = aim
 	input.fire = fire
-	input.ability_count = ability_count
 	_input_queue.append(input)
 	while _input_queue.size() > MAX_QUEUED_INPUTS:
 		_input_queue.pop_front()

@@ -6,12 +6,12 @@
 [sub_resource type="Resource" id="effect_0"]
 script = ExtResource("2_upgrade")
 stat = 9
-amount = 0.4
+amount = 0.25
 
 [resource]
 script = ExtResource("1_relic")
 title = "Holy Water"
 icon = "rel_holy_water"
-description = "Your ability is 40% stronger"
+description = "Your auto weapons deal 25% more damage"
 price = 60
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

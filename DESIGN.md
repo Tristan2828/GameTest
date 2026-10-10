@@ -1,9 +1,11 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-10 (v0.21.1)
+> Last updated: 2026-10-10 (v0.22.0)
 
-A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
+A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vampire Survivors-style hordes, auto-firing weapons and build power fantasy, with readable, dodgeable bullet patterns.
+
+> **Redesign (2026-10-10, owner decision):** the game moved from a twin-stick shooter (aim + fire) to **movement only** like Vampire Survivors: weapons fire on their own and the player's skill is dodging. Step 1 is in v0.22.0; step 2 (weapons on level-up cards, passive slots, evolutions) comes after a playtest. See §7 *Auto-fire redesign*. Milestone history below still describes aiming, abilities and hearts as they were at the time.
 
 ---
 
@@ -11,7 +13,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 
 - **Pillars**
   1. **Power fantasy through builds.** Start weak, end the run with the screen full of your own attacks.
-  2. **Real dodging.** Tiny hitbox, few hearts, readable enemy bullet patterns. Skill matters.
+  2. **Real dodging.** Tiny hitbox, a small HP bar, readable enemy bullet patterns. Movement is the only control, so where you stand is the skill.
   3. **Better with friends.** Online co-op for 1–4 players, but solo is fully supported.
   4. **Easy to pick up.** Simple controls, short runs, friends can jump in quickly.
 - **Audience:** Me and my friends. Long-term goal is a complete game.
@@ -58,21 +60,19 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **Bullet density:** readable (Enter the Gungeon-like), not hardcore shmup. See *Ideas for Later*.
 
 ### Player
-- **Health:** a few hearts (depends on the character), with a hitbox much smaller than the sprite. Enemy contact costs 1 heart, then ~1s of invulnerability (flashing).
-- **Downed:** at 0 hearts the player is downed and lies in a revive circle until a teammate revives them (see Co-op rules).
-- **Movement:** free 8-direction / analog movement.
-- **Aiming:** manual 360° aim with the mouse or right stick.
-- **Defense:**
-  - **One character ability** on one button, on a cooldown (owner decision after the first playtest; replaces the separate dash and bomb). Dash and a bomb-like blast are abilities of specific characters.
-  - **Ready marker (playtest request):** over your own hero's head, a small bar fills while the ability recharges, then a pulsing gold gem shows it's ready; a ring and a quiet chime play the moment it comes back. Only for cooldowns of 3s or more (not the Wanderer's Dash: it would flicker). Teammates don't see your marker.
+- **Controls (v0.22.0):** movement only (WASD / arrows / left stick). Weapons fire by themselves; there is no aim, Fire or ability button. The mouse cursor hides during play and comes back for level-up cards, the shop and menus.
+- **Health (v0.22.0):** an **HP bar** (Kael 100, Morwen 70, Vesper 90, Mortimer 150), with a hitbox much smaller than the sprite. Touching enemies drains their contact damage (all of them together) every 0.5 s with no safe time; an enemy bullet takes its damage and then bullets pass through you for 0.5 s (`hit_invulnerability`). Enemies hit 1.0x / 1.3x / 1.6x harder by stage. See §7 *Auto-fire redesign* for the numbers.
+- **Healing:** Recovery (HP per second: Mortimer's perk, Ghoul Blood, Bloodstone), Heart pickups (30% of max HP), every team level-up (5%), finished rituals (25%), Grave Blast (10%), Vampire Fang (1 HP per 3 kills), and full HP at every stage start.
+- **Downed:** at 0 HP the player is downed and lies in a revive circle until a teammate revives them (see Co-op rules).
+- **Movement:** free 8-direction / analog movement. Heroes face the way they last moved.
 
 ### Weapons
-- **Main weapon (v0.19.0):** each hero has their own, always aimed with the mouse / right stick and used by holding fire (owner decision: unique weapons instead of everyone shooting bolts; every hero keeps aiming so the twin-stick feel stays). See *Hero main weapons (v0.19.0)* in Milestones.
-  - Wanderer: **Bolt Gun** (unchanged). Gravekeeper: **Reaper's Scythe**. Hexblade Witch: **Chain Lightning**. Necromancer: **Bone Spears**.
-- **Auto weapons:** found on altars and in champions' chests, fire automatically: Orbiting Skulls, Seeking Bolts, Holy Aura, Hellfire Trail. (Reaper's Scythe, Chain Lightning and Bone Spears were auto weapons in v0.17–0.18; they're main weapons now and no longer drop.)
+- **Main weapon (v0.19.0; fires by itself since v0.22.0):** each hero has their own, and each picks its own target (`AutoAim`):
+  - Kael: **Bolt Gun** at the nearest enemy. Mortimer: **Reaper's Scythe** the way he faces, plus one behind him. Morwen: **Chain Lightning** at a random enemy nearby. Vesper: **Bone Spears**, a row toward a random enemy nearby.
+- **Auto weapons:** found on altars and in champions' chests, fire automatically: Orbiting Skulls, Seeking Bolts, Holy Aura, Hellfire Trail, and since v0.22.0 the old hero abilities **Grave Blast, Hex Snare and Bone Effigy** (anyone can get them). (Reaper's Scythe, Chain Lightning and Bone Spears were auto weapons in v0.17–0.18; they're main weapons now and no longer drop.)
 
 ### Characters
-- Multiple playable characters, each with a **unique kit** (main weapon, stats, unique ability, and their own weapon upgrades).
+- Multiple playable characters, each with a **unique kit**: main weapon, stats (HP, speed), a small **perk** and their own weapon upgrades (v0.22.0: perks replaced abilities). Perks: Kael **Light Feet** (moves 10% faster), Mortimer **Undying** (regenerates 0.5 HP/s), Morwen **Hexborn** (+10% crit chance), Vesper **Grave Harvest** (her kills burst for 8 damage).
 - Encourages team composition in co-op.
 
 ## 4. Progression
@@ -98,7 +98,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - ~~**None.** Each run stands alone, with no unlocks or permanent upgrades.~~ Changed (owner decision, v0.21.0): a **very light** permanent stat shop.
 - **Embers (permanent progression):** every finished run earns Embers on your own PC (`user://embers.cfg`; headless and autopilot runs don't count). The title menu's **Ember Shrine** sells small permanent boosts. Owner choices: a tiny stat shop (not unlocks or cosmetics), a fully upgraded hero is only ~5-10% stronger, about 100 runs to buy everything, earned from progress (bosses, victory, a little from kills), no extra hearts, a free **Refund all** button, and each player can switch their own boosts off. Records scores ignore boosts.
   - Earning: 8 per boss killed + 6 for a victory + 1 per 100 of your kills (max 10), times the run's score multiplier (clamped 0.25-2). A victory is ~40, dying in stage 2 ~15.
-  - Boosts (3 ranks each, prices 50 / 100 / 175, ~1950 in total): **Keen Eye** +2% main-weapon crit chance, **Swiftness** +2% move speed, **Focus** -3% ability cooldown, **Greed** +5% chance a coin you pick up is worth 1 more, **Reach** +6% pickup radius, **Resolve** +0.05 s invulnerability after a hit. (A +% XP boost was dropped: XP is shared by the team.)
+  - Boosts (3 ranks each, prices 50 / 100 / 175, ~1950 in total): **Keen Eye** +2% main-weapon crit chance, **Swiftness** +2% move speed, **Focus** -3% auto weapon cooldowns (ability cooldown before v0.22.0), **Greed** +5% chance a coin you pick up is worth 1 more, **Reach** +6% pickup radius, **Resolve** +0.05 s of bullet safety after a hit. (A +% XP boost was dropped: XP is shared by the team.)
   - Co-op: everyone brings their own boosts (sent to the host on connecting, applied to that player's stats on every peer through the spawn data). The host can turn them off for everyone in Custom Game (**Ember boosts** On/Off).
 - **Records (v0.15.0):** each PC keeps its own best runs (top 10 per hero, `user://records.cfg`) with a score: 10 per kill + 1 per 10 damage + 3000 per boss + 5000 for a victory, times the difficulty (enemy/boss health and enemy count; bonus hearts, starting levels, extra XP and all weapons lower it). Shown on the title menu's Records page and as "Score" on the run summary. Bragging rights only, no unlocks.
 
@@ -111,7 +111,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | XP | **Shared** team XP bar; each player picks their **own** upgrade |
 | Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted. Online, play resumes after a **3-second "3, 2, 1" countdown** (also after the shop); solo resumes right away (v0.18.0) |
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
-| Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 hearts you lie in a circle (30 px) and can't move, shoot or use your ability. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max hearts (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Fire / Ability cycles, ending on your own body). Teammates see a pulsing edge arrow with a "+" and the name, a blinking "+" on the minimap and a "Red is down!" line. (Since v0.18.0 only downed teammates get edge arrows; healthy ones are on the minimap.) Run ends if everyone is down at once |
+| Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 HP you lie in a circle (30 px) and can't move or attack. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max HP (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Space / Enter / click / A / RB cycles, ending on your own body). Teammates see a pulsing edge arrow with a "+" and the name, a blinking "+" on the minimap and a "Red is down!" line. (Since v0.18.0 only downed teammates get edge arrows; healthy ones are on the minimap.) Run ends if everyone is down at once |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
 | Pause | Solo: the Esc menu pauses the game. Online: nobody can pause; the Esc menu only blocks your own controls. (v0.17.0's host pause that froze everyone was removed in v0.18.0: the owner saw the game desync and it wasn't worth it) |
 | Names | Each player types a display name on the title menu (saved on their PC, max 12 characters, only characters the pixel font draws). Without one you're called by your slot color ("Red"). Shown on lobby cards, over teammates' heroes, on edge arrows, in toasts and "Waiting for..." lines, and on the run summary. Clients send it to the host on connecting; the host sends the list to everyone (`Net.names`) |
@@ -348,7 +348,51 @@ Decisions made by Claude (**revisit in the next playtest**): which weapon goes t
 - **Not yet played by a human:** stages 2–3 and their bosses, Victory, Hex Snare, the Necromancer, the end-of-run screen, the shop economy, full co-op runs on v0.6+. See `docs/PLAYTEST.md`.
 - **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
 
+### Auto-fire redesign (step 1 done in v0.22.0, step 2 planned for v0.23.0; owner decision 2026-10-10)
+**Why:** the owner found that aiming and dodging fight over the same hands: the game became either "aim well" or "dodge well", and builds couldn't take over the job of aiming the way they do in Vampire Survivors. It would be hard to balance. New direction: a close Vampire Survivors-style game with our own flavor (dark fantasy, co-op, real bullet patterns, stages + bosses + shop). Not for sale; for playing with friends. Decided in a Q&A round.
+
+**Step 1: auto-fire conversion (v0.22.0, implemented; not yet played by a human), then a playtest with friends**
+1. **Controls:** movement only (WASD / arrows / left stick). No Fire, no aim, **no ability button**. The cursor is hidden during runs; the in-game cursor settings (`GameCursor`, Settings cursor rows) go. The mouse still works in menus. Spectating (downed) needs a new cycle button (Claude's call).
+2. **Facing:** heroes face the way they move; standing still keeps the last direction.
+3. **Main weapons fire on their own**, each with its own targeting rule:
+   - **Bolt Gun** (Kael): the nearest enemy (like Magic Wand).
+   - **Reaper's Scythe** (Mortimer): the way you face (like Whip / Knife).
+   - **Chain Lightning** (Morwen): random enemies nearby.
+   - **Bone Spears** (Vesper): random enemies in range.
+4. **Abilities become auto weapons:** Grave Blast, Hex Snare and Bone Effigy leave the heroes and join the auto-weapon pool, so **any hero** can get them (pool 4 -> 7). They fire on their own cooldown at the **biggest nearby crowd** (Effigy: between you and it; nothing nearby: ahead of where you're moving). Each gets levels like the other auto weapons. **Dash is removed** (no replacement). The ability ready marker goes.
+5. **Heroes:** starting weapon + stats + **one small passive perk** each (Claude drafts the perks). The four hero-only upgrades (Afterimage, Hallowed Blast, Deep Hex, Ossuary) are retired or folded into the new auto weapons (ids stay: append-only).
+6. **HP bar instead of hearts:**
+   - Roughly Kael 100, Morwen 70, Vesper 90, Mortimer 150.
+   - **Touching enemies** does a little damage and keeps draining while they touch you (~5 every 0.5 s for a Shambler); no safety time, so being surrounded is deadly.
+   - **Bullets hit hard** (~15 for a Cultist bullet, ~20 for a boss bullet) and give **0.5 s of safety from bullets** only.
+   - Damage grows per stage (~x1.3 / x1.6).
+   - **Healing:** a Recovery stat (slow regen) on upgrades / relics; the Heart power-up heals a share of max HP; full heal at each stage start; a small heal on every level-up. Grave Blast and the ritual circle heal a share of HP.
+   - **Revives** stay as they are; you get up with half your max HP.
+   - Everything heart-based converts to HP: max-heart upgrades, Glass Cannon, relics, the bonus-hearts difficulty slider, Hearts lost / run summary, records, the Embers boost Resolve (safety time).
+7. **Networking:** each player's own computer picks the target (`AutoAim`, from the enemies its screen shows) and sends it in its input like the old mouse aim, so the shooter's prediction and the host's attack always match. (The plan said the host would pick; Claude kept the client pick because it reuses the existing, tested shot prediction.) The ability weapons are host-run like the other auto weapons and shown everywhere from small events.
+
+**How step 1 turned out (v0.22.0).** Claude's calls (**revisit in the playtest**):
+- **Mortimer's scythe also throws behind him** (`MainWeapons.SCYTHE_BACK_THROW`). With only the front throw, running from a crowd meant facing away from it: on the balance check his stage 1 boss took 257 s (Kael's: 8 s) and he never finished stage 2. With the back throw: boss fights 52 / 107 / 128 s and a full-run victory.
+- Targeting reach: bolts as far as they fly (~384 px); the scythe only throws with an enemy within 1.5x its reach; lightning and spears pick from enemies within their reach (+10 px). Nothing in reach: no attack (no wasted shots or sounds).
+- Grave Blast goes off when an enemy is within 1.2x its damage radius (12 s, 50 damage, clears enemy bullets within 150 px, heals 10%, 1 s safe); Hex Snare (7 s, 50 px, 3 s, +50% damage) and Bone Effigy (10 s, lures within 150 px for 4 s, bursts for 45 in 70 px) go at the middle of the biggest crowd within reach (`AutoWeapons.crowd_center`). Each gets 15% faster per level and Grave Blast / Effigy hit harder per level. Bosses never lure toward the Effigy.
+- Damage: Shambler 5, Bat 3, Ghoul 8, Cultist / Imp / Crawler 4, Spitter 5, Paladin 8, champions 10, bosses 15 to touch; bullets 15, champions 18, bosses 20. Hurt effects scale with the hit (a touch is a small flash, a bullet the full one).
+- HP conversions: Heart Container +20 max HP, Glass Cannon / Cursed Skull -20, Iron Boots +30, Blood Draught heals 40, Vampire Fang 1 HP per 3 kills, Steady Nerves +0.15 s bullet safety, difficulty "Bonus HP" -40..+60 in steps of 10 (Easy +20, Hard -20). New: **Ghoul Blood** upgrade (+0.4 HP/s, x5) and **Bloodstone** relic (+1 HP/s, 60 coins).
+- Ability stats became auto-weapon stats: Shadow Step (-12% auto weapon cooldowns) and Cracked Hourglass (-20%), Arcane Focus (+15% auto weapon damage) and Holy Water (+25%). Arcane Focus and Shadow Step are only offered once you own an auto weapon. Afterimage, Hallowed Blast, Deep Hex and Ossuary are retired (`Upgrade.retired`; ids kept).
+- The Watch demo's second half is now a dodge: a fan of enemy bullets, and the hero steps out of the way.
+- **Balance check** (solo invincible autopilot, `--fixed-fps 60`; the autopilot kites and dodges badly, so "hp lost" is large): boss fights Kael 8 / 30 / 100 s, Mortimer 52 / 107 / 128 s, Morwen 76 / 123 / 160 s, Vesper 67 / 56 / 82 s; all four win. HP lost per stage is roughly 2-30x a hero's max HP for the autopilot; human dodging decides the real difficulty. Not measured: co-op and real players.
+
+**Step 2: build rework (v0.23.0)**
+1. **Weapons on level-up cards:** cards offer new weapons, weapon levels and passives. **6 weapon slots** (your starting weapon is one); once full, only levels for what you carry.
+2. **Passive items:** the ~25 general upgrades merge into ~12 **passive items with levels** in **6 passive slots** (e.g. Whetstone: +damage per level). Weapon-specific upgrades become that weapon's level-up steps.
+3. **Evolutions:** a max-level weapon + a specific passive; the next **champion or boss chest** you open evolves it. ~4 to start, listed in the Game Guide with both ingredients.
+4. **Altars:** a free level for a weapon you carry (or a new weapon if a slot is free). **Shop:** keeps relics (no slot) and adds paid rerolls of level-up cards.
+5. More auto weapons to fill the pool (target ~10-12 in total).
+
+Bolt upgrades that were about aiming (Hunting Bolts, Long Shot, Ricochet) stay as they are for now; step 2 turns them into Bolt Gun levels.
+
 ### Next (proposed, in rough priority)
+**The auto-fire redesign above comes first** (owner, 2026-10-10). Weapon evolutions (item 1 below) are now part of its step 2.
+
 Owner added the top three (2026-10-10, v0.20.0) to the plan after asking Claude what would make the game better:
 1. **Weapon evolutions and synergies.** A max-level auto weapon plus a specific relic or upgrade evolves into a stronger weapon (e.g. Orbiting Skulls + a relic), and certain pairs of upgrades unlock a new effect. Builds are mostly stacked stats today, so runs feel alike; evolutions give each run a goal ("I'm going for X") and something to compare with friends. Shown in the Game Guide; evolutions need new `AutoWeapons` entries (append-only ids).
 2. **More boss and enemy variety.** Two possible bosses per stage (picked at random), more attacks per boss with clear warnings, and an elite enemy or two per stage that changes how you move (chargers, enemies that leave hazards on the ground). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and enemy behaviours.
@@ -364,7 +408,8 @@ Also on the list:
 
 - Working title?
 - Hero names (Kael, Mortimer, Morwen, Vesper): picked by the owner from Claude's suggestions; confirm with friends.
-- Do the four character abilities feel distinct and balanced (Dash / Grave Blast / Hex Snare / Bone Effigy)?
+- ~~Do the four character abilities feel distinct and balanced?~~ Abilities become auto weapons in the redesign (§7).
+- Auto-fire redesign: do the targeting rules feel fair, is the HP bar too forgiving or too harsh, do heroes still feel different with perks instead of abilities?
 - Enemy roster and boss designs beyond the first set (one boss per stage so far).
 - Weapon, auto-weapon, and relic lists; synergy rules (none yet).
 - Shop economy: first rebalance done in v0.12.0; needs a playtest.

@@ -74,7 +74,7 @@ func test_compendium_fills_every_tab() -> void:
 
 func test_compendium_numbers_come_from_the_data() -> void:
 	var wanderer := Characters.get_character(Characters.Id.WANDERER)
-	assert_string_contains(Compendium.hero_details(wanderer), "Hearts %d" % wanderer.max_hearts)
+	assert_string_contains(Compendium.hero_details(wanderer), "HP %d" % wanderer.max_hp)
 	var skulls := AutoWeapons.get_weapon(AutoWeapons.Id.ORBITING_SKULLS)
 	assert_string_contains(Compendium.weapon_details(skulls), "Lv %d" % AutoWeapons.MAX_LEVEL)
 	var boss_id := Stages.get_stage(2).boss_type

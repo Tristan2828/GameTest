@@ -22,7 +22,7 @@ extends RefCounted
 ##                                   (needs a real window, not --headless)
 ##   --perf-log                      print step timings, fps and object counts every second
 ##   --update-now                    (exported game) install a newer release as soon as one is found
-##   --invincible                    hits count but hearts refill (performance / visual / balance testing)
+##   --invincible                    hits count but HP refills (performance / visual / balance testing)
 ##   --test-down=<seconds>           host: knock out the first client's player at this stage time
 ##                                   (tests revives and spectating; autopilot teammates come to help)
 ##   --run-config=<k=v,k=v>          host's Difficulty / Custom Game settings (RunConfig names),

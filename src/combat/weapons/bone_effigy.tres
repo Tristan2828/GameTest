@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Bone Effigy"
+description = "Raises a decoy toward the biggest crowd near you: enemies chase it instead of you, then it bursts"
+icon = "up_ossuary"
+kind = 9
+color = Color(0.84, 0.8, 0.68, 1)
+damage = 45
+damage_per_level = 20
+count = 1
+count_per_level = 0
+interval = 10.0
+interval_scale_per_level = 0.85
+radius = 70.0
+radius_per_level = 10.0
+speed = 0.0
+reach = 150.0
+duration = 4.0

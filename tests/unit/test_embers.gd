@@ -98,12 +98,12 @@ func test_maxed_boosts_stay_small() -> void:
 	all.fill(Embers.MAX_RANK)
 	Embers.apply(all, boosted)
 	assert_almost_eq(boosted.move_speed / base.move_speed, 1.06, 0.001)
-	assert_almost_eq(boosted.ability_cooldown / base.ability_cooldown, 0.91, 0.001)
+	assert_almost_eq(boosted.auto_cooldown_scale / base.auto_cooldown_scale, 0.91, 0.001)
 	assert_almost_eq(boosted.crit_chance - base.crit_chance, 0.06, 0.001)
 	assert_almost_eq(boosted.pickup_radius / base.pickup_radius, 1.18, 0.001)
 	assert_almost_eq(boosted.coin_luck, 0.15, 0.001)
 	assert_almost_eq(boosted.hit_invulnerability - base.hit_invulnerability, 0.15, 0.001)
-	assert_eq(boosted.max_hearts, base.max_hearts, "no extra hearts")
+	assert_eq(boosted.max_hp, base.max_hp, "no extra HP")
 
 
 func test_player_spawns_with_its_boosts() -> void:
@@ -114,7 +114,7 @@ func test_player_spawns_with_its_boosts() -> void:
 	player.setup(5, 1, Vector2.ZERO, Rect2(0, 0, 100, 100), Characters.Id.WANDERER, 0, ranks)
 	var base := Characters.get_character(Characters.Id.WANDERER)
 	assert_almost_eq(player.stats.move_speed, base.move_speed * 1.06, 0.01)
-	assert_almost_eq(base.move_speed, 110.0, 0.01, "the shared character data is untouched")
+	assert_almost_eq(base.move_speed, 121.0, 0.01, "the shared character data is untouched")
 	player.free()
 
 

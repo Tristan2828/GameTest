@@ -26,8 +26,10 @@ func test_values_are_clamped_and_snapped() -> void:
 	assert_eq(config.enemy_health, 3.0)
 	config.set_value("enemy_count", 1.1)
 	assert_eq(config.enemy_count, 1.0, "snapped to 25% steps")
-	config.set_value("hearts_bonus", -7)
-	assert_eq(config.hearts_bonus, -2)
+	config.set_value("hp_bonus", -70)
+	assert_eq(config.hp_bonus, -40)
+	config.set_value("hp_bonus", 23)
+	assert_eq(config.hp_bonus, 20, "snapped to 10 HP steps")
 	config.set_value("wave_seconds", 95.0)
 	assert_eq(config.wave_seconds, 90.0)
 
@@ -72,18 +74,18 @@ func test_single_stage_run_shape() -> void:
 
 # --- Arena ---
 
-func test_difficulty_scales_enemies_bosses_and_hearts() -> void:
+func test_difficulty_scales_enemies_bosses_and_hp() -> void:
 	var config := RunConfig.new()
 	config.set_value("enemy_health", 2.0)
 	config.set_value("boss_health", 0.5)
-	config.set_value("hearts_bonus", 2)
+	config.set_value("hp_bonus", 20)
 	var arena: Arena = await _arena_with(config)
 	var shambler := EnemyTypes.get_type(EnemyTypes.Id.SHAMBLER)
 	assert_eq(arena._scaled_hp(EnemyTypes.Id.SHAMBLER), shambler.max_hp * 2)
 	var boss_id := Stages.get_stage(1).boss_type
 	assert_eq(arena._scaled_hp(boss_id), roundi(EnemyTypes.get_type(boss_id).max_hp * 0.5))
 	var player := arena._player_by_id(1)
-	assert_eq(player.health.max_hearts, Characters.get_character(player.character_id).max_hearts + 2)
+	assert_eq(player.health.max_hp, Characters.get_character(player.character_id).max_hp + 20)
 
 
 func test_single_stage_on_a_later_map_is_won_in_one_stage() -> void:

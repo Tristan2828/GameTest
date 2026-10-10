@@ -22,18 +22,18 @@ func test_every_hero_has_their_own_name() -> void:
 func test_every_hero_kills_shamblers_with_their_weapon() -> void:
 	for character: int in Characters.ALL.size():
 		var demo := _demo(character)
-		demo.seek(HeroDemo.ABILITY_START)
+		demo.seek(HeroDemo.DODGE_START)
 		assert_gt(demo.kills, 0, Characters.get_character(character).hero_name)
-		assert_eq(demo.part(), HeroDemo.Part.ABILITY)
+		assert_eq(demo.part(), HeroDemo.Part.DODGE)
 
 
-func test_damaging_abilities_kill_in_the_demo() -> void:
-	for character: int in [Characters.Id.GRAVEKEEPER, Characters.Id.NECROMANCER]:
+func test_the_hero_steps_out_of_the_bullet_fan() -> void:
+	for character: int in Characters.ALL.size():
 		var demo := _demo(character)
-		demo.seek(HeroDemo.ABILITY_START)
-		var before := demo.kills
-		demo.seek(HeroDemo.LOOP_SECONDS - 0.1)
-		assert_gt(demo.kills, before, Characters.get_character(character).hero_name)
+		demo.seek(HeroDemo.DODGE_START + 0.05)
+		var before := demo._hero
+		demo.seek(HeroDemo.DODGE_AT + HeroDemo.DODGE_ARRIVE)
+		assert_gt(demo._hero.distance_to(before), 10.0, Characters.get_character(character).hero_name)
 
 
 func test_the_demo_loops_and_is_the_same_every_time() -> void:

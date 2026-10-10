@@ -5,7 +5,7 @@ extends Control
 ## trophies, run totals, and three pages:
 ## - Overview: one card per player (numbers with a star for the best player in
 ##   each, build icons, co-op awards; the MVP gets a crown).
-## - Weapons: damage, share, DPS and kills of each player's main gun, ability and
+## - Weapons: damage, share, DPS and kills of each player's main weapon and
 ##   auto weapons, one compact row each.
 ## - Highlights: the team's standout moments (MVP, deadliest weapon, kill rate...).
 ## The cards sit in a scroll box sized to what's left of the screen, so a long
@@ -635,19 +635,19 @@ static func highlights(stats: RunStats, players: Array[Player], multiplier: floa
 
 	if co_op:
 		for entry: Array in [[RunStats.Stat.KILLS, "Most kills", "skull"], [RunStats.Stat.BOSS_DAMAGE, "Boss slayer", "crown"],
-				[RunStats.Stat.REVIVES, "Lifesaver", "pickup_heart"], [RunStats.Stat.HEARTS_LOST, "Untouchable", "star"]]:
+				[RunStats.Stat.REVIVES, "Lifesaver", "pickup_heart"], [RunStats.Stat.HP_LOST, "Untouchable", "star"]]:
 			var stat: RunStats.Stat = entry[0]
 			var leader := stats.best(stat)
 			if leader < 0:
 				continue
 			var detail := "%d" % stats.get_stat(leader, stat)
-			if stat == RunStats.Stat.HEARTS_LOST:
+			if stat == RunStats.Stat.HP_LOST:
 				var lost := stats.get_stat(leader, stat)
-				detail = "no hearts lost!" if lost == 0 else "only %d heart%s lost" % [lost, "" if lost == 1 else "s"]
+				detail = "not a scratch!" if lost == 0 else "only %d damage taken" % lost
 			result.append([entry[2], entry[1], "%s  -  %s" % [name_of.call(leader), detail], color_of.call(leader)])
 	else:
-		var lost := stats.total(RunStats.Stat.HEARTS_LOST)
-		result.append(["pickup_heart", "Hearts lost", "%d" % lost if lost > 0 else "none! Flawless.", Color(0.95, 0.45, 0.5)])
+		var lost := stats.total(RunStats.Stat.HP_LOST)
+		result.append(["pickup_heart", "Damage taken", "%d" % lost if lost > 0 else "none! Flawless.", Color(0.95, 0.45, 0.5)])
 	return result
 
 

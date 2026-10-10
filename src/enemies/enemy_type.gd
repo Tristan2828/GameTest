@@ -9,8 +9,11 @@ extends Resource
 @export var move_speed: float = 40.0
 ## Body size: used for drawing, bullet hits, and touching players.
 @export var radius: float = 6.0
-## Hearts removed when it touches a player.
-@export var contact_damage: int = 1
+## HP it drains from a player it touches, every PlayerHealth.CONTACT_INTERVAL
+## (before the stage's damage growth).
+@export var contact_damage: int = 5
+## HP one of its bullets takes (before the stage's damage growth).
+@export var bullet_damage: int = 15
 @export var xp_value: int = 1
 ## Chance (0..1) to drop a coin on death, and what it's worth.
 @export var coin_chance: float = 0.1

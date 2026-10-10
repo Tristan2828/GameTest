@@ -18,6 +18,7 @@ const ALL: Array[Relic] = [
 	preload("res://src/progression/relics/vampire_fang.tres"),
 	preload("res://src/progression/relics/holy_water.tres"),
 	preload("res://src/progression/relics/mourners_bell.tres"),
+	preload("res://src/progression/relics/bloodstone.tres"),
 ]
 
 

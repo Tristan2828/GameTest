@@ -109,11 +109,11 @@ func test_champion_chest_gives_a_weapon() -> void:
 func test_ritual_reward_heals_and_drops_xp() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
-	player.health.hearts = 1
+	player.health.hp = 1
 	var gems_before := arena._gems.count()
 	var inside: Array[int] = [1]
 	arena._on_ritual_completed(Vector2(400, 400), inside)
-	assert_eq(player.health.hearts, 1 + Arena.RITUAL_HEAL)
+	assert_eq(player.health.hp, 1 + roundi(player.health.max_hp * Arena.RITUAL_HEAL_SHARE))
 	assert_gt(arena._gems.count(), gems_before)
 	assert_gte(arena._gems.total_value(), roundi(TeamProgress.xp_to_next(1) * Arena.RITUAL_XP_SHARE) - 1)
 
@@ -121,9 +121,9 @@ func test_ritual_reward_heals_and_drops_xp() -> void:
 func test_heart_power_up_heals_and_bomb_clears_around() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
-	player.health.hearts = 1
+	player.health.hp = 1
 	arena._on_power_up_collected(PowerUps.Kind.HEART, 1)
-	assert_eq(player.health.hearts, 2)
+	assert_eq(player.health.hp, 1 + roundi(player.health.max_hp * PowerUps.HEART_HEAL_SHARE))
 	var shambler := arena._enemies.spawn(EnemyTypes.Id.SHAMBLER, player.state.position + Vector2(100, 0))
 	arena._on_power_up_collected(PowerUps.Kind.HOLY_BOMB, 1)
 	assert_false(shambler.active)

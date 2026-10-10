@@ -1,8 +1,9 @@
 class_name DamageSource
 extends RefCounted
 ## What dealt a hit, for the end-of-run weapon breakdown (the host counts it).
-## Sent as numbers: the main gun, the character's ability, then one id per auto
-## weapon (FIRST_WEAPON + AutoWeapons id, which is append-only too).
+## Sent as numbers: the main gun, the character's ability (heroes had one until
+## v0.22.0; now they're auto weapons), then one id per auto weapon
+## (FIRST_WEAPON + AutoWeapons id, which is append-only too).
 
 const MAIN_GUN: int = 0
 const ABILITY: int = 1
@@ -28,7 +29,7 @@ static func title(source: int, stats: CharacterStats) -> String:
 		MAIN_GUN:
 			return stats.main_weapon_name
 		ABILITY:
-			return stats.ability_name
+			return "Ability"
 		KILL_BURST:
 			return "Corpse Blast"
 		HOLY_BOMB:

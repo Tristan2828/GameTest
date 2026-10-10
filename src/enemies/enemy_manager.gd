@@ -61,6 +61,7 @@ var _grid_max_radius: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group("enemy_manager")  # Players' AutoAim looks at the enemies through this.
 	rng.randomize()
 	for i: int in POOL_SIZE:
 		var enemy: Enemy = ENEMY_SCENE.instantiate()
@@ -299,7 +300,7 @@ func find_nearest_except(point: Vector2, max_distance: float, skip: Dictionary[i
 
 ## Host: damage every active enemy within `radius` (Grave Blast).
 func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int,
-		source: int = DamageSource.ABILITY) -> void:
+		source: int = DamageSource.MAIN_GUN) -> void:
 	for enemy: Enemy in enemies_in_radius(center, radius):
 		if enemy.active:
 			damage(enemy, amount, from_peer_id, source)

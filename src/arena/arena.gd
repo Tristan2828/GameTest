@@ -27,6 +27,8 @@ const MAIN_WEAPON_SOUNDS: Array[StringName] = [&"shoot", &"scythe", &"zap", &"sp
 const ENEMY_HP_BY_DEPTH: Array[float] = [1.0, 4.0, 9.0]
 const BOSS_HP_BY_DEPTH: Array[float] = [1.0, 4.5, 12.0]
 const SPAWN_RATE_BY_DEPTH: Array[float] = [1.0, 1.4, 1.8]
+## How much harder enemies hit (touch and bullets) at each run depth.
+const DAMAGE_BY_DEPTH: Array[float] = [1.0, 1.3, 1.6]
 ## Later stages start their spawn ramp this many seconds in, so the opening
 ## minute isn't a stroll for a team that's already strong.
 const RAMP_HEAD_START_BY_DEPTH: Array[float] = [0.0, 45.0, 90.0]
@@ -48,8 +50,9 @@ const PLAYER_SNAPSHOT_INTERVAL_TICKS: int = 2
 ## Enemies are smoothed on clients anyway, so 15 per second is plenty.
 const ENEMY_SNAPSHOT_INTERVAL_TICKS: int = 4
 const SPAWN_OFFSETS: Array[Vector2] = [Vector2(-24, -24), Vector2(24, -24), Vector2(-24, 24), Vector2(24, 24)]
-## Enemy bullets: hearts per hit and how long they fly.
-const ENEMY_BULLET_DAMAGE: int = 1
+## Enemy bullets: HP per hit when the shooter isn't found (each EnemyType has its
+## own bullet_damage), and how long they fly.
+const ENEMY_BULLET_DAMAGE: int = 15
 const ENEMY_BULLET_LIFETIME: float = 7.0
 ## Clients fast-forward enemy patterns by at most this much (very laggy = less fair, not broken).
 const MAX_PATTERN_FAST_FORWARD: float = 0.4
@@ -58,7 +61,7 @@ const SPAWN_DISTANCE_MIN: float = 380.0
 const SPAWN_DISTANCE_MAX: float = 440.0
 const MIN_SPAWN_DISTANCE_FROM_ANY_PLAYER: float = 340.0
 const PACK_RADIUS: float = 28.0
-const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB / RT fire   Space / LT ability   Esc / Start menu"
+const CONTROLS_HINT: String = "WASD / L-stick move (your weapons fire by themselves)   Esc / Start menu"
 const COPIED_FEEDBACK_SECONDS: float = 4.0
 const SPARK_COLOR: Color = Color(1.0, 0.9, 0.6)
 const HURT_COLOR: Color = Color(1.0, 0.25, 0.3)
@@ -71,7 +74,10 @@ const KILL_BURST_COLOR: Color = Color(0.5, 0.95, 0.55)
 const CHAMPION_COINS: int = 10
 const RUNNER_COINS: int = 14
 const CHEST_COINS_WHEN_MAXED: int = 30
-const RITUAL_HEAL: int = 1
+## A finished ritual heals everyone inside this share of their max HP.
+const RITUAL_HEAL_SHARE: float = 0.25
+## Every team level-up heals each living player this share of their max HP.
+const LEVEL_UP_HEAL_SHARE: float = 0.05
 ## A finished ritual's XP: this share of the current level's cost.
 const RITUAL_XP_SHARE: float = 0.6
 ## Enemies called per ritual wave (+1 per extra player), and from how far.
@@ -124,13 +130,13 @@ var _power_up_cooldown: float = 0.0
 var _quests: QuestTracker = QuestTracker.new()
 ## Host: Arsenal counts auto weapon damage from the stage start (peer -> damage then).
 var _quest_damage_base: Dictionary[int, int] = {}
-## Host: Untouchable restarts when hearts_lost changes (peer -> hearts_lost last tick).
-var _quest_hearts_seen: Dictionary[int, int] = {}
+## Host: Untouchable restarts when hp_lost changes (peer -> hp_lost last tick).
+var _quest_hp_seen: Dictionary[int, int] = {}
 ## Host: when (in run seconds) each player first got each auto weapon: peer -> {weapon id: seconds}.
 var _weapon_owned_since: Dictionary[int, Dictionary] = {}
 ## Local: seconds our player has been downed (the camera moves to a teammate after a moment).
 var _downed_seconds: float = 0.0
-## Local: which teammate we're watching while downed (fire / ability switches).
+## Local: which teammate we're watching while downed (switch_view cycles).
 var _spectate_index: int = 0
 
 
@@ -142,6 +148,7 @@ class Effigy:
 	var burst_radius: float
 	var burst_damage: int
 	var owner_peer_id: int
+	var source: int = DamageSource.ABILITY
 ## Shared team XP and level (host-owned, copied to clients in snapshots).
 var _team: TeamProgress = TeamProgress.new()
 var _copied_feedback_left: float = 0.0
@@ -238,6 +245,7 @@ func _ready() -> void:
 		_events.wave_requested.connect(_on_ritual_wave)
 		_events.coin_dropped.connect(func(at: Vector2) -> void: _coins.spawn_host(at, 1))
 		_weapons.seeker_fired.connect(_fire_seeker)
+		_weapons.ability_cast.connect(_on_ability_cast)
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
 		_add_player(1)
@@ -254,6 +262,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	GameCursor.set_in_game(false)
+	LocalInput.blocked = false
 
 
 func _physics_process(delta: float) -> void:
@@ -415,7 +424,8 @@ func _process(delta: float) -> void:
 	_play_phase_jingle()
 	_update_music()
 	_update_spectate(delta)
-	GameCursor.set_in_game(not _is_between_stages())
+	# Hidden while playing; back for level-up cards, the shop and the pause menu.
+	GameCursor.set_in_game((_phase == Phase.PLAYING or _phase == Phase.COUNTDOWN) and not LocalInput.blocked)
 	_revive_screenshots()
 	_event_screenshots()
 	var t := PerfLog.start()
@@ -450,7 +460,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_copied_feedback_left = COPIED_FEEDBACK_SECONDS
 	if event.is_action_pressed("restart"):
 		_request_restart()
-	if (event.is_action_pressed("fire") or event.is_action_pressed("ability")) and _is_spectating():
+	if event.is_action_pressed("switch_view") and _is_spectating():
 		_spectate_index += 1
 
 
@@ -469,8 +479,8 @@ func feedback_context() -> String:
 		clock, Phase.keys()[_phase].to_lower().replace("_", " "), _team.level])
 	var local := _local_player()
 	if local != null:
-		lines.append("%s (%s) at %s, hearts %d/%d%s, %d upgrades, %d relics, %d weapons" % [local.stats.display_name,
-			local.display_name(), local.world_position().round(), local.health.hearts, local.health.max_hearts,
+		lines.append("%s (%s) at %s, HP %d/%d%s, %d upgrades, %d relics, %d weapons" % [local.stats.display_name,
+			local.display_name(), local.world_position().round(), local.health.hp, local.health.max_hp,
 			" (downed)" if local.is_downed() else "", local.upgrade_ids.size(), local.relic_ids.size(), local.weapon_levels.size()])
 	var session := "Solo"
 	if Net.is_online():
@@ -486,9 +496,9 @@ func debug_report() -> String:
 	lines.append("[report] peer %d (%s)  stage %d  phase=%s  time=%.1fs" % [multiplayer.get_unique_id(), role, _stage, Phase.keys()[_phase], _elapsed])
 	lines.append("[report]   config: %s   wave %.0fs" % [_config.summary(), _wave_duration])
 	for player: Player in _player_nodes():
-		var line := "[report]   player %d (%s) slot %d at %s  hearts %d/%d  ability %s  coins %d  upgrades %s  relics %s" % [
-			player.peer_id, player.stats.display_name, player.slot, player.position.round(), player.health.hearts, player.health.max_hearts,
-			player.stats.ability_name, player.coins, player.upgrade_ids, player.relic_ids]
+		var line := "[report]   player %d (%s) slot %d at %s  hp %d/%d  coins %d  upgrades %s  relics %s" % [
+			player.peer_id, player.stats.display_name, player.slot, player.position.round(), player.health.hp, player.health.max_hp,
+			player.coins, player.upgrade_ids, player.relic_ids]
 		line += "  weapons %s" % [player.weapon_levels]
 		if player.is_local() and not multiplayer.is_server():
 			line += "  corrections=%d largest=%.2fpx" % [player.correction_count, player.largest_correction]
@@ -551,7 +561,7 @@ func _alive_player_positions() -> Array[Vector2]:
 func _add_player(peer_id: int) -> void:
 	var boosts := Net.boosts_of(peer_id) if _config.ember_boosts else PackedInt32Array()
 	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id),
-		"hearts_bonus": _config.hearts_bonus, "boosts": boosts})
+		"hp_bonus": _config.hp_bonus, "boosts": boosts})
 	if _config.start_with_weapons:
 		for weapon_id: int in AutoWeapons.PICKUPS:
 			_weapons.grant(peer_id, weapon_id, _ready_peer_list())
@@ -588,10 +598,9 @@ func _spawn_player(data: Variant) -> Node:
 		character = Characters.Id.WANDERER
 	var player: Player = PLAYER_SCENE.instantiate()
 	var boosts: Variant = info.get("boosts", PackedInt32Array())
-	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character, int(info.get("hearts_bonus", 0)),
+	player.setup(peer_id, slot, BOUNDS.get_center() + SPAWN_OFFSETS[slot], BOUNDS, character, int(info.get("hp_bonus", 0)),
 		boosts if boosts is PackedInt32Array else PackedInt32Array())
 	player.shot_requested.connect(_on_player_shot_requested)
-	player.ability_used.connect(_on_player_ability_used)
 	player.hurt.connect(_on_player_hurt)
 	player.revived.connect(_on_player_revived)
 	return player
@@ -677,13 +686,22 @@ func _far_from_players(point: Vector2, alive_players: Array[Vector2]) -> bool:
 	return true
 
 
+## Enemies touching a player's hitbox drain HP together, every
+## PlayerHealth.CONTACT_INTERVAL: the more of them, the faster you lose HP.
 func _apply_contact_damage() -> void:
 	for player: Player in _player_nodes():
-		if not player.can_be_hit():
+		if player.is_downed() or player.health.contact_left > 0.0 or player.health.is_invulnerable():
 			continue
-		var enemy := _enemies.find_hit(player.state.position, player.stats.hitbox_radius)
-		if enemy != null and enemy.type.contact_damage > 0:
-			player.take_hit(enemy.type.contact_damage)
+		var total := 0
+		for enemy: Enemy in _enemies.enemies_in_radius(player.state.position, player.stats.hitbox_radius):
+			total += enemy.type.contact_damage
+		if total > 0:
+			player.take_contact(_scaled_damage(total))
+
+
+## Damage an enemy deals at this run depth.
+func _scaled_damage(amount: int) -> int:
+	return maxi(roundi(amount * by_depth(DAMAGE_BY_DEPTH, _run_depth())), 1)
 
 
 ## Host, --test-down: knock out the first client's player once (revive testing).
@@ -693,7 +711,7 @@ func _test_knock_out() -> void:
 	for player: Player in _player_nodes():
 		if not player.is_local() and not player.is_downed():
 			LaunchOptions.test_down_at = -1.0
-			player.health.hearts = 0
+			player.health.hp = 0
 			player.times_downed += 1
 			print("Player %d knocked out (--test-down)" % player.peer_id)
 			return
@@ -823,19 +841,19 @@ func _print_balance(phase: Phase) -> void:
 	var damage := 0
 	for peer_id: int in _enemies.damage_by_peer:
 		damage += _enemies.damage_by_peer[peer_id]
-	var hearts_lost := 0
+	var hp_lost := 0
 	var downs := 0
 	for player: Player in _player_nodes():
-		hearts_lost += player.hearts_lost
+		hp_lost += player.hp_lost
 		downs += player.times_downed
-	var now := PackedInt32Array([_run_stats.total(RunStats.Stat.KILLS), damage, hearts_lost, downs])
+	var now := PackedInt32Array([_run_stats.total(RunStats.Stat.KILLS), damage, hp_lost, downs])
 	var boss_seconds := _elapsed - _balance_boss_at if _balance_boss_at >= 0.0 else 0.0
-	var max_hearts := 0
+	var max_hp := 0
 	for player: Player in _player_nodes():
-		max_hearts += player.health.max_hearts
-	print("[balance] stage %d %s: time %.0fs (boss fight %.0fs)  team level %d  kills %d  dps %.0f  hearts lost %d of %d  downs %d  peak enemies %d  players %d" % [
+		max_hp += player.health.max_hp
+	print("[balance] stage %d %s: time %.0fs (boss fight %.0fs)  team level %d  kills %d  dps %.0f  hp lost %d (team max hp %d)  downs %d  peak enemies %d  players %d" % [
 		_run_depth(), Phase.keys()[phase], _elapsed, boss_seconds, _team.level, now[0] - _balance_start[0],
-		(now[1] - _balance_start[1]) / maxf(_elapsed, 1.0), now[2] - _balance_start[2], max_hearts, now[3] - _balance_start[3],
+		(now[1] - _balance_start[1]) / maxf(_elapsed, 1.0), now[2] - _balance_start[2], max_hp, now[3] - _balance_start[3],
 		_balance_peak_alive, _player_nodes().size()])
 	_balance_start = now
 	_balance_boss_at = -1.0
@@ -884,7 +902,7 @@ func _broadcast_run_stats(victory: bool) -> void:
 		_run_stats.add(peer_id, RunStats.Stat.KILLS, 0)  # Everyone gets a column.
 		_run_stats.set_stat(peer_id, RunStats.Stat.DAMAGE, _enemies.damage_by_peer.get(peer_id, 0))
 		_run_stats.set_stat(peer_id, RunStats.Stat.BOSS_DAMAGE, _enemies.boss_damage_by_peer.get(peer_id, 0))
-		_run_stats.set_stat(peer_id, RunStats.Stat.HEARTS_LOST, player.hearts_lost)
+		_run_stats.set_stat(peer_id, RunStats.Stat.HP_LOST, player.hp_lost)
 		_run_stats.set_stat(peer_id, RunStats.Stat.DOWNS, player.times_downed)
 		_record_weapon_breakdown(player)
 	var data := _run_stats.encode()
@@ -893,16 +911,14 @@ func _broadcast_run_stats(victory: bool) -> void:
 		_receive_run_stats.rpc_id(peer_id, data)
 
 
-## Host: damage, kills and time owned for this player's main gun, ability and
-## every auto weapon they picked up.
+## Host: damage, kills and time owned for this player's main weapon and every
+## auto weapon they picked up.
 func _record_weapon_breakdown(player: Player) -> void:
 	var peer_id := player.peer_id
 	var run_seconds := roundi(_run_stats.run_seconds)
 	var damage: Dictionary = _enemies.damage_by_source.get(peer_id, {})
 	var kills: Dictionary = _enemies.kills_by_source.get(peer_id, {})
 	var seconds_by_source: Dictionary[int, int] = {DamageSource.MAIN_GUN: run_seconds}
-	if damage.has(DamageSource.ABILITY) or player.stats.ability != CharacterStats.Ability.DASH:
-		seconds_by_source[DamageSource.ABILITY] = run_seconds
 	var owned: Dictionary = _weapon_owned_since.get(peer_id, {})
 	for weapon_id: int in player.weapon_levels:
 		var since: float = owned.get(weapon_id, 0.0)
@@ -970,7 +986,7 @@ func _settle_stage_rewards() -> void:
 
 
 ## Host: the next stage starts. The run (level, upgrades, relics, coins) carries
-## over; everyone respawns with full hearts and a ready ability, ghosts included.
+## over; everyone respawns with full HP, downed players included.
 func _begin_next_stage() -> void:
 	_stage += 1
 	_elapsed = 0.0
@@ -1083,7 +1099,7 @@ func _on_enemy_killed(enemy: Enemy, killer_peer_id: int, source: int) -> void:
 func _start_quests(chosen: Dictionary[int, int]) -> void:
 	_quests.clear()
 	_quest_damage_base.clear()
-	_quest_hearts_seen.clear()
+	_quest_hp_seen.clear()
 	for player: Player in _player_nodes():
 		var quest_id: int = chosen.get(player.peer_id, -1)
 		player.quest_id = quest_id
@@ -1092,7 +1108,7 @@ func _start_quests(chosen: Dictionary[int, int]) -> void:
 			continue
 		_quests.assign(player.peer_id, quest_id)
 		_quest_damage_base[player.peer_id] = _auto_weapon_damage(player.peer_id)
-		_quest_hearts_seen[player.peer_id] = player.hearts_lost
+		_quest_hp_seen[player.peer_id] = player.hp_lost
 		print("Player %d quest: %s" % [player.peer_id, Quests.TITLES[quest_id]])
 
 
@@ -1108,8 +1124,8 @@ func _tick_quests(delta: float) -> void:
 	for player: Player in _player_nodes():
 		var peer_id := player.peer_id
 		if _quests.is_on(peer_id, Quests.Id.UNTOUCHABLE):
-			var hit: bool = player.hearts_lost != _quest_hearts_seen.get(peer_id, player.hearts_lost)
-			_quest_hearts_seen[peer_id] = player.hearts_lost
+			var hit: bool = player.hp_lost != _quest_hp_seen.get(peer_id, player.hp_lost)
+			_quest_hp_seen[peer_id] = player.hp_lost
 			if hit or player.is_downed():
 				_quests.set_progress(peer_id, Quests.Id.UNTOUCHABLE, 0.0)
 			else:
@@ -1199,7 +1215,7 @@ func _on_power_up_collected(kind: int, collector_peer_id: int) -> void:
 	var at := player.state.position
 	match kind:
 		PowerUps.Kind.HEART:
-			player.health.heal(PowerUps.HEART_HEAL)
+			player.health.heal_share(PowerUps.HEART_HEAL_SHARE)
 		PowerUps.Kind.HOLY_BOMB:
 			var damage := roundi(PowerUps.BOMB_DAMAGE * hp_factor(false, _run_depth()) * _config.enemy_health)
 			_enemies.smite(at, PowerUps.BOMB_RADIUS, damage, collector_peer_id, DamageSource.HOLY_BOMB)
@@ -1278,7 +1294,7 @@ func _on_ritual_completed(at: Vector2, inside: Array[int]) -> void:
 	for peer_id: int in inside:
 		var player := _player_by_id(peer_id)
 		if player != null:
-			player.health.heal(RITUAL_HEAL)
+			player.health.heal_share(RITUAL_HEAL_SHARE)
 	var total := roundi(TeamProgress.xp_to_next(_team.level, _team.player_count, _team.xp_rate) * RITUAL_XP_SHARE)
 	var gems := clampi(total / 5, 6, 24)
 	for i: int in gems:
@@ -1402,8 +1418,10 @@ func _fire_seeker(shooter: Player, aim: float, level: int) -> void:
 
 func _spawn_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
 	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.SEEKING_BOLTS)
+	var shooter := _player_by_id(shooter_id)
+	var damage := WeaponSystem.power(shooter, weapon.damage_at(level)) if shooter != null else weapon.damage_at(level)
 	for angle: float in AutoWeapons.seeker_angles(level, aim):
-		_projectiles.spawn(origin, Vector2.from_angle(angle) * weapon.speed, weapon.damage_at(level),
+		_projectiles.spawn(origin, Vector2.from_angle(angle) * weapon.speed, damage,
 			weapon.reach / weapon.speed, shooter_id, 0, 0.0, DamageSource.of_weapon(AutoWeapons.Id.SEEKING_BOLTS))
 
 
@@ -1418,6 +1436,8 @@ func _on_gem_collected(value: int, collector_peer_id: int) -> void:
 	var levels_gained := _team.add_xp(value)
 	if levels_gained > 0:
 		_level_up.host_queue(levels_gained)
+		for player: Player in _player_nodes():
+			player.health.heal_share(LEVEL_UP_HEAL_SHARE * levels_gained)
 		print("Team level %d at %.1fs (stage %d)" % [_team.level, _elapsed, _stage])
 
 
@@ -1564,59 +1584,41 @@ func _on_enemy_crit(at: Vector2) -> void:
 	_effects.burst(at, CRIT_COLOR, 5, 90.0, 0.25, 1.0)
 
 
-## Host: a player used their ability. Movement (Dash, Blink) already happened in
-## PlayerMotor; here we resolve everything else and show it on every screen.
-func _on_player_ability_used(user: Player) -> void:
-	var stats := user.stats
-	match stats.ability:
-		CharacterStats.Ability.GRAVE_BLAST:
-			var at := user.state.position
-			user.health.invulnerable_left = maxf(user.health.invulnerable_left, stats.blast_invulnerability)
-			if stats.blast_heal > 0:
-				user.health.heal(stats.blast_heal)
-			var damage := roundi(stats.blast_damage * stats.ability_power)
-			_enemies.damage_in_radius(at, stats.blast_damage_radius * sqrt(stats.ability_power), damage, user.peer_id)
-			var radius := stats.blast_clear_radius * sqrt(stats.ability_power)
-			_detonate_blast(at, radius)
+## Host: one of a player's auto weapons that used to be a hero ability goes off
+## at `at` (WeaponSystem picked the spot). Resolve it and show it everywhere.
+func _on_ability_cast(caster: Player, weapon_id: int, level: int, at: Vector2) -> void:
+	var weapon := AutoWeapons.get_weapon(weapon_id)
+	var power := caster.stats.auto_power
+	var source := DamageSource.of_weapon(weapon_id)
+	match weapon.kind:
+		AutoWeapon.Kind.BLAST:
+			caster.health.invulnerable_left = maxf(caster.health.invulnerable_left, weapon.duration)
+			caster.health.heal_share(AutoWeapons.BLAST_HEAL_SHARE)
+			_enemies.damage_in_radius(at, weapon.radius_at(level), WeaponSystem.power(caster, weapon.damage_at(level)),
+				caster.peer_id, source)
+			_detonate_blast(at, weapon.reach)
 			for peer_id: int in _ready_peers:
-				_receive_blast.rpc_id(peer_id, at, radius)
-		CharacterStats.Ability.BLINK:
-			user.health.invulnerable_left = maxf(user.health.invulnerable_left, stats.blink_invulnerability)
-			_blink_effect(user.state.position, user.slot)
-			for peer_id: int in _ready_peers:
-				_receive_blink.rpc_id(peer_id, user.state.position, user.slot)
-		CharacterStats.Ability.HEX_SNARE:
-			var at := _ability_target(user, stats.hex_range)
-			var radius := stats.hex_radius * sqrt(stats.ability_power)
-			var seconds := stats.hex_duration * stats.ability_power
-			_enemies.hex_in_radius(at, radius, seconds, stats.hex_damage_multiplier)
+				_receive_blast.rpc_id(peer_id, at, weapon.reach)
+		AutoWeapon.Kind.HEX:
+			var radius := weapon.radius_at(level)
+			var seconds := weapon.duration * power
+			_enemies.hex_in_radius(at, radius, seconds, AutoWeapons.HEX_DAMAGE_MULTIPLIER)
 			_show_hex(at, radius, seconds)
 			for peer_id: int in _ready_peers:
 				_receive_hex.rpc_id(peer_id, at, radius, seconds)
-		CharacterStats.Ability.BONE_EFFIGY:
+		AutoWeapon.Kind.EFFIGY:
 			var effigy := Effigy.new()
-			effigy.position = _ability_target(user, stats.effigy_range)
-			effigy.time_left = stats.effigy_duration * stats.ability_power
-			effigy.lure_radius = stats.effigy_lure_radius * sqrt(stats.ability_power)
-			effigy.burst_radius = stats.effigy_burst_radius * sqrt(stats.ability_power)
-			effigy.burst_damage = roundi(stats.effigy_burst_damage * stats.ability_power)
-			effigy.owner_peer_id = user.peer_id
+			effigy.position = at
+			effigy.time_left = weapon.duration * power
+			effigy.lure_radius = weapon.reach
+			effigy.burst_radius = weapon.radius_at(level)
+			effigy.burst_damage = WeaponSystem.power(caster, weapon.damage_at(level))
+			effigy.owner_peer_id = caster.peer_id
+			effigy.source = source
 			_effigies.append(effigy)
-			_show_effigy(effigy.position, effigy.time_left, effigy.lure_radius, user.slot)
+			_show_effigy(effigy.position, effigy.time_left, effigy.lure_radius, caster.slot)
 			for peer_id: int in _ready_peers:
-				_receive_effigy.rpc_id(peer_id, effigy.position, effigy.time_left, effigy.lure_radius, user.slot)
-		CharacterStats.Ability.DASH:
-			# Dashing players can't be hit; Afterimage keeps them safe a bit longer.
-			if stats.dash_grace > 0.0:
-				var safe := stats.dash_duration * stats.ability_power + stats.dash_grace
-				user.health.invulnerable_left = maxf(user.health.invulnerable_left, safe)
-
-
-## Where a thrown ability lands: `distance` ahead in the aim direction, inside the arena.
-func _ability_target(user: Player, distance: float) -> Vector2:
-	var target := user.state.position + Vector2.from_angle(user.state.aim) * distance
-	var inner := BOUNDS.grow(-8.0)
-	return target.clamp(inner.position, inner.end)
+				_receive_effigy.rpc_id(peer_id, effigy.position, effigy.time_left, effigy.lure_radius, caster.slot)
 
 
 ## Host: count down effigies; an expired one bursts, damaging enemies around it.
@@ -1627,7 +1629,8 @@ func _tick_effigies(delta: float) -> void:
 		if effigy.time_left > 0.0:
 			continue
 		_effigies.remove_at(i)
-		_enemies.damage_in_radius(effigy.position, effigy.burst_radius, effigy.burst_damage, effigy.owner_peer_id)
+		_enemies.damage_in_radius(effigy.position, effigy.burst_radius, effigy.burst_damage, effigy.owner_peer_id,
+			effigy.source)
 		_effigy_burst(effigy.position, effigy.burst_radius)
 		for peer_id: int in _ready_peers:
 			_receive_effigy_burst.rpc_id(peer_id, effigy.position, effigy.burst_radius)
@@ -1719,11 +1722,13 @@ func _on_enemy_vanished(at: Vector2, type_id: int, facing_left: bool) -> void:
 		_shake_local(10.0)
 
 
-func _on_player_hurt(victim: Player) -> void:
-	_effects.burst(victim.position, HURT_COLOR, 10, 70.0, 0.4)
+func _on_player_hurt(victim: Player, amount: int) -> void:
+	# Small touches get small effects; a bullet hit gets the full flash.
+	var big := amount >= 10
+	_effects.burst(victim.position, HURT_COLOR, 10 if big else 4, 70.0, 0.4)
 	if victim.is_local():
-		_hud.flash_hurt()
-		Sfx.play(&"hurt", -3.0)
+		_hud.flash_hurt(0.28 if big else 0.14)
+		Sfx.play(&"hurt", -3.0 if big else -9.0)
 	if victim.is_downed() and _player_nodes().size() > 1:
 		_effects.burst(victim.position, Player.SLOT_COLORS[victim.slot % Player.SLOT_COLORS.size()], 18, 90.0, 0.6, 1.5)
 		Sfx.play(&"downed", -4.0)
@@ -1755,11 +1760,6 @@ func _detonate_blast(at: Vector2, radius: float) -> void:
 	add_child(blast)
 
 
-## Everyone: a puff of the player's color where they reappeared.
-func _blink_effect(at: Vector2, slot: int) -> void:
-	_effects.burst(at, Player.SLOT_COLORS[slot % Player.SLOT_COLORS.size()].lightened(0.4), 14, 80.0, 0.35, 1.5)
-
-
 ## Host: an enemy (or boss) fires a pattern. Spawn it here and tell clients.
 func _fire_enemy_pattern(pattern: int, origin: Vector2, aim: float) -> void:
 	var seed_value := _rng.randi() & 0x7fffffff
@@ -1779,10 +1779,12 @@ func _spawn_enemy_pattern(pattern: int, origin: Vector2, aim: float, seed_value:
 		shooter.play_attack()
 	if _near_local_player(origin, 360.0):
 		Sfx.play(&"enemy_shot", -12.0)
+	# Only the host's copy deals damage, so only its shooter lookup matters.
+	var damage := _scaled_damage(shooter.type.bullet_damage if shooter != null else ENEMY_BULLET_DAMAGE)
 	var bullets := ShotPatterns.build(pattern as ShotPatterns.Id, aim, seed_value)
 	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
 		var offset := Vector2(bullets[i + 3], bullets[i + 4])
-		_enemy_bullets.spawn(origin + offset, Vector2.from_angle(bullets[i]) * bullets[i + 1], ENEMY_BULLET_DAMAGE,
+		_enemy_bullets.spawn(origin + offset, Vector2.from_angle(bullets[i]) * bullets[i + 1], damage,
 			ENEMY_BULLET_LIFETIME, 0, 0, age - bullets[i + 2])
 
 
@@ -1803,8 +1805,7 @@ func _flush_enemy_patterns(peers: Array[int]) -> void:
 func _update_hud() -> void:
 	var local := _local_player()
 	if local != null:
-		_hud.set_hearts(local.health.hearts, local.health.max_hearts)
-		_hud.set_ability(local.stats.ability_name, local.ability_ready_ratio(), local.state.ability_cooldown_left)
+		_hud.set_health(local.health.hp, local.health.max_hp)
 		_hud.set_coins(local.coins)
 		_hud.set_weapons(local.weapon_levels)
 		_hud.set_quest(_quest_text(local), local.quest_id >= 0 and local.quest_progress >= Quests.TARGETS[local.quest_id])
@@ -1876,7 +1877,7 @@ func _revive_notice(local: Player) -> String:
 			var watching := local.spectate_target
 			var who := "yourself" if watching == null or watching == local else watching.display_name()
 			text += "
-Watching %s.   Fire / Ability: switch view" % who
+Watching %s.   Space / A: switch view" % who
 		return text
 	var names := PackedStringArray()
 	for player: Player in _player_nodes():
@@ -1948,8 +1949,8 @@ func _send_snapshots() -> void:
 		var positions := PackedVector2Array()
 		var aims := PackedFloat32Array()
 		var acks := PackedInt32Array()
-		var hearts := PackedByteArray()
-		var max_hearts := PackedByteArray()
+		var hp := PackedInt32Array()
+		var max_hp := PackedInt32Array()
 		var flags := PackedByteArray()
 		var coins := PackedInt32Array()
 		var revive := PackedByteArray()
@@ -1962,9 +1963,9 @@ func _send_snapshots() -> void:
 			positions.append(player.state.position)
 			aims.append(player.state.aim)
 			acks.append(player.last_processed_seq)
-			hearts.append(player.health.hearts)
-			max_hearts.append(player.health.max_hearts)
-			flags.append((1 if player.state.is_dashing() else 0) | (2 if player.health.is_invulnerable() else 0))
+			hp.append(player.health.hp)
+			max_hp.append(player.health.max_hp)
+			flags.append(2 if player.health.is_bullet_safe() else 0)
 			coins.append(player.coins)
 			revive.append(roundi(clampf(player.revive_progress, 0.0, 1.0) * 255.0))
 		# Whichever pause is running (level-up or shop) reports who we're waiting for.
@@ -1974,7 +1975,7 @@ func _send_snapshots() -> void:
 		if _phase == Phase.COUNTDOWN:
 			countdown = _resume_left
 		for peer_id: int in peers:
-			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins, revive,
+			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hp, max_hp, flags, coins, revive,
 				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown, quest_ids, quest_progress)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
@@ -1998,14 +1999,14 @@ func _notify_ready() -> void:
 
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
-		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
+		acks: PackedInt32Array, hp: PackedInt32Array, max_hp: PackedInt32Array, flags: PackedByteArray,
 		coins: PackedInt32Array, revive: PackedByteArray, elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
 		pause_waiting: PackedInt32Array, pause_countdown: float, quest_ids: PackedInt32Array,
 		quest_progress: PackedInt32Array) -> void:
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
-			player.apply_server_state(positions[i], aims[i], (flags[i] & 1) != 0, acks[i], hearts[i], max_hearts[i], (flags[i] & 2) != 0)
+			player.apply_server_state(positions[i], aims[i], acks[i], hp[i], max_hp[i], (flags[i] & 2) != 0)
 			player.coins = coins[i]
 			if i < revive.size():
 				player.revive_progress = revive[i] / 255.0
@@ -2094,11 +2095,6 @@ func _receive_power_up(kind: int, collector_peer_id: int, at: Vector2) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_blast(at: Vector2, radius: float) -> void:
 	_detonate_blast(at, radius)
-
-
-@rpc("authority", "call_remote", "reliable")
-func _receive_blink(at: Vector2, slot: int) -> void:
-	_blink_effect(at, slot)
 
 
 @rpc("authority", "call_remote", "reliable")

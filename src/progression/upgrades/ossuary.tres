@@ -15,5 +15,5 @@ description = "Effigy lasts 1.5s longer, bursts 50% harder"
 stat = 26
 amount = 1.5
 max_stacks = 3
-for_ability = 4
+retired = true
 extra_effects = Array[Resource]([SubResource("effect_0")])

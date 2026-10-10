@@ -43,7 +43,7 @@ func test_maxed_upgrades_are_not_offered() -> void:
 func test_apply_changes_only_the_target_stat() -> void:
 	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	health.reset(stats.max_hearts)
+	health.reset(stats.max_hp)
 	var base_speed := stats.move_speed
 	Upgrades.apply(0, stats, health)  # Sharpened Bolts
 	assert_eq(stats.bullet_damage, 14)
@@ -53,12 +53,12 @@ func test_apply_changes_only_the_target_stat() -> void:
 func test_heart_container_raises_max_and_heals() -> void:
 	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	health.reset(stats.max_hearts)
-	health.take_hit(1, 0.0)
+	health.reset(stats.max_hp)
+	health.take_bullet(30, 0.0)
 	Upgrades.apply(3, stats, health)  # Heart Container
-	assert_eq(stats.max_hearts, 4)
-	assert_eq(health.max_hearts, 4)
-	assert_eq(health.hearts, 3)
+	assert_eq(stats.max_hp, 120)
+	assert_eq(health.max_hp, 120)
+	assert_eq(health.hp, 90)
 
 
 func test_same_upgrades_give_identical_stats_on_every_peer() -> void:
@@ -70,7 +70,7 @@ func test_same_upgrades_give_identical_stats_on_every_peer() -> void:
 		Upgrades.apply(id, client_stats, health)
 	assert_eq(host_stats.move_speed, client_stats.move_speed)
 	assert_eq(host_stats.fire_interval, client_stats.fire_interval)
-	assert_eq(host_stats.ability_cooldown, client_stats.ability_cooldown)
+	assert_eq(host_stats.auto_cooldown_scale, client_stats.auto_cooldown_scale)
 
 
 # --- LevelUpSession ---
@@ -175,12 +175,14 @@ func test_preview_shows_stat_before_and_after_without_changing_it() -> void:
 	stats.bullet_damage = 10
 	stats.projectile_count = 2
 	var health := PlayerHealth.new()
-	health.reset(3)
-	health.hearts = 1
+	health.reset(100)
+	health.hp = 10
 	assert_eq(Upgrades.preview_text(0, stats, health), "Damage 10 -> 14")
 	assert_eq(Upgrades.preview_text(4, stats, health), "Bolts 2 -> 3")
-	assert_eq(Upgrades.preview_text(8, stats, health), "Hearts 1 -> 2")
+	assert_eq(Upgrades.preview_text(8, stats, health), "HP 10 -> 50")
 	assert_eq(stats.bullet_damage, 10)
-	assert_eq(health.hearts, 1)
+	assert_eq(health.hp, 10)
 	for id: int in Upgrades.ALL.size():
+		if Upgrades.get_upgrade(id).retired:
+			continue
 		assert_ne(Upgrades.preview_text(id, stats, health), "", "upgrade %d has a preview" % id)

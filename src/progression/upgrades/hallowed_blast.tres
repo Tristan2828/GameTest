@@ -15,5 +15,5 @@ description = "Blast hits 40% harder and heals 1 more heart"
 stat = 22
 amount = 0.4
 max_stacks = 2
-for_ability = 1
+retired = true
 extra_effects = Array[Resource]([SubResource("effect_0")])

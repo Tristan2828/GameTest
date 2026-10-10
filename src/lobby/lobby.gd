@@ -3,9 +3,9 @@ extends CanvasLayer
 ## Pre-run lobby: everyone picks a character and readies up; the host starts.
 ##
 ## The main page is the party: one card per player (their name, hero walking on
-## the spot, ability, hearts and ready state). Your own card (or Choose Hero)
+## the spot, perk, HP and ready state). Your own card (or Choose Hero)
 ## opens the hero picker sub-screen with all four heroes; each hero's Watch
-## button opens a looping demo of their weapon and ability (HeroDemoPopup).
+## button opens a looping demo of their weapon (HeroDemoPopup).
 ##
 ## The host owns the lobby state and broadcasts it whenever it changes. Clients
 ## send their choice and ready flag. Spawned by Main's LevelSpawner like the
@@ -25,8 +25,8 @@ const COPIED_FEEDBACK_SECONDS: float = 4.0
 const PARTY_CARD_SIZE: Vector2 = Vector2(148, 178)
 const LABEL_COLOR: Color = Color(0.6, 0.57, 0.68)
 const VALUE_COLOR: Color = Color(0.95, 0.93, 1.0)
-const ABILITY_COLOR: Color = Color(0.95, 0.78, 0.4)
-const HEARTS_COLOR: Color = Color(0.95, 0.45, 0.5)
+const PERK_COLOR: Color = Color(0.95, 0.78, 0.4)
+const HP_COLOR: Color = Color(0.95, 0.45, 0.5)
 const READY_COLOR: Color = Color(0.55, 0.95, 0.5)
 const CARD_BG: Color = Color(0.1, 0.08, 0.14)
 const HERO_NAME_COLOR: Color = Color(0.95, 0.78, 0.4)
@@ -74,7 +74,7 @@ func _ready() -> void:
 		var class_label := _card_label("the %s" % stats.display_name, LABEL_COLOR)
 		name_label.add_sibling(class_label)
 		(_cards[i].get_node("Lines/Blurb") as Label).text = stats.blurb
-		(_cards[i].get_node("Lines/Ability") as Label).text = "%s: %s" % [stats.ability_name, stats.ability_description]
+		(_cards[i].get_node("Lines/Perk") as Label).text = "%s: %s" % [stats.perk_name, stats.perk_description]
 		(_cards[i].get_node("Portrait") as CharacterPortrait).character_id = i
 		_cards[i].pressed.connect(func() -> void:
 			_choose_locally(i)
@@ -166,13 +166,13 @@ func _open_demo(character: int) -> void:
 	_demo_popup.open(character, _color_for(multiplayer.get_unique_id()))
 
 
-## --screenshot-dir: each hero's demo during their weapon and their ability.
+## --screenshot-dir: each hero's demo, early and late in the loop.
 func _screenshot_demos() -> void:
 	for i: int in _cards.size():
 		if not is_inside_tree():
 			return
 		_open_demo(i)
-		for shot: Array in [[2.0, "weapon"], [HeroDemo.ABILITY_USE + 0.2, "ability"]]:
+		for shot: Array in [[2.0, "early"], [5.0, "late"]]:
 			_demo_popup.demo.seek(shot[0])
 			await get_tree().process_frame
 			if not is_inside_tree():
@@ -274,8 +274,8 @@ func _refresh() -> void:
 		portrait.pickers = pickers
 	_config_label.text = RunSetup.config.summary()
 	for i: int in _cards.size():
-		var hearts := maxi(Characters.get_character(i).max_hearts + RunSetup.config.hearts_bonus, 1)
-		(_cards[i].get_node("Lines/Hearts") as Label).text = "%d hearts" % hearts
+		var hp := maxi(Characters.get_character(i).max_hp + RunSetup.config.hp_bonus, 1)
+		(_cards[i].get_node("Lines/Health") as Label).text = "%d HP" % hp
 	if multiplayer.is_server():
 		var waiting := _state.not_ready(1)
 		_start_button.disabled = not waiting.is_empty()
@@ -293,7 +293,7 @@ func _refresh() -> void:
 ## their name arrives (not every frame: the portraits animate on their own).
 func _refresh_party(me: int) -> void:
 	var signature := "%s|%s|%s|%s|%d|%d" % [_state.order, _state.characters, _state.ready, Net.names, me,
-		RunSetup.config.hearts_bonus]
+		RunSetup.config.hp_bonus]
 	if signature == _party_signature:
 		return
 	_party_signature = signature
@@ -308,7 +308,7 @@ func _refresh_party(me: int) -> void:
 		_my_card.grab_focus()
 
 
-## One player's card: name, hero walking on the spot, ability, hearts, ready state.
+## One player's card: name, hero walking on the spot, perk, HP, ready state.
 ## Your own card is a button that opens the hero picker.
 func _party_card(peer_id: int, me: int) -> Button:
 	var color := _color_for(peer_id)
@@ -365,14 +365,14 @@ func _party_card(peer_id: int, me: int) -> Button:
 	var hero := _card_label(character.full_name(), VALUE_COLOR)
 	hero.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lines.add_child(hero)
-	var ability := _card_label("%s: %s" % [character.ability_name, character.ability_description], ABILITY_COLOR)
-	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	ability.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lines.add_child(ability)
-	var hearts := maxi(character.max_hearts + RunSetup.config.hearts_bonus, 1)
-	lines.add_child(_card_label("%d hearts" % hearts, HEARTS_COLOR))
+	var perk := _card_label("%s: %s" % [character.perk_name, character.perk_description], PERK_COLOR)
+	perk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	perk.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lines.add_child(perk)
+	var hp := maxi(character.max_hp + RunSetup.config.hp_bonus, 1)
+	lines.add_child(_card_label("%d HP" % hp, HP_COLOR))
 	var status := "HOST" if peer_id == 1 else ("READY" if is_ready else "not ready")
-	var status_color := ABILITY_COLOR if peer_id == 1 else (READY_COLOR if is_ready else LABEL_COLOR)
+	var status_color := PERK_COLOR if peer_id == 1 else (READY_COLOR if is_ready else LABEL_COLOR)
 	if mine:
 		status += "  -  change hero"
 	lines.add_child(_card_label(status, status_color))

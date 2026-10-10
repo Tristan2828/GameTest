@@ -6,7 +6,7 @@
 script = ExtResource("1_upgrade")
 title = "Shadow Step"
 icon = "up_shadow_step"
-description = "Ability cooldown 20% shorter"
+description = "Your auto weapons recharge 12% faster"
 stat = 7
-amount = 0.2
+amount = 0.12
 max_stacks = 3

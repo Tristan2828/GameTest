@@ -14,7 +14,7 @@ const LIMITS: Dictionary[String, Array] = {
 	"enemy_count": [0.25, 3.0, 0.25, 1.0],
 	"xp_rate": [0.25, 3.0, 0.25, 1.0],
 	"coin_rate": [0.0, 3.0, 0.25, 1.0],
-	"hearts_bonus": [-2, 3, 1, 0],
+	"hp_bonus": [-40, 60, 10, 0],
 	"stage": [1, 3, 1, 1],
 	"wave_seconds": [60.0, 600.0, 30.0, 240.0],
 	"bonus_levels": [0, 10, 1, 0],
@@ -23,9 +23,9 @@ const LIMITS: Dictionary[String, Array] = {
 
 ## Difficulty presets (only the difficulty values; custom game options stay).
 const PRESETS: Dictionary[String, Dictionary] = {
-	"Easy": {"enemy_health": 0.75, "boss_health": 0.5, "enemy_count": 0.75, "xp_rate": 1.25, "coin_rate": 1.25, "hearts_bonus": 1},
-	"Normal": {"enemy_health": 1.0, "boss_health": 1.0, "enemy_count": 1.0, "xp_rate": 1.0, "coin_rate": 1.0, "hearts_bonus": 0},
-	"Hard": {"enemy_health": 1.5, "boss_health": 1.5, "enemy_count": 1.5, "xp_rate": 0.75, "coin_rate": 0.75, "hearts_bonus": -1},
+	"Easy": {"enemy_health": 0.75, "boss_health": 0.5, "enemy_count": 0.75, "xp_rate": 1.25, "coin_rate": 1.25, "hp_bonus": 20},
+	"Normal": {"enemy_health": 1.0, "boss_health": 1.0, "enemy_count": 1.0, "xp_rate": 1.0, "coin_rate": 1.0, "hp_bonus": 0},
+	"Hard": {"enemy_health": 1.5, "boss_health": 1.5, "enemy_count": 1.5, "xp_rate": 0.75, "coin_rate": 0.75, "hp_bonus": -20},
 }
 
 # --- Difficulty ---
@@ -39,8 +39,8 @@ var enemy_count: float = 1.0
 var xp_rate: float = 1.0
 ## Coin drop chance multiplier.
 var coin_rate: float = 1.0
-## Extra (or fewer) max hearts for every hero.
-var hearts_bonus: int = 0
+## Extra (or less) max HP for every hero.
+var hp_bonus: int = 0
 
 # --- Custom game ---
 ## One stage (the chosen map) instead of the 3-stage run. Winning it is Victory.
@@ -93,7 +93,7 @@ func difficulty_name() -> String:
 ## Records: harder settings score more, easier ones less (1.0 = Normal).
 func score_multiplier() -> float:
 	var toughness := (enemy_health + boss_health + enemy_count) / 3.0
-	toughness *= 1.0 - 0.1 * hearts_bonus
+	toughness *= 1.0 - 0.005 * hp_bonus
 	toughness *= 1.0 - 0.04 * bonus_levels
 	toughness /= sqrt(maxf(xp_rate, 0.01))
 	if start_with_weapons:

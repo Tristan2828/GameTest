@@ -1,7 +1,7 @@
 extends Node
 ## Registers every input action in code instead of the editor's Input Map, so all
 ## bindings live in one readable, text-editable place. Each action is bound to
-## both mouse/keyboard and gamepad.
+## both keyboard and gamepad. In a run you only move: weapons fire by themselves.
 
 const STICK_DEADZONE: float = 0.2
 
@@ -11,30 +11,19 @@ func _enter_tree() -> void:
 	_add_action("move_right", [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
 	_add_action("move_up", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
 	_add_action("move_down", [_key(KEY_S), _key(KEY_DOWN), _axis(JOY_AXIS_LEFT_Y, 1.0)])
-	_add_action("aim_left", [_axis(JOY_AXIS_RIGHT_X, -1.0)])
-	_add_action("aim_right", [_axis(JOY_AXIS_RIGHT_X, 1.0)])
-	_add_action("aim_up", [_axis(JOY_AXIS_RIGHT_Y, -1.0)])
-	_add_action("aim_down", [_axis(JOY_AXIS_RIGHT_Y, 1.0)])
 	# Godot's built-in "confirm" for menus has no gamepad button by default, so
 	# controllers could move between buttons but not press them.
 	_add_action("ui_accept", [_joy(JOY_BUTTON_A)])
 	_add_action("copy_invite", [_key(KEY_F1)])
 	_add_action("restart", [_key(KEY_R), _joy(JOY_BUTTON_BACK)])
 	_add_action("pause", [_key(KEY_ESCAPE), _joy(JOY_BUTTON_START)])
-	_add_action("fire",[_mouse(MOUSE_BUTTON_LEFT), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
-	# One ability button per character (Dash, Grave Blast, Blink...): all the
-	# old dash and bomb buttons trigger it.
-	_add_action("ability", [
+	# While you're downed: watch the next teammate.
+	_add_action("switch_view", [
 		_key(KEY_SPACE),
-		_key(KEY_SHIFT),
-		_key(KEY_Q),
-		_mouse(MOUSE_BUTTON_RIGHT),
-		_mouse(MOUSE_BUTTON_MIDDLE),
-		_axis(JOY_AXIS_TRIGGER_LEFT, 1.0),
-		_joy(JOY_BUTTON_LEFT_SHOULDER),
-		_joy(JOY_BUTTON_RIGHT_SHOULDER),
+		_key(KEY_ENTER),
+		_mouse(MOUSE_BUTTON_LEFT),
 		_joy(JOY_BUTTON_A),
-		_joy(JOY_BUTTON_Y),
+		_joy(JOY_BUTTON_RIGHT_SHOULDER),
 	])
 
 

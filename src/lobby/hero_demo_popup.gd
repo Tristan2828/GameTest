@@ -1,7 +1,7 @@
 class_name HeroDemoPopup
 extends Control
 ## The hero picker's Watch popup: the hero's name and class, a looping HeroDemo
-## of their main weapon and ability (the caption of the part playing lights up),
+## of their main weapon and a dodge (the caption of the part playing lights up),
 ## and Pick / Back buttons. Esc / B closes it.
 
 signal picked(character_id: int)
@@ -18,7 +18,7 @@ var _character_id: int = 0
 var _name_label: Label = null
 var _class_label: Label = null
 var _weapon_label: Label = null
-var _ability_label: Label = null
+var _dodge_label: Label = null
 var _pick_button: Button = null
 var _back_button: Button = null
 
@@ -49,8 +49,8 @@ func _init() -> void:
 	box.add_child(demo)
 	_weapon_label = _label(9, ACTIVE_COLOR)
 	box.add_child(_weapon_label)
-	_ability_label = _label(9, IDLE_COLOR)
-	box.add_child(_ability_label)
+	_dodge_label = _label(9, IDLE_COLOR)
+	box.add_child(_dodge_label)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 8)
@@ -70,9 +70,9 @@ func open(character_id: int, color: Color) -> void:
 	_character_id = character_id
 	var stats := Characters.get_character(character_id)
 	_name_label.text = stats.hero_name
-	_class_label.text = "the %s" % stats.display_name
+	_class_label.text = "the %s     Perk - %s: %s" % [stats.display_name, stats.perk_name, stats.perk_description]
 	_weapon_label.text = "Main weapon - %s: %s" % [stats.main_weapon_name, Compendium.main_weapon_text(stats)]
-	_ability_label.text = "Ability - %s: %s" % [stats.ability_name, stats.ability_description]
+	_dodge_label.text = "Dodge: you only move. Your weapons fire by themselves."
 	_pick_button.text = "Pick %s" % stats.hero_name
 	demo.color = color
 	demo.character_id = character_id
@@ -90,9 +90,9 @@ func close() -> void:
 func _process(_delta: float) -> void:
 	if not visible:
 		return
-	var ability := demo.part() == HeroDemo.Part.ABILITY
-	_weapon_label.add_theme_color_override("font_color", IDLE_COLOR if ability else ACTIVE_COLOR)
-	_ability_label.add_theme_color_override("font_color", ACTIVE_COLOR if ability else IDLE_COLOR)
+	var dodging := demo.part() == HeroDemo.Part.DODGE
+	_weapon_label.add_theme_color_override("font_color", IDLE_COLOR if dodging else ACTIVE_COLOR)
+	_dodge_label.add_theme_color_override("font_color", ACTIVE_COLOR if dodging else IDLE_COLOR)
 
 
 func _unhandled_input(event: InputEvent) -> void:

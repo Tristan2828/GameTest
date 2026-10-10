@@ -35,14 +35,14 @@ func test_offers_are_unowned_and_distinct() -> void:
 
 # --- Relic effects ---
 
-func test_cursed_skull_trades_a_heart_for_damage() -> void:
+func test_cursed_skull_trades_hp_for_damage() -> void:
 	var stats := CharacterStats.new()
 	var health := PlayerHealth.new()
-	health.reset(stats.max_hearts)
+	health.reset(stats.max_hp)
 	Relics.apply(_relic_id("Cursed Skull"), stats, health)
 	assert_eq(stats.bullet_damage, 16)
-	assert_eq(stats.max_hearts, 2)
-	assert_eq(health.hearts, 2, "current hearts are capped to the new max")
+	assert_eq(stats.max_hp, 80)
+	assert_eq(health.hp, 80, "current HP is capped to the new max")
 
 
 func test_bone_charm_and_holy_water() -> void:
@@ -51,17 +51,24 @@ func test_bone_charm_and_holy_water() -> void:
 	Relics.apply(_relic_id("Bone Charm"), stats, health)
 	Relics.apply(_relic_id("Holy Water"), stats, health)
 	assert_eq(stats.pierce, 1)
-	assert_almost_eq(stats.ability_power, 1.4, 0.0001)
+	assert_almost_eq(stats.auto_power, 1.25, 0.0001)
 
 
-func test_max_hearts_never_drops_below_one() -> void:
+func test_bloodstone_regenerates() -> void:
 	var stats := CharacterStats.new()
-	stats.max_hearts = 1
 	var health := PlayerHealth.new()
-	health.reset(1)
+	Relics.apply(_relic_id("Bloodstone"), stats, health)
+	assert_almost_eq(stats.recovery, 1.0, 0.0001)
+
+
+func test_max_hp_never_drops_below_one() -> void:
+	var stats := CharacterStats.new()
+	stats.max_hp = 10
+	var health := PlayerHealth.new()
+	health.reset(10)
 	Relics.apply(_relic_id("Cursed Skull"), stats, health)
-	assert_eq(stats.max_hearts, 1)
-	assert_eq(health.hearts, 1)
+	assert_eq(stats.max_hp, 1)
+	assert_eq(health.hp, 1)
 
 
 # --- ShopSession ---
@@ -121,9 +128,9 @@ func test_vampire_fang_heals_every_n_kills() -> void:
 	player.setup(1, 0, Vector2(100, 100), Rect2(0, 0, 500, 500))
 	add_child_autofree(player)
 	player.apply_relic(_relic_id("Vampire Fang"))
-	player.health.take_hit(1, 0.0)
-	for i: int in 59:
+	player.health.take_bullet(5, 0.0)
+	for i: int in 2:
 		player.register_kill()
-	assert_eq(player.health.hearts, player.health.max_hearts - 1)
+	assert_eq(player.health.hp, player.health.max_hp - 5)
 	player.register_kill()
-	assert_eq(player.health.hearts, player.health.max_hearts)
+	assert_eq(player.health.hp, player.health.max_hp - 4)

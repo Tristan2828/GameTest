@@ -1,7 +1,7 @@
-# Playtest Review (v0.20.0)
+# Playtest Review (v0.22.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (344 unit tests, plus online host+client runs).
+Automated tests prove it *works* (356 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -22,7 +22,7 @@ $g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
 & $g -- --solo --start-stage=3 --start-at=230      # Cathedral boss (Ashen Bishop)
 & $g -- --solo --start-stage=2                     # A full stage 2 from the start
 & $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (tests the flow, not balance)
-& $g -- --solo --give-weapons                      # Start with all 4 auto weapons at level 2
+& $g -- --solo --give-weapons                      # Start with all 7 auto weapons at level 2
 & $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
 & $g -- --solo --run-config=single_stage=true,stage=3,bonus_levels=5   # Custom game without the lobby pages
 & $g -- --solo --run-config=soundtrack=1           # Metal soundtrack (2 = metal boss fights only, 3 = shuffle)
@@ -52,6 +52,23 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0k Auto-fire redesign, step 1 (v0.22.0, check these first)
+- [ ] You only move now: every main weapon fires by itself. Does it feel good, or do you miss aiming? Is the game more about dodging, like you wanted?
+- [ ] Targeting: Kael's bolts hit the closest enemy, Morwen's lightning and Vesper's spears pick a random enemy near you, Mortimer's scythes fly the way you last moved **and** behind you. Does each rule feel fair and readable?
+  - *Tune: `src/player/auto_aim.gd` (rules and reach); the back throw is `SCYTHE_BACK_THROW` in `src/combat/main_weapons.gd`.*
+- [ ] Mortimer's scythe also throws behind him (Claude's call: with only the front throw, running away from a crowd meant facing away from it, and his boss fights took 4+ minutes). Keep it, or front only?
+- [ ] HP bar instead of hearts (top-left, and a small bar under every hero). Kael 100, Morwen 70, Vesper 90, Mortimer 150. Readable? Right amounts?
+- [ ] Touching enemies drains a little every half second (Shambler 5, Ghoul 8, bosses 15), with no safe time: getting surrounded is deadly. Bullets hit harder (15, bosses 20, champions 18) and then you're safe from bullets for 0.5 s. Later stages hit 30% / 60% harder. Fair? Too harsh / too soft?
+  - *Tune: `contact_damage` / `bullet_damage` in `src/enemies/types/*.tres`, `DAMAGE_BY_DEPTH` in `src/arena/arena.gd`, `max_hp` / `hit_invulnerability` in `src/player/characters/*.tres`, `CONTACT_INTERVAL` in `src/player/player_health.gd`.*
+- [ ] Healing: Heart pickup 30% of max HP, every level-up 5%, a finished ritual 25%, full HP each stage, Ghoul Blood (upgrade, +0.4 HP/s) and Bloodstone (relic, +1 HP/s). Too much healing, too little?
+  - *Tune: `HEART_HEAL_SHARE` in `src/progression/power_ups.gd`, `LEVEL_UP_HEAL_SHARE` / `RITUAL_HEAL_SHARE` in `src/arena/arena.gd`.*
+- [ ] No more ability button. Grave Blast, Hex Snare and Bone Effigy are auto weapons anyone can find on altars and in chests; they go off by themselves (Grave Blast when enemies get close, the other two at the biggest crowd near you). Do they feel useful? Dash is gone.
+  - *Tune: `src/combat/weapons/grave_blast.tres`, `hex_snare.tres`, `bone_effigy.tres`; crowd rules in `src/combat/auto_weapons.gd`.*
+- [ ] Hero perks instead of abilities: Kael moves 10% faster, Mortimer regenerates 0.5 HP/s, Morwen +10% crit chance, Vesper's kills burst for 8 damage. Do heroes still feel different enough?
+- [ ] The mouse cursor hides while you play and comes back for level-up cards, the shop and the pause menu. Any moment it's missing when you need it?
+- [ ] Watch demos: the weapon part, then the hero steps out of a fan of bullets ("dodge!"). Clear?
+- [ ] Ability upgrades/relics now boost auto weapons: Shadow Step / Cracked Hourglass (recharge faster), Arcane Focus / Holy Water (more damage); Ember Shrine's Focus too. Arcane Focus and Shadow Step only show up once you own an auto weapon.
+
 ### 3.0j Embers and the Ember Shrine (v0.21.0)
 - [ ] Finish a run: the run summary says "+N Embers". Title menu > **Ember Shrine**: buy a boost, see the rank pips fill. Clear? Works with mouse and gamepad?
 - [ ] Earning pace: about 40 for a victory and about 15 for dying in stage 2; everything costs about 1950 (around 100 runs). Feels rewarding enough, or too slow?
@@ -60,21 +77,17 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] **My boosts: Off** and **Refund all** work? Host: Custom Game > **Ember boosts Off** turns everyone's off (the lobby summary says "no Ember boosts")?
 - [ ] Co-op: a friend's boosts work for them (e.g. Swiftness makes only them faster, with no rubber-banding)?
 
-### 3.0i Ability ready marker (v0.21.0)
-- [ ] Play the Gravekeeper, Witch or Necromancer: over your head a small bar fills while your ability recharges, then a gold gem pulses when it's ready (with a ring and a soft chime). Easy to notice without looking at the corner? Too much clutter, or is the chime annoying?
-  - *Tune: `ABILITY_MARKER_MIN_COOLDOWN`, `ABILITY_PING_SECONDS` and `_draw_ability_marker()` in `src/player/player.gd`; the chime is `ability_ready` in `src/autoload/sfx.gd`.*
-
 ### 3.0h Hero names, Watch demos, quieter floors (v0.20.0, your sixth list)
 - [ ] Heroes have names: Kael (Wanderer), Mortimer (Gravekeeper), Morwen (Hexblade Witch), Vesper (Necromancer). Do they fit? Want different ones?
-- [ ] In Choose Hero, press **Watch** under a hero: a looping demo shows their main weapon, then their ability. Does it explain the hero well? Anything missing or confusing?
+- [ ] In Choose Hero, press **Watch** under a hero: a looping demo shows their main weapon, then a dodge. Does it explain the hero well? Anything missing or confusing?
 - [ ] The demo's **Pick** button picks that hero; Back / Esc / B closes it. Works with a gamepad?
 - [ ] Floor decorations (tombstones, bones, skull piles, reeds, pews) are now about half a monster's size and faded into the floor. Still distracting, or now too hard to see?
   - *Tune: names in `src/player/characters/*.tres` (`hero_name`); the demo in `src/lobby/hero_demo.gd` (timing constants at the top); props in `src/arena/floor_baker.gd` (`PROP_OPACITY`, `PROP_BRIGHTNESS`) and the prop sprites in `src/art/pixel_art.gd`.*
 
 ### 3.0g Every hero has their own main weapon (v0.19.0)
-- [ ] Gravekeeper: hold fire to throw the **Reaper's Scythe** where you aim; it comes back to you. Fun? Does a slow tank with a short-range weapon feel strong enough?
-- [ ] Hexblade Witch: **Chain Lightning** hits the enemy you aim at and jumps on. Does it hit what you meant to hit? Too easy, since you only need to aim roughly?
-- [ ] Necromancer: **Bone Spears** rise in a row along your aim after a short warning. Satisfying, or does the delay feel laggy?
+- [ ] Gravekeeper: the **Reaper's Scythe** flies out the way you face (and behind you since v0.22.0) and comes back to you. Fun? Does a slow tank with a short-range weapon feel strong enough?
+- [ ] Hexblade Witch: **Chain Lightning** strikes a random enemy near you and jumps on. Satisfying?
+- [ ] Necromancer: **Bone Spears** rise in a row toward a random nearby enemy after a short warning. Satisfying, or does the delay feel laggy?
 - [ ] Wanderer: still the Bolt Gun. Does the Wanderer feel boring next to the others?
 - [ ] Each hero's own upgrades show up on level-up cards ("Mortimer only" and so on): Twin Scythes, Long Reach, Heavy Blade, Grim Harvest / Forked Lightning, Long Arc, Conductor, Split Bolt / Longer Row, Wide Spikes, Quick Rise, Splinters. Any that feel useless or too strong?
 - [ ] Online: your scythe / lightning / spears show up instantly for you, and your friends see them too.
@@ -128,13 +141,12 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 ### 3.0b Changes from your second co-op list (v0.15.0, check these first)
 - [ ] Difficulty: level-ups are cheaper again (between v0.13 and v0.14) and Sharpened Bolts (+4) / Quick Hands (15%) are stronger. Can you beat stage 1 now? Too easy?
   - *Tune: `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; upgrade `.tres` files.*
-- [ ] Co-op revives: at 0 hearts you're downed in a circle; a teammate standing in it brings you back in 4 s with half your hearts. Is 4 s right? Is the circle easy to find and stand in?
-  - *Tune: `RADIUS`, `SECONDS`, `HEART_SHARE`, `DRAIN_PER_SECOND` in `src/player/revive.gd`.*
-- [ ] While you're down, your screen follows a teammate after a moment (Fire / Ability switches who). Better than watching your body? Did the arrow back to your own body help?
+- [ ] Co-op revives: at 0 HP you're downed in a circle; a teammate standing in it brings you back in 4 s with half your HP. Is 4 s right? Is the circle easy to find and stand in?
+  - *Tune: `RADIUS`, `SECONDS`, `HP_SHARE`, `DRAIN_PER_SECOND` in `src/player/revive.gd`.*
+- [ ] While you're down, your screen follows a teammate after a moment (Space / A switches who). Better than watching your body? Did the arrow back to your own body help?
 - [ ] Teammates' arrows pulse with a green "+" when they're down, and "Red is down!" / "Reviving Red... 40%" shows near the bottom. Noticeable in a fight?
 - [ ] Mourner's Bell relic (co-op only): revive twice as fast. Worth buying?
-- [ ] Settings: in-game cursor (Crosshair / Ring / Dot / System arrow, 4 sizes, 7 colors). Can you find your cursor now? Best default?
-- [ ] Run summary: a star next to the best player's number in each stat (fewest for Hearts lost / Downed). Clear?
+- [ ] Run summary: a star next to the best player's number in each stat (fewest for Damage taken / Downed). Clear?
 - [ ] Run summary: icons for weapons, upgrades and relics under "Build" (hover for names). Can you tell the icons apart?
 - [ ] Run summary: Weapons page (button at the bottom): damage, share, DPS and kills per weapon. Numbers believable? Anything else you want there?
 - [ ] Upgrade and relic icons on the level-up and shop cards. Do they help?
@@ -149,7 +161,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Level pips on each card (filled = levels you have, blinking gold = this pick, hollow = left to max). Readable?
 - [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop (co-op only since v0.18.0). Long enough? Too long?
   - *Tune: `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`.*
-- [ ] Weapon icons with level pips under the hearts (HUD), on the run-end cards, and floating over altars. Can you tell the three apart?
+- [ ] Weapon icons with level pips under the HP bar (HUD), on the run-end cards, and floating over altars. Can you tell the three apart?
 - [ ] Arrows at the screen edge point to off-screen teammates, in their color (pulsing with a "+" when they're down). Helpful? Distracting?
 - [ ] Lobby: party cards show each player's color, and in the hero picker small color squares show who picked which hero.
 - [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
@@ -167,13 +179,12 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Minimap: helpful? Did you notice the red edge warning near walls?
 - [ ] Text: shop, level-up cards, lobby, HUD all readable now?
 - [ ] Shop: about one relic per shop now? Too stingy? (*Tune: coin_chance in enemy `.tres`, relic `price`, `BOSS_BOUNTY` in `src/arena/arena.gd`*)
-- [ ] Abilities: Dash / Grave Blast / Hex Snare / Bone Effigy each feel good and different? Cooldowns right? Is the hex sigil and the effigy's lure ring readable? (*Tune: `ability_cooldown` etc. in `src/player/characters/*.tres`*)
+- [ ] Grave Blast / Hex Snare / Bone Effigy (auto weapons since v0.22.0) each feel good and different? Is the hex sigil and the effigy's lure ring readable? (*Tune: `src/combat/weapons/*.tres`*)
 - [ ] Version shown on the title screen.
 
 ### 3.1 Moment-to-moment feel
 - [ ] Does movement still feel instant and smooth (it did in M1/M2)?
-- [ ] Shooting: does the main gun feel good? Too weak or strong early on?
-- [ ] Abilities (Space / LT): see 3.0.
+- [ ] Your main weapon (fires by itself): does it feel good? Too weak or strong early on?
 - [ ] **New:** screen shake (hurt, Grave Blast, boss death). Too much, too little, or annoying? *(Can be turned off in Settings)*
 - [ ] **New:** hit sparks, death puffs, red flash when hurt. Helpful or noisy?
 - [ ] **New:** music. Menu/shop theme, one track per stage, boss theme. Does each fit its stage? Gets repetitive (loops are 14–27 s)? Too loud vs effects? *(Music volume in Settings)*
@@ -217,15 +228,15 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 ### 3.5 Characters (lobby)
 - [ ] Lobby: easy to pick and ready up (mouse **and** gamepad)?
 
-| Character | Feels distinct? | Too strong / weak? | Ability noticeable? |
+| Character | Feels distinct? | Too strong / weak? | Perk noticeable? |
 |---|---|---|---|
-| Wanderer (Dash) | | | |
-| Gravekeeper (Reaper's Scythe, 5 hearts, Grave Blast) | | | |
-| Hexblade Witch (fast, 2 hearts, Chain Lightning, Hex Snare) | | | |
-| Necromancer (3 hearts, Bone Spears, Bone Effigy decoy) | | | |
+| Kael the Wanderer (Bolt Gun, 100 HP, moves 10% faster) | | | |
+| Mortimer the Gravekeeper (Reaper's Scythe, 150 HP, regenerates) | | | |
+| Morwen the Hexblade Witch (fast, 70 HP, Chain Lightning, +10% crit) | | | |
+| Vesper the Necromancer (90 HP, Bone Spears, kills burst) | | | |
 
 - [ ] Gravekeeper's scythe range (short). Fun or frustrating?
-- [ ] Witch with 2 hearts. Too fragile?
+- [ ] Witch with 70 HP. Too fragile?
   - *Tune: `src/player/characters/*.tres`.*
 
 ### 3.6 Level-ups and upgrades
@@ -246,13 +257,13 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 
 ### 3.8 Auto weapons and altars
 - [ ] Did you notice the altars (glowing pedestals at ~1:20 and ~2:40)? Worth walking to?
-- [ ] Orbiting Skulls / Seeking Bolts / Holy Aura / Hellfire Trail: any too strong or useless? Is max level 3 enough?
+- [ ] Orbiting Skulls / Seeking Bolts / Holy Aura / Hellfire Trail / Grave Blast / Hex Snare / Bone Effigy: any too strong or useless? Is max level 3 enough?
 - [ ] Do weapons make the screen too busy to read enemy bullets?
   - *Tune: `src/combat/weapons/*.tres`, `ALTAR_TIMES` in `src/combat/weapon_system.gd`.*
 
-### 3.9 Grave Blast (Gravekeeper)
-- [ ] Clear radius big enough to save you? Damage noticeable? 14 s cooldown fair?
-  - *Tune: `blast_*` and `ability_cooldown` in `src/player/characters/gravekeeper.tres`.*
+### 3.9 Grave Blast (auto weapon)
+- [ ] Goes off by itself when enemies get close (every 12 s at level 1): clear radius big enough to save you? Damage noticeable?
+  - *Tune: `src/combat/weapons/grave_blast.tres`, `BLAST_WAKE_FACTOR` / `BLAST_HEAL_SHARE` in `src/combat/auto_weapons.gd`.*
 
 ### 3.10 Co-op (session D)
 - [ ] Being downed: do revives happen often enough, or do you still end up waiting for the next stage?
@@ -266,7 +277,6 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] **New:** Settings (volume, fullscreen, screen shake). Do they work and stick after restarting?
 - [ ] **New:** End-of-run stats table. Interesting?
 - [ ] **New:** menu style (dark panels, gold focus ring for gamepad, crisp pixel text, crypt backdrop on the title screen). Readable? Fits the game?
-- [ ] **Changed:** the aim line on your character is gone (sprites face your aim instead). Do you miss knowing exactly where you aim?
 - [ ] HUD readable at your screen size? Anything you look for and can't find?
 - [ ] Is the controls hint at the bottom still useful, or clutter?
 
@@ -288,7 +298,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Stage flow:** 4:00 horde then boss; horde at 40% during the boss; stage clear = boss dead.
 - **Run:** 3 stages, each harder; Victory after stage 3; the host returns everyone to character select (button, or R / Select).
 - **Boss HP** scales with players (+75% each); regular enemies don't (more of them instead).
-- **Downed players** can be revived by a teammate (4 s in the circle, half hearts back); otherwise they get up at the next stage.
+- **Downed players** can be revived by a teammate (4 s in the circle, half HP back); otherwise they get up at the next stage.
 - **Coins** go to whoever picks them up; the boss bounty is paid to everyone.
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.
@@ -297,10 +307,10 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Quests (v0.17.0):** the nine quests, their targets and rewards; a random offer if you don't pick.
 - **Weapons and pickups (v0.17.0):** the four new weapons' numbers; pickup drop chance (1.2% per kill, at most one per 10 s) and odds.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
-- **Abilities:** one per character on a cooldown (Dash / Grave Blast / Hex Snare / Bone Effigy), replacing dash and bombs.
-- **Characters / abilities**, as listed in 3.5.
+- **Auto-fire redesign (v0.22.0):** the targeting rules' details (reach, random picks), Mortimer's back throw, every HP and damage number, the healing amounts, the four perks, the three ability weapons' numbers and when they go off, Dash removed, the hidden cursor, the Watch demo's dodge part, and the Recovery upgrade and relic (Ghoul Blood, Bloodstone).
+- **Characters**, as listed in 3.5.
 - **Mid-run joiners** play the Wanderer.
-- **Watch demos (sixth list):** a scripted mini-scene drawn in code (no video files): ~8 s loop, weapon for 4 s then the ability; Shamblers walk a bit faster than real ones and the effigy bursts sooner than in a real game, so the loop stays short.
+- **Watch demos (sixth list):** a scripted mini-scene drawn in code (no video files): ~8 s loop, weapon for 4 s then a dodge through a bullet fan; Shamblers walk a bit faster than real ones, so the loop stays short.
 - **Sound** is synthesized placeholder; no music yet.
 
 ---

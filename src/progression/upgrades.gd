@@ -47,7 +47,10 @@ const ALL: Array[Upgrade] = [
 	preload("res://src/progression/upgrades/wide_spikes.tres"),
 	preload("res://src/progression/upgrades/quick_rise.tres"),
 	preload("res://src/progression/upgrades/splinters.tres"),
+	preload("res://src/progression/upgrades/ghoul_blood.tres"),
 ]
+## A max-HP cut is never offered if it would leave the hero below this.
+const MIN_MAX_HP_AFTER_CUT: int = 30
 
 
 static func get_upgrade(id: int) -> Upgrade:
@@ -58,15 +61,16 @@ static func is_valid_id(id: int) -> bool:
 	return id >= 0 and id < ALL.size()
 
 
-## Rolls up to CHOICES_PER_LEVEL different upgrade ids. Skips maxed-out ones,
-## only offers healing to a player who is missing hearts, hero-only and
-## weapon-only upgrades to that hero (`stats`; none without it), and never a
-## max-heart cut at 1 max heart.
+## Rolls up to CHOICES_PER_LEVEL different upgrade ids. Skips maxed-out and
+## retired ones, only offers healing to a player who is hurt, weapon-only
+## upgrades to that weapon's hero (`stats`; none without it), auto weapon boosts
+## only to someone with an auto weapon, and never a max-HP cut that would leave
+## too little.
 static func roll(rng: RandomNumberGenerator, owned: Array[int], is_hurt: bool,
-		stats: CharacterStats = null) -> Array[int]:
+		stats: CharacterStats = null, has_auto_weapons: bool = true) -> Array[int]:
 	var pool: Array[int] = []
 	for id: int in ALL.size():
-		if is_offered(ALL[id], owned.count(id), is_hurt, stats):
+		if is_offered(ALL[id], owned.count(id), is_hurt, stats, has_auto_weapons):
 			pool.append(id)
 	var result: Array[int] = []
 	while not pool.is_empty() and result.size() < CHOICES_PER_LEVEL:
@@ -74,18 +78,22 @@ static func roll(rng: RandomNumberGenerator, owned: Array[int], is_hurt: bool,
 	return result
 
 
-static func is_offered(upgrade: Upgrade, stacks: int, is_hurt: bool, stats: CharacterStats) -> bool:
+static func is_offered(upgrade: Upgrade, stacks: int, is_hurt: bool, stats: CharacterStats,
+		has_auto_weapons: bool = true) -> bool:
+	if upgrade.retired:
+		return false
+	if not has_auto_weapons and (upgrade.stat == Upgrade.Stat.AUTO_COOLDOWN or upgrade.stat == Upgrade.Stat.AUTO_POWER):
+		return false
 	if upgrade.stat == Upgrade.Stat.HEAL and not is_hurt:
 		return false
 	if upgrade.max_stacks > 0 and stacks >= upgrade.max_stacks:
 		return false
-	if upgrade.for_ability >= 0 and (stats == null or stats.ability != upgrade.for_ability):
-		return false
 	if upgrade.for_weapon >= 0 and (stats == null or stats.main_weapon != upgrade.for_weapon):
 		return false
-	if stats != null and stats.max_hearts <= 1:
+	if stats != null:
 		for effect: Upgrade in effects_of(upgrade):
-			if effect.stat == Upgrade.Stat.MAX_HEARTS and effect.amount < 0.0:
+			if effect.stat == Upgrade.Stat.MAX_HP and effect.amount < 0.0 \
+					and stats.max_hp + effect.amount < MIN_MAX_HP_AFTER_CUT:
 				return false
 	return true
 
@@ -98,12 +106,12 @@ static func effects_of(upgrade: Upgrade) -> Array[Upgrade]:
 	return effects
 
 
-## "Kael only" for hero and weapon upgrades (empty for everyone's).
+## "Kael only" for weapon upgrades (empty for everyone's).
 static func hero_text(upgrade: Upgrade) -> String:
-	if upgrade.for_ability < 0 and upgrade.for_weapon < 0:
+	if upgrade.for_weapon < 0:
 		return ""
 	for character: CharacterStats in Characters.ALL:
-		if character.ability == upgrade.for_ability or character.main_weapon == upgrade.for_weapon:
+		if character.main_weapon == upgrade.for_weapon:
 			return "%s only" % character.hero_name
 	return ""
 
@@ -128,25 +136,25 @@ static func _apply_stat(upgrade: Upgrade, stats: CharacterStats, health: PlayerH
 			stats.fire_interval *= 1.0 - upgrade.amount
 		Upgrade.Stat.MOVE_SPEED:
 			stats.move_speed *= 1.0 + upgrade.amount
-		Upgrade.Stat.MAX_HEARTS:
-			stats.max_hearts = maxi(stats.max_hearts + int(upgrade.amount), 1)
-			health.max_hearts = stats.max_hearts
+		Upgrade.Stat.MAX_HP:
+			stats.max_hp = maxi(stats.max_hp + int(upgrade.amount), 1)
+			health.max_hp = stats.max_hp
 			if upgrade.amount > 0.0:
 				health.heal(int(upgrade.amount))
 			else:
-				health.hearts = mini(health.hearts, health.max_hearts)
+				health.hp = mini(health.hp, health.max_hp)
 		Upgrade.Stat.EXTRA_BOLT:
 			stats.projectile_count += int(upgrade.amount)
 		Upgrade.Stat.PIERCE:
 			stats.pierce += int(upgrade.amount)
 		Upgrade.Stat.PICKUP_RADIUS:
 			stats.pickup_radius *= 1.0 + upgrade.amount
-		Upgrade.Stat.ABILITY_COOLDOWN:
-			stats.ability_cooldown *= 1.0 - upgrade.amount
+		Upgrade.Stat.AUTO_COOLDOWN:
+			stats.auto_cooldown_scale *= 1.0 - upgrade.amount
 		Upgrade.Stat.HEAL:
 			health.heal(int(upgrade.amount))
-		Upgrade.Stat.ABILITY_POWER:
-			stats.ability_power *= 1.0 + upgrade.amount
+		Upgrade.Stat.AUTO_POWER:
+			stats.auto_power *= 1.0 + upgrade.amount
 		Upgrade.Stat.BULLET_SPEED:
 			stats.bullet_speed *= 1.0 + upgrade.amount
 		Upgrade.Stat.KILL_HEAL:
@@ -169,20 +177,8 @@ static func _apply_stat(upgrade: Upgrade, stats: CharacterStats, health: PlayerH
 			stats.ricochet += int(upgrade.amount)
 		Upgrade.Stat.HOMING:
 			stats.homing += upgrade.amount
-		Upgrade.Stat.DASH_GRACE:
-			stats.dash_grace += upgrade.amount
-		Upgrade.Stat.BLAST_DAMAGE:
-			stats.blast_damage = roundi(stats.blast_damage * (1.0 + upgrade.amount))
-		Upgrade.Stat.BLAST_HEAL:
-			stats.blast_heal += int(upgrade.amount)
-		Upgrade.Stat.HEX_DURATION:
-			stats.hex_duration += upgrade.amount
-		Upgrade.Stat.HEX_DAMAGE:
-			stats.hex_damage_multiplier += upgrade.amount
-		Upgrade.Stat.EFFIGY_DURATION:
-			stats.effigy_duration += upgrade.amount
-		Upgrade.Stat.EFFIGY_BURST:
-			stats.effigy_burst_damage = roundi(stats.effigy_burst_damage * (1.0 + upgrade.amount))
+		Upgrade.Stat.RECOVERY:
+			stats.recovery += upgrade.amount
 		Upgrade.Stat.WEAPON_REACH:
 			stats.weapon_reach *= 1.0 + upgrade.amount
 		Upgrade.Stat.WEAPON_SIZE:
@@ -223,8 +219,8 @@ static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -
 	var upgrade := get_upgrade(id)
 	var after_stats := stats.duplicate() as CharacterStats
 	var after_health := PlayerHealth.new()
-	after_health.max_hearts = health.max_hearts
-	after_health.hearts = health.hearts
+	after_health.max_hp = health.max_hp
+	after_health.hp = health.hp
 	apply_effect(upgrade, after_stats, after_health)
 	var lines: PackedStringArray = []
 	for effect: Upgrade in effects_of(upgrade):
@@ -242,31 +238,34 @@ static func _stat_preview(stat: Upgrade.Stat, stats: CharacterStats, after_stats
 			return "%s %.1f -> %.1f" % [rate_name, 1.0 / stats.fire_interval, 1.0 / after_stats.fire_interval]
 		Upgrade.Stat.MOVE_SPEED:
 			return "Speed %d -> %d" % [roundi(stats.move_speed), roundi(after_stats.move_speed)]
-		Upgrade.Stat.MAX_HEARTS:
-			return "Max hearts %d -> %d" % [stats.max_hearts, after_stats.max_hearts]
+		Upgrade.Stat.MAX_HP:
+			return "Max HP %d -> %d" % [stats.max_hp, after_stats.max_hp]
 		Upgrade.Stat.EXTRA_BOLT:
 			return "%s %d -> %d" % [COUNT_NAMES[stats.main_weapon], stats.projectile_count, after_stats.projectile_count]
 		Upgrade.Stat.PIERCE:
 			return "Pierce %d -> %d" % [stats.pierce, after_stats.pierce]
 		Upgrade.Stat.PICKUP_RADIUS:
 			return "Range %d -> %d" % [roundi(stats.pickup_radius), roundi(after_stats.pickup_radius)]
-		Upgrade.Stat.ABILITY_COOLDOWN:
-			return "Cooldown %.2fs -> %.2fs" % [stats.ability_cooldown, after_stats.ability_cooldown]
+		Upgrade.Stat.AUTO_COOLDOWN:
+			return "Auto cooldown %d%% -> %d%%" % [roundi(stats.auto_cooldown_scale * 100.0),
+				roundi(after_stats.auto_cooldown_scale * 100.0)]
 		Upgrade.Stat.HEAL:
-			return "Hearts %d -> %d" % [health.hearts, after_health.hearts]
-		Upgrade.Stat.ABILITY_POWER:
-			return "Power %d%% -> %d%%" % [roundi(stats.ability_power * 100.0), roundi(after_stats.ability_power * 100.0)]
+			return "HP %d -> %d" % [health.hp, after_health.hp]
+		Upgrade.Stat.AUTO_POWER:
+			return "Auto damage %d%% -> %d%%" % [roundi(stats.auto_power * 100.0), roundi(after_stats.auto_power * 100.0)]
 		Upgrade.Stat.BULLET_SPEED:
 			return "Bolt speed %d -> %d" % [roundi(stats.bullet_speed), roundi(after_stats.bullet_speed)]
 		Upgrade.Stat.KILL_HEAL:
-			return "Heal every %d kills" % after_stats.heal_every_kills
+			return "Heal 1 HP every %d kills" % after_stats.heal_every_kills
+		Upgrade.Stat.RECOVERY:
+			return "Recovery %.1f -> %.1f HP/s" % [stats.recovery, after_stats.recovery]
 		Upgrade.Stat.REVIVE_SPEED:
 			return "Revive speed %d%% -> %d%%" % [roundi(stats.revive_speed * 100.0), roundi(after_stats.revive_speed * 100.0)]
 		Upgrade.Stat.BULLET_RANGE:
 			return "Bolt range %d -> %d" % [roundi(stats.bullet_speed * stats.bullet_lifetime),
 				roundi(after_stats.bullet_speed * after_stats.bullet_lifetime)]
 		Upgrade.Stat.HIT_INVULNERABILITY:
-			return "Safe time %.1fs -> %.1fs" % [stats.hit_invulnerability, after_stats.hit_invulnerability]
+			return "Bullet safety %.2fs -> %.2fs" % [stats.hit_invulnerability, after_stats.hit_invulnerability]
 		Upgrade.Stat.CRIT_CHANCE:
 			return "Crit chance %d%% -> %d%%" % [roundi(stats.crit_chance * 100.0), roundi(after_stats.crit_chance * 100.0)]
 		Upgrade.Stat.KILL_BURST:
@@ -281,25 +280,6 @@ static func _stat_preview(stat: Upgrade.Stat, stats: CharacterStats, after_stats
 			return "Bounces %d -> %d" % [stats.ricochet, after_stats.ricochet]
 		Upgrade.Stat.HOMING:
 			return "Homing %d -> %d" % [roundi(stats.homing / HOMING_STEP), roundi(after_stats.homing / HOMING_STEP)]
-		Upgrade.Stat.DASH_GRACE:
-			return "Safe after Dash %.1fs -> %.1fs" % [stats.dash_grace, after_stats.dash_grace]
-		Upgrade.Stat.BLAST_DAMAGE:
-			return "Blast damage %d -> %d" % [roundi(stats.blast_damage * stats.ability_power),
-				roundi(after_stats.blast_damage * after_stats.ability_power)]
-		Upgrade.Stat.BLAST_HEAL:
-			return "Blast heals %d -> %d" % [stats.blast_heal, after_stats.blast_heal]
-		Upgrade.Stat.HEX_DURATION:
-			return "Hex %.1fs -> %.1fs" % [stats.hex_duration * stats.ability_power,
-				after_stats.hex_duration * after_stats.ability_power]
-		Upgrade.Stat.HEX_DAMAGE:
-			return "Vs hexed +%d%% -> +%d%%" % [roundi((stats.hex_damage_multiplier - 1.0) * 100.0),
-				roundi((after_stats.hex_damage_multiplier - 1.0) * 100.0)]
-		Upgrade.Stat.EFFIGY_DURATION:
-			return "Effigy %.1fs -> %.1fs" % [stats.effigy_duration * stats.ability_power,
-				after_stats.effigy_duration * after_stats.ability_power]
-		Upgrade.Stat.EFFIGY_BURST:
-			return "Burst %d -> %d" % [roundi(stats.effigy_burst_damage * stats.ability_power),
-				roundi(after_stats.effigy_burst_damage * after_stats.ability_power)]
 		Upgrade.Stat.WEAPON_REACH:
 			return "Reach %d -> %d" % [roundi(stats.weapon_reach), roundi(after_stats.weapon_reach)]
 		Upgrade.Stat.WEAPON_SIZE:
