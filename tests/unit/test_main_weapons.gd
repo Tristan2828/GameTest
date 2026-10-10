@@ -177,34 +177,22 @@ func test_splinters_spray_shards() -> void:
 
 # --- Upgrades, relics, pickups ---
 
-func test_weapon_upgrades_only_go_to_their_hero() -> void:
-	for title: String in ["Twin Scythes", "Forked Lightning", "Longer Row", "Extra Bolt", "Ricochet"]:
-		var upgrade := Upgrades.get_upgrade(_upgrade_id(title))
-		var takers := 0
-		for stats: CharacterStats in Characters.ALL:
-			if Upgrades.is_offered(upgrade, 0, true, stats):
-				takers += 1
-				assert_eq(stats.main_weapon, upgrade.for_weapon, title)
-		assert_eq(takers, 1, title)
-		assert_false(Upgrades.is_offered(upgrade, 0, true, null), "no stats: no weapon upgrades")
-
-
-func test_every_hero_has_weapon_upgrades() -> void:
+func test_weapon_level_steps_belong_to_their_hero() -> void:
 	for stats: CharacterStats in Characters.ALL:
-		var count := 0
-		for upgrade: Upgrade in Upgrades.ALL:
-			if upgrade.for_weapon == stats.main_weapon:
-				count += 1
-				assert_true(PixelArt.has_sprite(upgrade.icon), upgrade.title)
-		assert_gte(count, 4, stats.display_name)
+		assert_eq(stats.main_levels.size(), 5, stats.hero_name)
+		for step: Resource in stats.main_levels:
+			var upgrade := step as Upgrade
+			assert_eq(upgrade.for_weapon, stats.main_weapon, "%s: %s" % [stats.hero_name, upgrade.title])
+			assert_false(upgrade.passive, upgrade.title)
+			assert_true(PixelArt.has_sprite(upgrade.icon), upgrade.title)
 
 
 func test_weapon_upgrade_cards_name_the_right_thing() -> void:
 	var keeper := _hero_player(Characters.Id.GRAVEKEEPER)
-	assert_eq(Upgrades.preview_text(_upgrade_id("Twin Scythes"), keeper.stats, keeper.health), "Scythes 1 -> 2")
+	assert_eq(Upgrades.preview_text(_upgrade_id("Twin Scythes"), keeper.stats, keeper.health), "Scythes 1 -> 2\nDamage 40 -> 45")
 	var witch := _hero_player(Characters.Id.HEXBLADE_WITCH)
-	assert_eq(Upgrades.preview_text(_upgrade_id("Long Arc"), witch.stats, witch.health).split("\n").size(), 2,
-		"reach and jump range")
+	assert_eq(Upgrades.preview_text(_upgrade_id("Long Arc"), witch.stats, witch.health).split("\n").size(), 3,
+		"reach, jump range and damage")
 	witch.apply_upgrade(_upgrade_id("Long Arc"))
 	assert_almost_eq(witch.stats.weapon_reach, Characters.get_character(Characters.Id.HEXBLADE_WITCH).weapon_reach * 1.25, 0.01)
 
@@ -225,12 +213,12 @@ func test_bolt_relics_only_offered_to_bolt_heroes() -> void:
 	assert_true(seen_for_wanderer)
 
 
-func test_main_weapons_are_not_pickups() -> void:
+func test_auto_versions_of_hero_weapons_have_their_own_names() -> void:
 	for id: int in [AutoWeapons.Id.REAPERS_SCYTHE, AutoWeapons.Id.CHAIN_LIGHTNING, AutoWeapons.Id.BONE_SPEARS]:
-		assert_does_not_have(AutoWeapons.PICKUPS, id)
-	var player := _hero_player(Characters.Id.WANDERER)
-	for i: int in 100:
-		assert_has(AutoWeapons.PICKUPS, _weapons.random_upgradable_weapon(player))
+		assert_has(AutoWeapons.PICKUPS, id)
+		var title := AutoWeapons.get_weapon(id).title
+		for stats: CharacterStats in Characters.ALL:
+			assert_ne(title, stats.main_weapon_name, "auto weapon named like a hero's weapon")
 
 
 func test_run_summary_names_the_main_weapon() -> void:

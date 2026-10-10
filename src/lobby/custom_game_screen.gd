@@ -22,7 +22,7 @@ func _build_rows() -> void:
 	_slider("wave_seconds", "Wave length", "Horde time before the boss", RunConfigScreen.minutes)
 	_toggle("boss_enabled", "Boss", "Off: survive the timer to win")
 	_slider("bonus_levels", "Starting level-ups", "Upgrades everyone picks at the start", func(value: int) -> String: return str(value))
-	_toggle("start_with_weapons", "All weapons", "Start with every auto weapon")
+	_toggle("start_with_weapons", "Full arsenal", "Start with every weapon slot filled (random weapons)")
 	_toggle("ember_boosts", "Ember boosts", "Off: nobody's Ember Shrine boosts count")
 	_cycle("Soundtrack", "Music during the run (for everyone)", Tracks.SOUNDTRACKS,
 		func() -> int: return config.soundtrack,

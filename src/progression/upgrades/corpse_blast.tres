@@ -6,7 +6,8 @@
 script = ExtResource("1_upgrade")
 title = "Corpse Blast"
 icon = "up_corpse_blast"
-description = "Enemies you kill burst, dealing 10 damage around them"
+description = "Enemies you kill burst, dealing 8 damage around them"
 stat = 16
-amount = 10.0
-max_stacks = 3
+amount = 8.0
+max_stacks = 5
+passive = true

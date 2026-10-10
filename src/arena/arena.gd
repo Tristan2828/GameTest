@@ -29,10 +29,10 @@ const BOSS_HP_BY_DEPTH: Array[float] = [1.0, 4.5, 12.0]
 const SPAWN_RATE_BY_DEPTH: Array[float] = [1.0, 1.4, 1.8]
 ## How much harder enemies hit (touch and bullets) at each run depth.
 const DAMAGE_BY_DEPTH: Array[float] = [1.0, 1.3, 1.6]
-## Auto weapons hit this much harder at each run depth (they only have 3 levels,
-## while enemies get 4x / 9x tougher; v0.22.0's balance check had every auto
-## weapon together under 5% of the team's damage).
-const AUTO_DAMAGE_BY_DEPTH: Array[float] = [1.0, 2.0, 3.5]
+## Auto weapons hit this much harder at each run depth (enemies get 4x / 9x
+## tougher). v0.22.1 used 1 / 2 / 3.5 for 3-level weapons; with 5 levels from
+## level-up cards (v0.23.0) that let single auto weapons do over half the damage.
+const AUTO_DAMAGE_BY_DEPTH: Array[float] = [1.0, 1.5, 2.25]
 ## Enemies drop coins this much less often at each run depth (later stages bring
 ## far more kills of coin-rich enemies; v0.22.0 ended runs with 500-1000 coins
 ## unspent and every relic bought). Event and boss coins aren't affected.
@@ -209,9 +209,10 @@ func _ready() -> void:
 	_setup_stage()
 	if multiplayer.is_server():
 		_events.host_start_stage()
-	_level_up.bind_panel(_hud.level_up_panel, _local_player)
+	_level_up.bind_panel(_hud.level_up_panel, _local_player, _player_by_id, _ready_peer_list)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
 	_shop.relic_bought.connect(_on_relic_bought)
+	_shop.card_reroll_bought.connect(func(peer_id: int) -> void: _level_up.host_add_reroll(peer_id, _ready_peer_list()))
 	_weapons.bounds = BOUNDS
 	_enemies.enemy_vanished.connect(_on_enemy_vanished)
 	_enemies.enemy_crit.connect(_on_enemy_crit)
@@ -228,11 +229,11 @@ func _ready() -> void:
 	_power_ups.picked_up_at.connect(func(at: Vector2) -> void:
 		if _near_local_player(at, 80.0):
 			Sfx.play(&"pickup", -4.0))
-	_weapons.weapon_gained.connect(_on_weapon_gained)
+	_weapons.card_earned.connect(func(peer_id: int, card: int) -> void: _level_up.host_grant(peer_id, card, _ready_peer_list()))
 	_weapons.shards_requested.connect(_on_shards_requested)
 	_weapons.find_player = _player_by_id
 	_events.announced.connect(_on_event_announced)
-	_level_up.upgrade_announced.connect(_on_upgrade_announced)
+	_level_up.card_announced.connect(_on_card_announced)
 	_hud.run_summary.return_requested.connect(_request_restart)
 	if LaunchOptions.stage_seconds > 0.0:
 		_wave_duration = LaunchOptions.stage_seconds
@@ -572,14 +573,16 @@ func _add_player(peer_id: int) -> void:
 	var boosts := Net.boosts_of(peer_id) if _config.ember_boosts else PackedInt32Array()
 	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id),
 		"hp_bonus": _config.hp_bonus, "boosts": boosts})
-	if _config.start_with_weapons:
-		for weapon_id: int in AutoWeapons.PICKUPS:
-			_weapons.grant(peer_id, weapon_id, _ready_peer_list())
-	if LaunchOptions.give_weapons:
-		# Test aid: same path as real pickups (new joiners also get it via history).
-		for weapon_id: int in AutoWeapons.PICKUPS:
-			for level: int in 2:
-				_weapons.grant(peer_id, weapon_id, _ready_peer_list())
+	# Custom game "start with weapons" fills every weapon slot (level 1); the
+	# --give-weapons test aid does the same at level 3. Same path as real pickups
+	# (new joiners also get it via history).
+	var levels := 3 if LaunchOptions.give_weapons else (1 if _config.start_with_weapons else 0)
+	if levels > 0:
+		var pool := AutoWeapons.PICKUPS.duplicate()
+		pool.shuffle()
+		for weapon_id: int in pool.slice(0, AutoWeapons.WEAPON_SLOTS - 1):
+			for level: int in levels:
+				_level_up.host_grant(peer_id, Cards.weapon(weapon_id), _ready_peer_list())
 	for upgrade_id: int in LaunchOptions.give_upgrades:
 		_level_up.host_grant(peer_id, upgrade_id, _ready_peer_list())
 
@@ -913,8 +916,9 @@ func _print_balance_detail() -> void:
 		var relics: PackedStringArray = []
 		for relic_id: int in player.relic_ids:
 			relics.append(Relics.get_relic(relic_id).title)
-		print("[balance-picks] %s: coins %d  weapons [%s]  relics [%s]  upgrades [%s]" % [player.display_name(),
-			player.coins, ", ".join(weapons), ", ".join(relics), ", ".join(picks)])
+		print("[balance-picks] %s: coins %d  main Lv %d%s  weapons [%s]  relics [%s]  upgrades [%s]" % [
+			player.display_name(), player.coins, player.main_level, " (evolved)" if player.main_evolved else "",
+			", ".join(weapons), ", ".join(relics), ", ".join(picks)])
 	_balance_counts.clear()
 	_balance_coins_start = coins
 	_balance_source_start = by_source
@@ -1137,6 +1141,7 @@ func _on_enemy_killed(enemy: Enemy, killer_peer_id: int, source: int) -> void:
 	if enemy.type.is_boss:
 		# Don't end the stage mid-hit-check; the phase check does it this tick.
 		_boss_defeated = true
+		_evolve_ready_weapons()
 		print("Boss killed by peer %d at %.1fs" % [killer_peer_id, _elapsed])
 		return
 	if not _gems.spawn_host(enemy.position, enemy.type.xp_value):
@@ -1330,8 +1335,9 @@ func _on_champion_slain(at: Vector2, _champion_type: int) -> void:
 	_drop_power_up(at + Vector2(0, 18), PowerUps.pick_kind(_rng.randf()))
 
 
-## Host: the first player to touch a champion's chest gets an auto weapon (or a
-## level of one); with every weapon maxed, coins instead.
+## Host: the first player to touch a champion's chest gets an evolution if one
+## is ready, else a weapon (new, or a level of one they carry); with nothing
+## left to give, coins instead.
 func _on_chest_opened(peer_id: int, at: Vector2) -> void:
 	var player := _player_by_id(peer_id)
 	if player == null:
@@ -1339,16 +1345,34 @@ func _on_chest_opened(peer_id: int, at: Vector2) -> void:
 	_show_chest_opened(at)
 	for target: int in _ready_peers:
 		_receive_chest_opened.rpc_id(target, at)
-	var weapon_id := _weapons.random_upgradable_weapon(player)
-	if weapon_id < 0:
+	var card := Cards.chest_card(_rng, player)
+	if card < 0:
 		player.coins += CHEST_COINS_WHEN_MAXED
 		_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, CHEST_COINS_WHEN_MAXED)
 		_events.announce("%s opened the chest: %d coins!" % [player.display_name(), CHEST_COINS_WHEN_MAXED])
 		return
-	var level: int = player.weapon_levels.get(weapon_id, 0) + 1
-	_weapons.grant(peer_id, weapon_id, _ready_peer_list())
-	_events.announce("%s opened the chest: %s%s!" % [player.display_name(), AutoWeapons.get_weapon(weapon_id).title,
+	if Cards.is_evolution(card):
+		_grant_evolution(player, card)
+		return
+	var level := Cards.levels(card, player).x + 1
+	_level_up.host_grant(peer_id, card, _ready_peer_list())
+	_events.announce("%s opened the chest: %s%s!" % [player.display_name(), Cards.title(card, player.stats),
 		"" if level <= 1 else " Lv %d" % level])
+
+
+## Host: evolve a weapon (from a chest or a boss) and tell the team.
+func _grant_evolution(player: Player, card: int) -> void:
+	var before := Cards.title(Cards.MAIN_LEVEL if card == Cards.MAIN_EVOLUTION else Cards.weapon(
+		AutoWeapons.get_weapon(Cards.weapon_id(card)).evolves_from), player.stats)
+	_level_up.host_grant(player.peer_id, card, _ready_peer_list())
+	_events.announce("%s's %s evolved into %s!" % [player.display_name(), before, Cards.title(card, player.stats)])
+
+
+## Host: the boss fell; every player's ready evolutions happen now.
+func _evolve_ready_weapons() -> void:
+	for player: Player in _player_nodes():
+		for card: int in Cards.ready_evolutions(player):
+			_grant_evolution(player, card)
 
 
 ## Host: everyone in the circle heals, and a ring of XP gems worth most of a level appears.
@@ -1461,34 +1485,30 @@ func _on_coin_collected(value: int, collector_peer_id: int) -> void:
 		_quest_count(collector_peer_id, Quests.Id.GOLD_DIGGER, value)
 
 
-func _on_weapon_gained(peer_id: int, weapon_id: int) -> void:
-	if multiplayer.is_server():
-		if not _weapon_owned_since.has(peer_id):
-			_weapon_owned_since[peer_id] = {}
-		if not _weapon_owned_since[peer_id].has(weapon_id):
-			_weapon_owned_since[peer_id][weapon_id] = _run_stats.run_seconds
-	var player := _player_by_id(peer_id)
-	if player != null:
-		player.gain_weapon(weapon_id)
-		if player.is_local():
-			Sfx.play(&"pickup")
+## Host: when a weapon (or its evolution) arrived, for the run summary's per-weapon numbers.
+func _note_weapon_owned(peer_id: int, weapon_id: int) -> void:
+	if not _weapon_owned_since.has(peer_id):
+		_weapon_owned_since[peer_id] = {}
+	if not _weapon_owned_since[peer_id].has(weapon_id):
+		_weapon_owned_since[peer_id][weapon_id] = _run_stats.run_seconds
 
 
-## Host: a Seeking Bolts volley. Clients get a small event and spawn the same bolts.
-func _fire_seeker(shooter: Player, aim: float, level: int) -> void:
+## Host: a volley of bolts (Seeking Bolts, Soul Barrage, Spirit Daggers). Clients
+## get a small event and spawn the same bolts.
+func _fire_seeker(shooter: Player, aim: float, level: int, weapon_id: int) -> void:
 	var origin := shooter.state.position
-	_spawn_seeker(shooter.peer_id, origin, aim, level)
+	_spawn_seeker(shooter.peer_id, origin, aim, level, weapon_id)
 	for peer_id: int in _ready_peers:
-		_receive_seeker.rpc_id(peer_id, shooter.peer_id, origin, aim, level)
+		_receive_seeker.rpc_id(peer_id, shooter.peer_id, origin, aim, level, weapon_id)
 
 
-func _spawn_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
-	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.SEEKING_BOLTS)
+func _spawn_seeker(shooter_id: int, origin: Vector2, aim: float, level: int, weapon_id: int) -> void:
+	var weapon := AutoWeapons.get_weapon(weapon_id)
 	var shooter := _player_by_id(shooter_id)
 	var damage := _weapons.power(shooter, weapon.damage_at(level)) if shooter != null else weapon.damage_at(level)
-	for angle: float in AutoWeapons.seeker_angles(level, aim):
+	for angle: float in AutoWeapons.seeker_angles(level, aim, weapon_id):
 		_projectiles.spawn(origin, Vector2.from_angle(angle) * weapon.speed, damage,
-			weapon.reach / weapon.speed, shooter_id, 0, 0.0, DamageSource.of_weapon(AutoWeapons.Id.SEEKING_BOLTS))
+			weapon.reach / weapon.speed, shooter_id, 0, 0.0, DamageSource.of_weapon(weapon_id))
 
 
 func _on_relic_bought(peer_id: int, relic_id: int) -> void:
@@ -1524,10 +1544,21 @@ func _start_resume_countdown() -> void:
 	_resume_left = RESUME_COUNTDOWN_SECONDS
 
 
-func _on_upgrade_announced(peer_id: int, upgrade_id: int) -> void:
+## Every peer: a card for this player (a level-up pick, altar, chest, evolution).
+func _on_card_announced(peer_id: int, card: int) -> void:
 	var player := _player_by_id(peer_id)
-	if player != null:
-		player.apply_upgrade(upgrade_id)
+	if player == null:
+		return
+	var coins_before := player.coins
+	player.apply_card(card)
+	if multiplayer.is_server():
+		if player.coins > coins_before:
+			_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, player.coins - coins_before)
+		var weapon_id := Cards.weapon_id(card)
+		if weapon_id >= 0:
+			_note_weapon_owned(peer_id, weapon_id)
+	if player.is_local() and (Cards.is_weapon(card) or Cards.is_evolution(card)) and _phase != Phase.LEVEL_UP:
+		Sfx.play(&"pickup")
 
 
 ## The whole run has ended (the host can restart).
@@ -1873,7 +1904,7 @@ func _update_hud() -> void:
 	if local != null:
 		_hud.set_health(local.health.hp, local.health.max_hp)
 		_hud.set_coins(local.coins)
-		_hud.set_weapons(local.weapon_levels)
+		_hud.set_build(local)
 		_hud.set_quest(_quest_text(local), local.quest_id >= 0 and local.quest_progress >= Quests.TARGETS[local.quest_id])
 	var boss := _enemies.find_boss()
 	if boss == null and _elapsed < _wave_duration:
@@ -2058,7 +2089,6 @@ func _notify_ready() -> void:
 		_coins.send_full_state(peer_id)
 		_power_ups.send_full_state(peer_id)
 		_weapons.send_full_state(peer_id)
-		_weapons.send_history(peer_id, _player_nodes())
 		_level_up.host_send_history(peer_id, _player_nodes())
 		_shop.host_send_history(peer_id, _player_nodes())
 
@@ -2148,8 +2178,9 @@ func _apply_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2Arr
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
-	_spawn_seeker(shooter_id, origin, aim, level)
+func _receive_seeker(shooter_id: int, origin: Vector2, aim: float, level: int, weapon_id: int) -> void:
+	if AutoWeapons.is_valid_id(weapon_id):
+		_spawn_seeker(shooter_id, origin, aim, level, weapon_id)
 
 
 @rpc("authority", "call_remote", "reliable")

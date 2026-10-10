@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Soul Barrage"
+description = "Evolved Seeking Bolts: a storm of bolts at the nearest enemy"
+icon = "icon_soul_barrage"
+kind = 1
+color = Color(0.65, 0.95, 1, 1)
+damage = 50
+count = 4
+interval = 0.45
+radius = 0.0
+speed = 340.0
+reach = 300.0
+evolves_from = 1
+catalyst = 1

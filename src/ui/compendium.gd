@@ -1,8 +1,8 @@
 class_name Compendium
 extends ListScreen
 ## The title menu's "Game Guide" (called the Compendium until v0.18.0; the class
-## keeps the old name): info pages on heroes, auto weapons, level-up upgrades, relics,
-## pickups, map events and quests, enemies and bosses. Everything is read from the game's own data
+## keeps the old name): info pages on heroes, auto weapons, passives, evolutions,
+## relics, pickups, map events and quests, enemies and bosses. Everything is read from the game's own data
 ## (Characters, AutoWeapons, Upgrades, Relics, EnemyTypes, Stages), so it stays
 ## correct when numbers are tuned.
 
@@ -14,7 +14,8 @@ func _ready() -> void:
 	set_title("Game Guide")
 	add_tab("Heroes", _show_heroes)
 	add_tab("Weapons", _show_weapons)
-	add_tab("Upgrades", _show_upgrades)
+	add_tab("Passives", _show_upgrades)
+	add_tab("Evolutions", _show_evolutions)
 	add_tab("Relics", _show_relics)
 	add_tab("Pickups", _show_pickups)
 	add_tab("Events", _show_events)
@@ -49,6 +50,7 @@ func _show_heroes() -> void:
 	for stats: CharacterStats in Characters.ALL:
 		var text := _entry(stats.sprite, stats.full_name(), stats.blurb, hero_details(stats))
 		text.add_child(label("Main weapon - %s: %s" % [stats.main_weapon_name, main_weapon_text(stats)], 9, TITLE_COLOR, true))
+		text.add_child(label(main_levels_text(stats), 9, DIM_COLOR, true))
 		text.add_child(label("Perk - %s: %s" % [stats.perk_name, stats.perk_description], 9, TITLE_COLOR, true))
 
 
@@ -58,6 +60,14 @@ static func hero_details(stats: CharacterStats) -> String:
 		count = "  %s %d" % [Upgrades.COUNT_NAMES[stats.main_weapon], stats.projectile_count]
 	return "HP %d   Speed %d   Damage %d   Attacks/s %.1f%s" % [
 		stats.max_hp, roundi(stats.move_speed), stats.bullet_damage, 1.0 / stats.fire_interval, count]
+
+
+## "Levels: 2 Extra Bolt, 3 Piercing Bolts, ..." (each comes from a level-up card or an altar).
+static func main_levels_text(stats: CharacterStats) -> String:
+	var parts := PackedStringArray()
+	for i: int in stats.main_levels.size():
+		parts.append("%d %s" % [i + 2, (stats.main_levels[i] as Upgrade).title])
+	return "Levels: %s." % ", ".join(parts)
 
 
 ## What the hero's main weapon does (it fires by itself; see AutoAim).
@@ -74,7 +84,8 @@ static func main_weapon_text(stats: CharacterStats) -> String:
 
 func _show_weapons() -> void:
 	clear_list()
-	add_heading("On glowing altars (twice per stage) and in champions' chests. Taking one again levels it up (max %d). They fire on their own, next to your hero's main weapon." % AutoWeapons.MAX_LEVEL)
+	add_heading("Offered on level-up cards, on glowing altars and in champions' chests. You carry up to %d weapons, your hero's main weapon included; taking one again levels it up (max %d). They fire on their own." % [
+		AutoWeapons.WEAPON_SLOTS, AutoWeapons.MAX_LEVEL])
 	for weapon_id: int in AutoWeapons.PICKUPS:
 		var weapon := AutoWeapons.get_weapon(weapon_id)
 		_entry(weapon.icon, weapon.title, weapon.description, weapon_details(weapon), weapon.color)
@@ -83,7 +94,7 @@ func _show_weapons() -> void:
 ## "Lv 1: 8 dmg, 2 skulls   Lv 2: ..." for each level.
 static func weapon_details(weapon: AutoWeapon) -> String:
 	var parts := PackedStringArray()
-	for level: int in range(1, AutoWeapons.MAX_LEVEL + 1):
+	for level: int in range(1, weapon.max_level() + 1):
 		var text := "Lv %d: %d dmg" % [level, weapon.damage_at(level)]
 		match weapon.kind:
 			AutoWeapon.Kind.ORBIT:
@@ -107,23 +118,55 @@ static func weapon_details(weapon: AutoWeapon) -> String:
 					weapon.duration]
 			AutoWeapon.Kind.EFFIGY:
 				text += " burst every %.1fs, radius %d" % [weapon.interval_at(level), roundi(weapon.radius_at(level))]
+			AutoWeapon.Kind.DAGGERS:
+				text += ", %d dagger%s every %.1fs" % [weapon.count_at(level), "" if weapon.count_at(level) == 1 else "s",
+					weapon.interval_at(level)]
 		parts.append(text)
 	return "   ".join(parts)
 
 
 func _show_upgrades() -> void:
 	clear_list()
-	add_heading("Each level-up, every player picks 1 of 3. Squares on the card show how many you have.")
-	for upgrade: Upgrade in Upgrades.ALL:
-		if upgrade.retired:
+	add_heading("Each level-up, every player picks 1 of 3 cards: a new weapon or passive, or a level of one you carry. You carry up to %d passives (squares on the card show the level). With everything full, you get a heal or coins instead." % Upgrades.PASSIVE_SLOTS)
+	for id: int in Upgrades.passive_ids():
+		var upgrade := Upgrades.get_upgrade(id)
+		var details := "Up to level %d" % upgrade.max_stacks
+		var evolves := evolutions_needing(id)
+		if not evolves.is_empty():
+			details += "   Evolves: %s" % ", ".join(evolves)
+		_entry(upgrade.icon, upgrade.title, upgrade.description, details)
+	for id: int in [Cards.HEAL_FILLER, Cards.COIN_FILLER]:
+		var upgrade := Upgrades.get_upgrade(id)
+		_entry(upgrade.icon, upgrade.title, upgrade.description, "Only when there's nothing else to offer", DIM_COLOR)
+
+
+## Weapons that need this passive to evolve ("Bolt Gun (Kael)").
+static func evolutions_needing(passive_id: int) -> PackedStringArray:
+	var names := PackedStringArray()
+	for stats: CharacterStats in Characters.ALL:
+		if stats.evolution_catalyst == passive_id:
+			names.append("%s (%s)" % [stats.main_weapon_name, stats.hero_name])
+	for evolved: int in AutoWeapons.EVOLUTIONS:
+		if AutoWeapons.get_weapon(evolved).catalyst == passive_id:
+			names.append(AutoWeapons.get_weapon(AutoWeapons.get_weapon(evolved).evolves_from).title)
+	return names
+
+
+func _show_evolutions() -> void:
+	clear_list()
+	add_heading("Max out a weapon and carry its passive (any level). The next champion's chest you open, or the next boss your team beats, evolves it.")
+	for stats: CharacterStats in Characters.ALL:
+		var evolution := stats.evolution as Upgrade
+		if evolution == null:
 			continue
-		var limit := "No limit" if upgrade.max_stacks <= 0 else "Up to %d times" % upgrade.max_stacks
-		if upgrade.stat == Upgrade.Stat.HEAL:
-			limit = "Only offered when you're hurt"
-		var hero := Upgrades.hero_text(upgrade)
-		if not hero.is_empty():
-			limit = "%s   %s" % [hero, limit]
-		_entry(upgrade.icon, upgrade.title, upgrade.description, limit)
+		_entry(stats.evolved_weapon_icon, stats.evolved_weapon_name, evolution.description,
+			"%s (Lv %d, %s's main weapon) + %s" % [stats.main_weapon_name, stats.main_max_level(), stats.hero_name,
+				Upgrades.get_upgrade(stats.evolution_catalyst).title], TITLE_COLOR)
+	for evolved: int in AutoWeapons.EVOLUTIONS:
+		var weapon := AutoWeapons.get_weapon(evolved)
+		var base := AutoWeapons.get_weapon(weapon.evolves_from)
+		_entry(weapon.icon, weapon.title, weapon.description, "%s (Lv %d) + %s.   %s" % [base.title, base.max_level(),
+			Upgrades.get_upgrade(weapon.catalyst).title, weapon_details(weapon)], weapon.color)
 
 
 func _show_relics() -> void:
@@ -142,7 +185,7 @@ func _show_pickups() -> void:
 		"Small / medium / big crystals are worth more XP.")
 	_entry("coin", "Coins", "Some enemies drop coins. Whoever picks one up keeps it. Spend them in the shop between stages.",
 		"Beating a boss also pays everyone a bounty.")
-	_entry("icon_orbiting_skulls", "Weapon altars", "Appear twice per stage and show the weapon they hold. First player to touch one takes it.",
+	_entry("icon_orbiting_skulls", "Weapon altars", "Appear twice per stage (more with a bigger team) and show the weapon they hold. The first player to touch one gets it, or a level of it; if your slots are full, a level of a weapon you carry.",
 		"See the Weapons tab.")
 	for kind: int in PowerUps.TITLES.size():
 		_entry(PowerUps.SPRITES[kind], PowerUps.TITLES[kind], PowerUps.DESCRIPTIONS[kind],
@@ -157,7 +200,7 @@ func _show_events() -> void:
 	_entry("crown", "Champion lair", "A crowned champion sleeps somewhere in every stage and wakes when you come close. It's tough and shoots back. Beat it for coins, a power-up and a chest.",
 		"Wakes within %d px. +%d%% HP per extra player." % [roundi(MapEvents.WAKE_RADIUS), roundi(EnemyTypes.get_type(EnemyTypes.Id.GHOUL_CHAMPION).hp_per_extra_player * 100.0)],
 		MapEvents.CHAMPION_COLOR)
-	_entry("chest", "Champion's chest", "First player to touch it gets an auto weapon they can still level up (or %d coins if they're all maxed)." % Arena.CHEST_COINS_WHEN_MAXED,
+	_entry("chest", "Champion's chest", "The first player to touch it evolves a weapon if one is ready (see Evolutions), or else gets a weapon or a weapon level (%d coins if there's nothing left to give)." % Arena.CHEST_COINS_WHEN_MAXED,
 		"", MapEvents.CHEST_COLOR)
 	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills; with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d%% of their HP." % [roundi(Arena.RITUAL_XP_SHARE * 100.0), roundi(Arena.RITUAL_HEAL_SHARE * 100.0)],
 		"%ds to fill. One is placed at the start of each stage, another pops up later and fades if nobody starts it." % roundi(MapEvents.RITUAL_SECONDS),

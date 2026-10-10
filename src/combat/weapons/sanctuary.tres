@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Sanctuary"
+description = "Evolved Holy Aura: a wide ring of holy fire that burns everything around you"
+icon = "icon_sanctuary"
+kind = 2
+color = Color(1, 0.95, 0.65, 1)
+damage = 50
+count = 1
+interval = 0.4
+radius = 100.0
+speed = 0.0
+reach = 0.0
+evolves_from = 2
+catalyst = 37

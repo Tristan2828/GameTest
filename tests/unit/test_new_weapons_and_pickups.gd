@@ -43,9 +43,11 @@ func _ghoul(at: Vector2) -> Enemy:
 # --- Weapons ---
 
 func test_new_weapons_are_registered_with_icons() -> void:
-	assert_eq(AutoWeapons.ALL.size(), 10)
+	assert_eq(AutoWeapons.ALL.size(), 15)
 	for weapon: AutoWeapon in AutoWeapons.ALL:
 		assert_true(PixelArt.has_sprite(weapon.icon), weapon.title)
+		if weapon.is_evolution():
+			continue
 		if weapon.kind != AutoWeapon.Kind.HEX:  # Hex Snare binds instead of hurting.
 			assert_gt(weapon.damage_at(3), weapon.damage_at(1), weapon.title)
 		assert_lt(weapon.interval_at(3), weapon.interval_at(1) + 0.001, weapon.title)

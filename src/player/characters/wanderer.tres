@@ -1,6 +1,11 @@
 [gd_resource type="Resource" script_class="CharacterStats" format=3]
 
 [ext_resource type="Script" path="res://src/player/character_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/extra_bolt.tres" id="2_extra_bolt"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/piercing_bolts.tres" id="2_piercing_bolts"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/ricochet.tres" id="2_ricochet"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/hunting_bolts.tres" id="2_hunting_bolts"]
+[ext_resource type="Resource" path="res://src/player/evolutions/storm_bolter.tres" id="3_evolution"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -24,3 +29,8 @@ max_hp = 100
 hit_invulnerability = 0.5
 perk_name = "Light Feet"
 perk_description = "Moves 10% faster."
+main_levels = Array[Resource]([ExtResource("2_extra_bolt"), ExtResource("2_piercing_bolts"), ExtResource("2_ricochet"), ExtResource("2_extra_bolt"), ExtResource("2_hunting_bolts")])
+evolution = ExtResource("3_evolution")
+evolution_catalyst = 1
+evolved_weapon_name = "Storm Bolter"
+evolved_weapon_icon = "icon_storm_bolter"

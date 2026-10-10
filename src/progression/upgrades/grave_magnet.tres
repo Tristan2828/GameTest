@@ -6,7 +6,8 @@
 script = ExtResource("1_upgrade")
 title = "Grave Magnet"
 icon = "up_grave_magnet"
-description = "Pick up XP from 30% farther"
+description = "Pick up gems and coins from 25% farther"
 stat = 6
-amount = 0.3
-max_stacks = 4
+amount = 0.25
+max_stacks = 5
+passive = true

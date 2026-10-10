@@ -7,36 +7,7 @@ func _rng(seed_value: int = 1) -> RandomNumberGenerator:
 	return rng
 
 
-# --- Upgrades.roll ---
-
-func test_roll_gives_three_different_upgrades() -> void:
-	var no_upgrades: Array[int] = []
-	for seed_value: int in 50:
-		var choices := Upgrades.roll(_rng(seed_value), no_upgrades, true)
-		assert_eq(choices.size(), Upgrades.CHOICES_PER_LEVEL)
-		assert_ne(choices[0], choices[1])
-		assert_ne(choices[1], choices[2])
-		assert_ne(choices[0], choices[2])
-
-
-func test_heal_only_offered_when_hurt() -> void:
-	var heal_id := -1
-	for id: int in Upgrades.ALL.size():
-		if Upgrades.ALL[id].stat == Upgrade.Stat.HEAL:
-			heal_id = id
-	var no_upgrades: Array[int] = []
-	for seed_value: int in 100:
-		assert_does_not_have(Upgrades.roll(_rng(seed_value), no_upgrades, false), heal_id)
-
-
-func test_maxed_upgrades_are_not_offered() -> void:
-	var owned: Array[int] = []
-	var maxed_id := 4  # Extra Bolt, max 3
-	for i: int in Upgrades.get_upgrade(maxed_id).max_stacks:
-		owned.append(maxed_id)
-	for seed_value: int in 100:
-		assert_does_not_have(Upgrades.roll(_rng(seed_value), owned, true), maxed_id)
-
+# (Rolling level-up cards is tested in test_cards.gd.)
 
 # --- Upgrades.apply ---
 
@@ -45,8 +16,8 @@ func test_apply_changes_only_the_target_stat() -> void:
 	var health := PlayerHealth.new()
 	health.reset(stats.max_hp)
 	var base_speed := stats.move_speed
-	Upgrades.apply(0, stats, health)  # Sharpened Edge: +25% of Kael's 10, rounded
-	assert_eq(stats.bullet_damage, 13)
+	Upgrades.apply(0, stats, health)  # Sharpened Edge: +20% of Kael's 10
+	assert_eq(stats.bullet_damage, 12)
 	assert_eq(stats.move_speed, base_speed)
 
 
@@ -167,7 +138,8 @@ func test_piercing_bullet_passes_through_one_enemy() -> void:
 func test_level_text_counts_owned_stacks() -> void:
 	var owned: Array[int] = [4, 0, 4]  # two Extra Bolts (max 3)
 	assert_eq(Upgrades.level_text(4, owned), "Lv 2 -> 3 of 3")
-	assert_eq(Upgrades.level_text(0, owned), "Lv 1 -> 2")  # Sharpened Bolts, no limit
+	assert_eq(Upgrades.level_text(0, owned), "Lv 1 -> 2 of 5")  # Sharpened Edge, a passive
+	assert_eq(Upgrades.level_text(Cards.COIN_FILLER, owned), "Lv 0 -> 1")  # no limit
 
 
 func test_preview_shows_stat_before_and_after_without_changing_it() -> void:
@@ -177,12 +149,12 @@ func test_preview_shows_stat_before_and_after_without_changing_it() -> void:
 	var health := PlayerHealth.new()
 	health.reset(100)
 	health.hp = 10
-	assert_eq(Upgrades.preview_text(0, stats, health), "Damage 10 -> 13")
-	assert_eq(Upgrades.preview_text(4, stats, health), "Bolts 2 -> 3")
+	assert_eq(Upgrades.preview_text(0, stats, health), "Damage 10 -> 12")
+	assert_eq(Upgrades.preview_text(4, stats, health), "Bolts 2 -> 3\nDamage 10 -> 12")
 	assert_eq(Upgrades.preview_text(8, stats, health), "HP 10 -> 50")
 	assert_eq(stats.bullet_damage, 10)
 	assert_eq(health.hp, 10)
 	for id: int in Upgrades.ALL.size():
-		if Upgrades.get_upgrade(id).retired:
+		if Upgrades.get_upgrade(id).retired or Upgrades.get_upgrade(id).stat == Upgrade.Stat.COINS:
 			continue
 		assert_ne(Upgrades.preview_text(id, stats, health), "", "upgrade %d has a preview" % id)

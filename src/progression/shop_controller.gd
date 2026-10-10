@@ -9,6 +9,8 @@ extends Node
 
 ## Every peer: this player bought this relic (the arena applies it).
 signal relic_bought(peer_id: int, relic_id: int)
+## Host: this player bought a level-up card reroll (the level-up controller keeps the count).
+signal card_reroll_bought(peer_id: int)
 
 const AUTOPILOT_DELAY: float = 1.0
 
@@ -40,6 +42,7 @@ func bind(panel: ShopPanel, find_player: Callable, get_ready_peers: Callable) ->
 	_get_ready_peers = get_ready_peers
 	_panel.buy_pressed.connect(_buy_locally)
 	_panel.reroll_pressed.connect(_reroll_locally)
+	_panel.card_reroll_pressed.connect(_buy_card_reroll_locally)
 	_panel.ready_pressed.connect(_ready_locally)
 	_panel.quest_pressed.connect(_choose_quest_locally)
 
@@ -127,6 +130,14 @@ func _host_reroll(peer_id: int) -> void:
 	_send_offers(peer_id)
 
 
+func _host_buy_card_reroll(peer_id: int) -> void:
+	var player: Player = _find_player.call(peer_id)
+	if player == null or not _session.can_buy_card_reroll(peer_id, player.coins):
+		return
+	player.coins -= ShopSession.CARD_REROLL_PRICE
+	card_reroll_bought.emit(peer_id)
+
+
 func _host_ready(peer_id: int) -> void:
 	_session.mark_ready(peer_id)
 	_refresh_host_status()
@@ -178,7 +189,8 @@ func refresh_panel(local_player: Player, name_of: Callable) -> void:
 		parts.append("Waiting for %s" % ", ".join(names))
 	if countdown_left >= 0.0:
 		parts.append("%ds left" % ceili(countdown_left))
-	_panel.refresh(local_player.coins, local_player.relic_ids, _ready_sent, "   ".join(parts), _my_reroll_price, _my_quest)
+	_panel.refresh(local_player.coins, local_player.relic_ids, _ready_sent, "   ".join(parts), _my_reroll_price, _my_quest,
+		local_player.card_rerolls)
 
 
 func _show_offers(offers: Array[int], reroll_price: int, quests: Array[int]) -> void:
@@ -221,6 +233,13 @@ func _choose_quest_locally(quest_id: int) -> void:
 		_host_choose_quest(multiplayer.get_unique_id(), quest_id)
 	else:
 		_request_quest.rpc_id(1, quest_id)
+
+
+func _buy_card_reroll_locally() -> void:
+	if multiplayer.is_server():
+		_host_buy_card_reroll(multiplayer.get_unique_id())
+	else:
+		_request_card_reroll.rpc_id(1)
 
 
 func _reroll_locally() -> void:
@@ -281,6 +300,12 @@ func _request_buy(relic_id: int) -> void:
 func _request_reroll() -> void:
 	if multiplayer.is_server():
 		_host_reroll(multiplayer.get_remote_sender_id())
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_card_reroll() -> void:
+	if multiplayer.is_server():
+		_host_buy_card_reroll(multiplayer.get_remote_sender_id())
 
 
 @rpc("any_peer", "call_remote", "reliable")

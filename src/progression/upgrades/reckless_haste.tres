@@ -15,4 +15,5 @@ description = "Fire 25% faster, but move 10% slower"
 stat = 1
 amount = 0.25
 max_stacks = 2
+retired = true
 extra_effects = Array[Resource]([SubResource("effect_0")])

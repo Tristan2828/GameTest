@@ -6,7 +6,8 @@
 script = ExtResource("1_upgrade")
 title = "Steady Nerves"
 icon = "up_steady_nerves"
-description = "Bullets can't hit you again for 0.15s longer after one does"
+description = "Bullets can't hit you again for 0.1s longer after one does"
 stat = 14
-amount = 0.15
-max_stacks = 3
+amount = 0.1
+max_stacks = 5
+passive = true

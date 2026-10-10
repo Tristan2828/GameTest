@@ -2,12 +2,18 @@
 
 [ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
 
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 0
+amount = 3.0
+
 [resource]
 script = ExtResource("1_upgrade")
 title = "Quick Rise"
 icon = "up_quick_rise"
-description = "Spears rise 30% sooner"
+description = "Spears rise 30% sooner, +3 damage"
 stat = 30
 amount = 0.3
 max_stacks = 2
 for_weapon = 3
+extra_effects = Array[Resource]([SubResource("effect_0")])

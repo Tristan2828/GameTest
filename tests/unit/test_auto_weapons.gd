@@ -36,9 +36,13 @@ func _run(seconds: float) -> void:
 
 func test_weapons_get_stronger_with_level() -> void:
 	for weapon: AutoWeapon in AutoWeapons.ALL:
+		if weapon.is_evolution():
+			assert_eq(weapon.max_level(), 1, weapon.title)
+			continue
+		var top := weapon.max_level()
 		if weapon.kind != AutoWeapon.Kind.HEX:  # Hex Snare binds instead of hurting.
-			assert_gt(weapon.damage_at(3), weapon.damage_at(1), weapon.title)
-		assert_true(weapon.interval_at(3) <= weapon.interval_at(1), weapon.title)
+			assert_gt(weapon.damage_at(top), weapon.damage_at(1), weapon.title)
+		assert_true(weapon.interval_at(top) <= weapon.interval_at(1), weapon.title)
 
 
 func test_orbit_positions_are_deterministic_and_spaced() -> void:
@@ -81,7 +85,8 @@ func test_seeker_fires_at_enemies_in_range() -> void:
 
 func test_orbiting_skulls_bite_with_a_cooldown() -> void:
 	_player.gain_weapon(AutoWeapons.Id.ORBITING_SKULLS)
-	var ghoul := _enemies.spawn(EnemyTypes.Id.GHOUL, Vector2(530, 500))
+	var orbit := AutoWeapons.get_weapon(AutoWeapons.Id.ORBITING_SKULLS).reach
+	var ghoul := _enemies.spawn(EnemyTypes.Id.GHOUL, Vector2(500 + orbit, 500))
 	_run(0.5)
 	var damage := AutoWeapons.get_weapon(AutoWeapons.Id.ORBITING_SKULLS).damage_at(1)
 	var hits := (ghoul.max_hp - ghoul.hp) / damage
@@ -109,7 +114,7 @@ func test_altar_appears_on_schedule_and_is_grabbed_by_touch() -> void:
 	_player.state.position = _weapons.nearest_altar(_player.state.position)
 	_weapons.tick_host(DELTA, WeaponSystem.ALTAR_TIMES[0] + 1.0, _players(), _enemies, no_peers)
 	assert_eq(_weapons.altar_count(), 0)
-	assert_signal_emitted(_weapons, "weapon_gained")
+	assert_signal_emitted(_weapons, "card_earned")
 
 
 func test_maxed_weapon_altar_gives_coins_instead() -> void:
@@ -117,10 +122,27 @@ func test_maxed_weapon_altar_gives_coins_instead() -> void:
 	_weapons._add_altar(7, Vector2(500, 500), AutoWeapons.Id.HOLY_AURA)
 	for i: int in AutoWeapons.MAX_LEVEL:
 		_player.gain_weapon(AutoWeapons.Id.HOLY_AURA)
+	for i: int in _player.stats.main_max_level() - 1:
+		_player.apply_card(Cards.MAIN_LEVEL)
+	for weapon_id: int in [AutoWeapons.Id.ORBITING_SKULLS, AutoWeapons.Id.SEEKING_BOLTS, AutoWeapons.Id.HELLFIRE_TRAIL,
+			AutoWeapons.Id.GRAVE_BLAST]:
+		for i: int in AutoWeapons.MAX_LEVEL:
+			_player.gain_weapon(weapon_id)
 	watch_signals(_weapons)
 	_weapons.tick_host(DELTA, 0.0, _players(), _enemies, no_peers)
-	assert_signal_not_emitted(_weapons, "weapon_gained")
+	assert_signal_not_emitted(_weapons, "card_earned", "every slot full and maxed")
 	assert_eq(_player.coins, WeaponSystem.MAXED_WEAPON_COINS)
+
+
+func test_maxed_altar_weapon_levels_another_weapon_instead() -> void:
+	var no_peers: Array[int] = []
+	_weapons._add_altar(7, Vector2(500, 500), AutoWeapons.Id.HOLY_AURA)
+	for i: int in AutoWeapons.MAX_LEVEL:
+		_player.gain_weapon(AutoWeapons.Id.HOLY_AURA)
+	watch_signals(_weapons)
+	_weapons.tick_host(DELTA, 0.0, _players(), _enemies, no_peers)
+	assert_eq(get_signal_parameters(_weapons, "card_earned"), [_player.peer_id, Cards.MAIN_LEVEL],
+		"the only other weapon carried is the main weapon")
 
 
 func test_bigger_teams_get_an_altar_near_more_players() -> void:

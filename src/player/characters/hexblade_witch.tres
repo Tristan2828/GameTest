@@ -1,6 +1,11 @@
 [gd_resource type="Resource" script_class="CharacterStats" format=3]
 
 [ext_resource type="Script" path="res://src/player/character_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/forked_lightning.tres" id="2_forked_lightning"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/long_arc.tres" id="2_long_arc"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/conductor.tres" id="2_conductor"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/split_bolt.tres" id="2_split_bolt"]
+[ext_resource type="Resource" path="res://src/player/evolutions/tempest.tres" id="3_evolution"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -27,3 +32,8 @@ hit_invulnerability = 0.5
 perk_name = "Hexborn"
 perk_description = "+10% chance for her lightning to deal double damage."
 crit_chance = 0.1
+main_levels = Array[Resource]([ExtResource("2_forked_lightning"), ExtResource("2_long_arc"), ExtResource("2_conductor"), ExtResource("2_split_bolt"), ExtResource("2_forked_lightning")])
+evolution = ExtResource("3_evolution")
+evolution_catalyst = 13
+evolved_weapon_name = "Tempest"
+evolved_weapon_icon = "icon_tempest"

@@ -6,7 +6,8 @@
 script = ExtResource("1_upgrade")
 title = "Fleet Foot"
 icon = "up_fleet_foot"
-description = "Move 10% faster"
+description = "Move 8% faster"
 stat = 2
-amount = 0.1
+amount = 0.08
 max_stacks = 5
+passive = true

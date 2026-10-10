@@ -94,6 +94,17 @@ enum MainWeapon { BOLTS, SCYTHE, LIGHTNING, SPEARS }
 ## Spears: bone shards each spear sprays out when it strikes.
 @export var spear_shards: int = 0
 
+@export_group("Weapon levels")
+## The main weapon's level steps (v0.23.0): Upgrade resources applied at levels
+## 2, 3, ... from level-up cards and altars. The weapon starts at level 1.
+@export var main_levels: Array[Resource] = []
+## Applied once when the maxed main weapon evolves (needs the catalyst passive).
+@export var evolution: Resource = null
+## The passive (Upgrades id) the main weapon needs to evolve.
+@export var evolution_catalyst: int = -1
+@export var evolved_weapon_name: String = ""
+@export var evolved_weapon_icon: String = ""
+
 @export_group("Damage bonuses")
 ## Damage added as a share of the hero's starting damage (0.25 = +25%; Sharpened
 ## Edge, Glass Cannon, Cursed Skull). Raises bullet_damage, and auto weapons hit
@@ -105,6 +116,11 @@ enum MainWeapon { BOLTS, SCYTHE, LIGHTNING, SPEARS }
 @export var wounded_damage_bonus: float = 0.0
 ## Enemies this player kills burst for this much damage around them (0 = no burst).
 @export var kill_burst_damage: int = 0
+
+
+## The main weapon's top level (it starts at 1).
+func main_max_level() -> int:
+	return 1 + main_levels.size()
 
 
 ## "Kael the Wanderer".

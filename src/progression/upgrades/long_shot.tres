@@ -10,4 +10,5 @@ description = "Bolts fly 30% farther"
 stat = 13
 amount = 0.3
 max_stacks = 3
+retired = true
 for_weapon = 0

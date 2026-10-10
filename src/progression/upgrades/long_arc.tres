@@ -7,13 +7,18 @@ script = ExtResource("1_upgrade")
 stat = 29
 amount = 0.25
 
+[sub_resource type="Resource" id="effect_1"]
+script = ExtResource("1_upgrade")
+stat = 0
+amount = 2.0
+
 [resource]
 script = ExtResource("1_upgrade")
 title = "Long Arc"
 icon = "up_long_arc"
-description = "Lightning strikes and jumps 25% farther"
+description = "Lightning strikes and jumps 25% farther, +2 damage"
 stat = 28
 amount = 0.25
 max_stacks = 3
 for_weapon = 2
-extra_effects = Array[Resource]([SubResource("effect_0")])
+extra_effects = Array[Resource]([SubResource("effect_0"), SubResource("effect_1")])

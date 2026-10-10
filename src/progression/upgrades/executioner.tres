@@ -6,7 +6,8 @@
 script = ExtResource("1_upgrade")
 title = "Executioner"
 icon = "up_executioner"
-description = "All your damage +30% against enemies below half health"
+description = "All your damage +15% against enemies below half health"
 stat = 18
-amount = 0.3
-max_stacks = 3
+amount = 0.15
+max_stacks = 5
+passive = true

@@ -10,3 +10,4 @@ description = "Your auto weapons recharge 12% faster"
 stat = 7
 amount = 0.12
 max_stacks = 3
+retired = true

@@ -15,4 +15,5 @@ description = "+50% damage for all your weapons, but -20 max HP"
 stat = 36
 amount = 0.5
 max_stacks = 1
+retired = true
 extra_effects = Array[Resource]([SubResource("effect_0")])

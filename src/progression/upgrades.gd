@@ -1,9 +1,12 @@
 class_name Upgrades
 extends RefCounted
-## Registry of level-up upgrades, plus the rules for rolling and applying them.
+## Registry of upgrades: passives (offered on level-up cards, see Cards), the
+## main weapons' level steps, filler cards (heal, coins), plus the rules for
+## applying them. Relics are lists of these effects too.
 ## The index in ALL is the id sent over the network: only add new ones at the end.
 
-const CHOICES_PER_LEVEL: int = 3
+## Passive slots per player (v0.23.0).
+const PASSIVE_SLOTS: int = 6
 ## Homing turn rate one Hunting Bolts pick adds (radians per second); cards count picks.
 const HOMING_STEP: float = 2.5
 ## What "+1" counts for each main weapon (CharacterStats.MainWeapon) on cards.
@@ -48,9 +51,8 @@ const ALL: Array[Upgrade] = [
 	preload("res://src/progression/upgrades/quick_rise.tres"),
 	preload("res://src/progression/upgrades/splinters.tres"),
 	preload("res://src/progression/upgrades/ghoul_blood.tres"),
+	preload("res://src/progression/upgrades/coin_pouch.tres"),
 ]
-## A max-HP cut is never offered if it would leave the hero below this.
-const MIN_MAX_HP_AFTER_CUT: int = 30
 
 
 static func get_upgrade(id: int) -> Upgrade:
@@ -61,41 +63,13 @@ static func is_valid_id(id: int) -> bool:
 	return id >= 0 and id < ALL.size()
 
 
-## Rolls up to CHOICES_PER_LEVEL different upgrade ids. Skips maxed-out and
-## retired ones, only offers healing to a player who is hurt, weapon-only
-## upgrades to that weapon's hero (`stats`; none without it), auto weapon boosts
-## only to someone with an auto weapon, and never a max-HP cut that would leave
-## too little.
-static func roll(rng: RandomNumberGenerator, owned: Array[int], is_hurt: bool,
-		stats: CharacterStats = null, has_auto_weapons: bool = true) -> Array[int]:
-	var pool: Array[int] = []
+## Every passive's id, in registry order.
+static func passive_ids() -> Array[int]:
+	var ids: Array[int] = []
 	for id: int in ALL.size():
-		if is_offered(ALL[id], owned.count(id), is_hurt, stats, has_auto_weapons):
-			pool.append(id)
-	var result: Array[int] = []
-	while not pool.is_empty() and result.size() < CHOICES_PER_LEVEL:
-		result.append(pool.pop_at(rng.randi() % pool.size()))
-	return result
-
-
-static func is_offered(upgrade: Upgrade, stacks: int, is_hurt: bool, stats: CharacterStats,
-		has_auto_weapons: bool = true) -> bool:
-	if upgrade.retired:
-		return false
-	if not has_auto_weapons and (upgrade.stat == Upgrade.Stat.AUTO_COOLDOWN or upgrade.stat == Upgrade.Stat.AUTO_POWER):
-		return false
-	if upgrade.stat == Upgrade.Stat.HEAL and not is_hurt:
-		return false
-	if upgrade.max_stacks > 0 and stacks >= upgrade.max_stacks:
-		return false
-	if upgrade.for_weapon >= 0 and (stats == null or stats.main_weapon != upgrade.for_weapon):
-		return false
-	if stats != null:
-		for effect: Upgrade in effects_of(upgrade):
-			if effect.stat == Upgrade.Stat.MAX_HP and effect.amount < 0.0 \
-					and stats.max_hp + effect.amount < MIN_MAX_HP_AFTER_CUT:
-				return false
-	return true
+		if ALL[id].passive and not ALL[id].retired:
+			ids.append(id)
+	return ids
 
 
 ## The upgrade's own effect followed by its extra effects.
@@ -222,7 +196,11 @@ static func level_text(id: int, owned: Array[int]) -> String:
 ## "Damage 13 -> 16" (one line per effect). Applies the upgrade to copies, so
 ## it uses the same math.
 static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -> String:
-	var upgrade := get_upgrade(id)
+	return effect_preview(get_upgrade(id), stats, health)
+
+
+## The same for any Upgrade resource (a main weapon level step, an evolution).
+static func effect_preview(upgrade: Upgrade, stats: CharacterStats, health: PlayerHealth) -> String:
 	var after_stats := stats.duplicate() as CharacterStats
 	var after_health := PlayerHealth.new()
 	after_health.max_hp = health.max_hp
@@ -230,7 +208,9 @@ static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -
 	apply_effect(upgrade, after_stats, after_health)
 	var lines: PackedStringArray = []
 	for effect: Upgrade in effects_of(upgrade):
-		lines.append(_stat_preview(effect.stat, stats, after_stats, health, after_health))
+		var line := _stat_preview(effect.stat, stats, after_stats, health, after_health)
+		if not line.is_empty():
+			lines.append(line)
 	return "\n".join(lines)
 
 

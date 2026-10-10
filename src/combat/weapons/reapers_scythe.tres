@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1_weapon")
-title = "Reaper's Scythe"
-description = "A spinning scythe flies out the way you face and comes back, cutting everything twice"
-icon = "icon_reapers_scythe"
+title = "Bone Cleaver"
+description = "Hurls a spinning cleaver toward your target; it flies out and comes back, cutting everything twice"
+icon = "icon_bone_cleaver"
 kind = 4
 color = Color(0.8, 0.85, 0.95, 1)
 damage = 18
@@ -20,3 +20,4 @@ radius_per_level = 1.0
 speed = 0.0
 reach = 110.0
 duration = 1.2
+sprite = "cleaver"

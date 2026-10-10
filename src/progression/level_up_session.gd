@@ -10,9 +10,9 @@ extends RefCounted
 
 const COUNTDOWN_SECONDS: float = 30.0
 
-## peer id -> offered upgrade ids
+## peer id -> offered cards (Cards)
 var choices: Dictionary[int, Array] = {}
-## peer id -> chosen upgrade id
+## peer id -> chosen card
 var picks: Dictionary[int, int] = {}
 ## Seconds left after the first pick; negative = not started yet.
 var countdown_left: float = -1.0

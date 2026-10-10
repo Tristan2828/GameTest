@@ -405,24 +405,22 @@ func _best_score(stats: RunStats) -> int:
 	return -1 if tied else best_id
 
 
-## "Build:" then one wrapping row of icons: auto weapons (with level pips),
-## upgrades ("x2" when taken twice) and relics.
+## "Build:" then one wrapping row of icons: weapons (main weapon first, with
+## level pips), passives and other upgrades ("x2" when taken twice) and relics.
 func _build_row(player: Player, width: int) -> VBoxContainer:
 	var icons := _upgrade_icons(player)
 	icons.append_array(_relic_icons(player))
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 1)
-	var empty := icons.is_empty() and player.weapon_levels.is_empty()
-	box.add_child(_label("Build:" + (" nothing yet" if empty else ""), 9, VALUE_COLOR, false))
+	box.add_child(_label("Build:", 9, VALUE_COLOR, false))
 	var flow := HFlowContainer.new()
 	flow.custom_minimum_size.x = width - 12
 	flow.add_theme_constant_override("h_separation", 3)
 	flow.add_theme_constant_override("v_separation", 1)
 	box.add_child(flow)
-	if not player.weapon_levels.is_empty():
-		var weapons := WeaponIcons.new()
-		weapons.set_weapons(player.weapon_levels)
-		flow.add_child(weapons)
+	var weapons := WeaponIcons.new()
+	weapons.set_entries(WeaponIcons.weapon_entries(player))
+	flow.add_child(weapons)
 	for entry: Array in icons:
 		var item := HBoxContainer.new()
 		item.add_theme_constant_override("separation", 0)

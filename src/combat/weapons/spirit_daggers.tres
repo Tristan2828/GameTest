@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Spirit Daggers"
+description = "Throws ghostly daggers the way you last moved, and behind you"
+icon = "icon_spirit_daggers"
+kind = 10
+color = Color(0.75, 0.95, 0.9, 1)
+damage = 14
+damage_per_level = 6
+count = 1
+count_per_level = 1
+interval = 0.9
+interval_scale_per_level = 0.9
+radius = 0.0
+radius_per_level = 0.0
+speed = 300.0
+reach = 230.0

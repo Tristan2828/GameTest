@@ -2,12 +2,18 @@
 
 [ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
 
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 0
+amount = 5.0
+
 [resource]
 script = ExtResource("1_upgrade")
 title = "Twin Scythes"
 icon = "up_twin_scythes"
-description = "+1 scythe per throw, fanned out"
+description = "+1 scythe per throw, fanned out, +5 damage"
 stat = 4
 amount = 1.0
 max_stacks = 2
 for_weapon = 1
+extra_effects = Array[Resource]([SubResource("effect_0")])

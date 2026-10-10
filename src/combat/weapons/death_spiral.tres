@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Death Spiral"
+description = "Evolved Orbiting Skulls: a whirl of six skulls that never stops biting"
+icon = "icon_death_spiral"
+kind = 0
+color = Color(0.85, 1, 0.75, 1)
+damage = 80
+count = 6
+interval = 0.4
+radius = 9.0
+speed = 4.5
+reach = 60.0
+evolves_from = 0
+catalyst = 12

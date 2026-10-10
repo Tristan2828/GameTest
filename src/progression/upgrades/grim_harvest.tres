@@ -2,12 +2,18 @@
 
 [ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
 
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 0
+amount = 5.0
+
 [resource]
 script = ExtResource("1_upgrade")
 title = "Grim Harvest"
 icon = "up_grim_harvest"
-description = "Your scythe can cut each enemy 3 times per throw"
+description = "Your scythe can cut each enemy 3 times per throw, +5 damage"
 stat = 33
 amount = 1.0
 max_stacks = 1
 for_weapon = 1
+extra_effects = Array[Resource]([SubResource("effect_0")])

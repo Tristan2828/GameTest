@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Inferno Path"
+description = "Evolved Hellfire Trail: a wide river of fire follows you"
+icon = "icon_inferno_path"
+kind = 5
+color = Color(1, 0.35, 0.15, 1)
+damage = 90
+count = 1
+interval = 0.4
+radius = 22.0
+speed = 0.0
+reach = 0.0
+duration = 7.0
+evolves_from = 5
+catalyst = 2

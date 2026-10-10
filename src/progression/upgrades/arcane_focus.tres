@@ -9,4 +9,5 @@ icon = "up_arcane_focus"
 description = "Your auto weapons deal 15% more damage"
 stat = 9
 amount = 0.15
-max_stacks = 3
+max_stacks = 5
+passive = true

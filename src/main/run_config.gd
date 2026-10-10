@@ -123,7 +123,7 @@ func summary() -> String:
 	if bonus_levels > 0:
 		extras += "   +%d levels" % bonus_levels
 	if start_with_weapons:
-		extras += "   all weapons"
+		extras += "   full arsenal"
 	if not ember_boosts:
 		extras += "   no Ember boosts"
 	if soundtrack != 0:

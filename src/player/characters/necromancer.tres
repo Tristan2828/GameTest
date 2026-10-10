@@ -1,6 +1,11 @@
 [gd_resource type="Resource" script_class="CharacterStats" format=3]
 
 [ext_resource type="Script" path="res://src/player/character_stats.gd" id="1_stats"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/longer_row.tres" id="2_longer_row"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/wide_spikes.tres" id="2_wide_spikes"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/quick_rise.tres" id="2_quick_rise"]
+[ext_resource type="Resource" path="res://src/progression/upgrades/splinters.tres" id="2_splinters"]
+[ext_resource type="Resource" path="res://src/player/evolutions/bone_cathedral.tres" id="3_evolution"]
 
 [resource]
 script = ExtResource("1_stats")
@@ -16,7 +21,7 @@ main_weapon_icon = "icon_bone_spears"
 weapon_radius = 11.0
 weapon_duration = 0.3
 fire_interval = 0.5
-bullet_damage = 20
+bullet_damage = 24
 pierce = 0
 hitbox_radius = 2.0
 pickup_radius = 40.0
@@ -27,3 +32,8 @@ hit_invulnerability = 0.5
 perk_name = "Grave Harvest"
 perk_description = "Enemies she kills burst for 8 damage around them."
 kill_burst_damage = 8
+main_levels = Array[Resource]([ExtResource("2_longer_row"), ExtResource("2_wide_spikes"), ExtResource("2_quick_rise"), ExtResource("2_splinters"), ExtResource("2_longer_row")])
+evolution = ExtResource("3_evolution")
+evolution_catalyst = 14
+evolved_weapon_name = "Bone Cathedral"
+evolved_weapon_icon = "icon_bone_cathedral"

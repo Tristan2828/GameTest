@@ -3,18 +3,26 @@ extends RefCounted
 ## Registry of automatic weapons, plus the pure math every peer shares.
 ## The index in ALL is the network id: only add new weapons at the end.
 
+## CHAIN_LIGHTNING, REAPERS_SCYTHE and BONE_SPEARS keep their old names here, but
+## they're Storm Lantern, Bone Cleaver and Grave Spikes in the game (v0.23.0):
+## the heroes' main weapons with those names live in MainWeapons.
 enum Id {
 	ORBITING_SKULLS, SEEKING_BOLTS, HOLY_AURA, CHAIN_LIGHTNING, REAPERS_SCYTHE, HELLFIRE_TRAIL, BONE_SPEARS,
-	GRAVE_BLAST, HEX_SNARE, BONE_EFFIGY,
+	GRAVE_BLAST, HEX_SNARE, BONE_EFFIGY, SPIRIT_DAGGERS, DEATH_SPIRAL, SOUL_BARRAGE, SANCTUARY, INFERNO_PATH,
 }
 
-const MAX_LEVEL: int = 3
-## Weapons found on altars and in chests. Reaper's Scythe, Chain Lightning and
-## Bone Spears are heroes' main weapons now (see MainWeapons), so they're left
-## out. Grave Blast, Hex Snare and Bone Effigy were heroes' abilities until v0.22.0.
+## Levels a weapon can reach (evolutions have one; AutoWeapon.max_level()).
+const MAX_LEVEL: int = 5
+## Weapons offered on level-up cards, altars and chests. Grave Blast, Hex Snare
+## and Bone Effigy were heroes' abilities until v0.22.0.
 const PICKUPS: Array[int] = [
 	Id.ORBITING_SKULLS, Id.SEEKING_BOLTS, Id.HOLY_AURA, Id.HELLFIRE_TRAIL, Id.GRAVE_BLAST, Id.HEX_SNARE, Id.BONE_EFFIGY,
+	Id.CHAIN_LIGHTNING, Id.REAPERS_SCYTHE, Id.BONE_SPEARS, Id.SPIRIT_DAGGERS,
 ]
+## Evolved weapons (each names its base weapon and the passive it needs).
+const EVOLUTIONS: Array[int] = [Id.DEATH_SPIRAL, Id.SOUL_BARRAGE, Id.SANCTUARY, Id.INFERNO_PATH]
+## Weapon slots per player, the hero's main weapon included.
+const WEAPON_SLOTS: int = 6
 ## Grave Blast heals this share of your max HP.
 const BLAST_HEAL_SHARE: float = 0.1
 ## Hex Snare: hexed enemies take this much damage (1.5 = +50%).
@@ -39,6 +47,11 @@ const ALL: Array[AutoWeapon] = [
 	preload("res://src/combat/weapons/grave_blast.tres"),
 	preload("res://src/combat/weapons/hex_snare.tres"),
 	preload("res://src/combat/weapons/bone_effigy.tres"),
+	preload("res://src/combat/weapons/spirit_daggers.tres"),
+	preload("res://src/combat/weapons/death_spiral.tres"),
+	preload("res://src/combat/weapons/soul_barrage.tres"),
+	preload("res://src/combat/weapons/sanctuary.tres"),
+	preload("res://src/combat/weapons/inferno_path.tres"),
 ]
 
 
@@ -48,6 +61,14 @@ static func get_weapon(id: int) -> AutoWeapon:
 
 static func is_valid_id(id: int) -> bool:
 	return id >= 0 and id < ALL.size()
+
+
+## The evolved weapon that `weapon_id` becomes, or -1 if it has none.
+static func evolution_of(weapon_id: int) -> int:
+	for evolved: int in EVOLUTIONS:
+		if ALL[evolved].evolves_from == weapon_id:
+			return evolved
+	return -1
 
 
 ## The middle of the biggest crowd among `points` within `reach` of `from`: the
@@ -73,10 +94,12 @@ static func crowd_center(from: Vector2, points: PackedVector2Array, reach: float
 	return best
 
 
-## Where each orbiting skull is, from the player's position and the shared stage
-## clock. Pure math, so every peer draws (and the host hits) the same spots.
-static func orbit_positions(center: Vector2, level: int, clock: float) -> PackedVector2Array:
-	var weapon := get_weapon(Id.ORBITING_SKULLS)
+## Where each orbiting skull is (Orbiting Skulls or Death Spiral, `weapon_id`),
+## from the player's position and the shared stage clock. Pure math, so every
+## peer draws (and the host hits) the same spots.
+static func orbit_positions(center: Vector2, level: int, clock: float,
+		weapon_id: int = Id.ORBITING_SKULLS) -> PackedVector2Array:
+	var weapon := get_weapon(weapon_id)
 	var skulls := weapon.count_at(level)
 	var result := PackedVector2Array()
 	for i: int in skulls:
@@ -85,9 +108,9 @@ static func orbit_positions(center: Vector2, level: int, clock: float) -> Packed
 	return result
 
 
-## Directions of a Seeking Bolts volley aimed at `aim`.
-static func seeker_angles(level: int, aim: float) -> PackedFloat32Array:
-	var bolts := get_weapon(Id.SEEKING_BOLTS).count_at(level)
+## Directions of a Seeking Bolts (or Spirit Daggers, Soul Barrage) volley aimed at `aim`.
+static func seeker_angles(level: int, aim: float, weapon_id: int = Id.SEEKING_BOLTS) -> PackedFloat32Array:
+	var bolts := get_weapon(weapon_id).count_at(level)
 	var result := PackedFloat32Array()
 	for i: int in bolts:
 		result.append(aim + deg_to_rad((i - (bolts - 1) / 2.0) * SEEKER_SPREAD_DEGREES))

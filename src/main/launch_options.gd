@@ -14,7 +14,7 @@ extends RefCounted
 ##   --character=<n>                 play this character (0 Wanderer, 1 Gravekeeper, 2 Witch); with
 ##                                   --autopilot a joining client picks it in the lobby
 ##   --start-stage=<n>               host starts the run at stage n (1-3)
-##   --give-weapons                  every player starts with all auto weapons at level 2
+##   --give-weapons                  every player starts with 5 random auto weapons at level 3
 ##   --give-upgrades=<id,id,...>     every player starts with these upgrades (Upgrades.ALL ids, repeats stack)
 ##   --weak-bosses                   bosses have 2% HP (test stage transitions quickly)
 ##   --screenshot-dir=<folder>       save PNGs: the title screen (when no mode flag), gameplay every 10s,

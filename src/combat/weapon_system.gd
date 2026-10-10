@@ -2,7 +2,8 @@ class_name WeaponSystem
 extends Node2D
 ## Runs every player's automatic weapons, the aimed main weapons that aren't
 ## bolts (Reaper's Scythe, Chain Lightning, Bone Spears; see `fire_main`) and
-## the weapon altars.
+## the weapon altars. Weapons of the same Kind share code; evolved ones just
+## have their own numbers (and id).
 ##
 ## Host: deals all weapon damage, fires Seeking Bolts, spawns altars, and decides
 ## who grabs them. Everyone: draws the altars. (Players draw their own skulls and
@@ -12,10 +13,12 @@ extends Node2D
 ## a lightning path, spear spots) or, for Hellfire Trail, from where each player
 ## walks; only the host's copies deal damage.
 
-## Every peer: this player gained a level in this weapon (the arena applies it).
-signal weapon_gained(peer_id: int, weapon_id: int)
-## Host: fire a Seeking Bolts volley (the arena spawns it and tells clients).
-signal seeker_fired(shooter: Player, aim: float, level: int)
+## Host: a player touched an altar; give them this card (Cards; the arena
+## announces it like a level-up pick).
+signal card_earned(peer_id: int, card: int)
+## Host: fire a volley of bolts (Seeking Bolts, Soul Barrage, Spirit Daggers;
+## the arena spawns it and tells clients).
+signal seeker_fired(shooter: Player, aim: float, level: int, weapon_id: int)
 ## Everyone: a Bone Spear with Splinters struck; the arena spawns its shards.
 signal shards_requested(owner_id: int, at: Vector2, angles: PackedFloat32Array, damage: int)
 ## Host: Grave Blast, Hex Snare or Bone Effigy goes off at `at` (the arena
@@ -90,14 +93,17 @@ class Scythe:
 	var source: int
 	## Drawing size (main-weapon scythes are bigger, and grow with Heavy Blade).
 	var scale: float = 1.0
+	## What's drawn spinning ("scythe", or Bone Cleaver's "cleaver").
+	var sprite: String = "scythe"
 	var position: Vector2 = Vector2.INF
 	## Host: enemy pool index -> scythe age when it was last cut (once per pass).
 	var hit_at: Dictionary[int, float] = {}
 
 
-## One patch of Hellfire Trail.
+## One patch of Hellfire Trail (or Inferno Path: `weapon_id`).
 class Flame:
 	var owner_id: int
+	var weapon_id: int = AutoWeapons.Id.HELLFIRE_TRAIL
 	var position: Vector2
 	var age: float = 0.0
 	var duration: float
@@ -143,8 +149,10 @@ func tick_host(delta: float, clock: float, players: Array[Player], enemies: Enem
 	for player: Player in players:
 		if player.is_downed():
 			continue
-		for weapon_id: int in player.weapon_levels:
-			_tick_weapon(player, weapon_id, player.weapon_levels[weapon_id], delta, clock, enemies)
+		# A copy: a hit can kill the boss, and the boss evolves weapons right away.
+		for weapon_id: int in player.weapon_levels.keys():
+			if player.weapon_levels.has(weapon_id):
+				_tick_weapon(player, weapon_id, player.weapon_levels[weapon_id], delta, clock, enemies)
 
 
 ## Everyone, every tick of play: move scythes, light and age flames, count down
@@ -243,13 +251,6 @@ func send_full_state(peer_id: int) -> void:
 		_receive_altar_spawned.rpc_id(peer_id, altar_id, _altars[altar_id][0], _altars[altar_id][1])
 
 
-## Host: tell a late joiner every player's weapon levels.
-func send_history(peer_id: int, players: Array[Player]) -> void:
-	for player: Player in players:
-		for weapon_id: int in player.weapon_levels:
-			for i: int in player.weapon_levels[weapon_id]:
-				_receive_weapon_gained.rpc_id(peer_id, player.peer_id, weapon_id)
-
 
 ## Below the enemies: flames, spear warnings and altars.
 func _draw() -> void:
@@ -288,7 +289,7 @@ func _draw_overlay() -> void:
 		if not scythe.position.is_finite():
 			continue
 		_overlay.draw_set_transform(scythe.position.round(), snappedf(scythe.age * SCYTHE_SPIN, PI / 4.0))
-		PixelArt.draw(_overlay, "scythe", Vector2.ZERO, Color.WHITE, false, false, scythe.scale)
+		PixelArt.draw(_overlay, scythe.sprite, Vector2.ZERO, Color.WHITE, false, false, scythe.scale)
 	_overlay.draw_set_transform(Vector2.ZERO)
 	var bolt_color := AutoWeapons.get_weapon(AutoWeapons.Id.CHAIN_LIGHTNING).color
 	for bolt: Bolt in _bolts:
@@ -345,13 +346,14 @@ func _find_player(players: Array[Player], peer_id: int) -> Player:
 	return null
 
 
-## Everyone: players with Hellfire Trail leave a flame every few steps.
+## Everyone: players with Hellfire Trail (or Inferno Path) leave a flame every few steps.
 func _drop_flames(players: Array[Player]) -> void:
-	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.HELLFIRE_TRAIL)
 	for player: Player in players:
-		var level: int = player.weapon_levels.get(AutoWeapons.Id.HELLFIRE_TRAIL, 0)
-		if level <= 0 or player.is_downed():
+		var weapon_id := _trail_of(player)
+		if weapon_id < 0 or player.is_downed():
 			continue
+		var weapon := AutoWeapons.get_weapon(weapon_id)
+		var level: int = player.weapon_levels[weapon_id]
 		var at := player.world_position()
 		var last: Vector2 = _last_flame_at.get(player.peer_id, Vector2.INF)
 		if last.is_finite() and last.distance_to(at) < TRAIL_SPACING:
@@ -359,10 +361,19 @@ func _drop_flames(players: Array[Player]) -> void:
 		_last_flame_at[player.peer_id] = at
 		var flame := Flame.new()
 		flame.owner_id = player.peer_id
+		flame.weapon_id = weapon_id
 		flame.position = at
 		flame.duration = weapon.duration
 		flame.radius = weapon.radius_at(level)
 		_flames.append(flame)
+
+
+## The trail weapon this player carries (Hellfire Trail or its evolution), or -1.
+func _trail_of(player: Player) -> int:
+	for weapon_id: int in player.weapon_levels:
+		if AutoWeapons.get_weapon(weapon_id).kind == AutoWeapon.Kind.TRAIL:
+			return weapon_id
+	return -1
 
 
 ## Host: a scythe cuts each enemy it touches once on the way out and once back.
@@ -376,9 +387,11 @@ func _scythe_hits(scythe: Scythe, enemies: EnemyManager) -> void:
 			enemies.damage(enemy, scythe.damage, scythe.owner_id, scythe.source)
 
 
-## Everyone: a throw of scythes from this player.
-func _throw_scythes(owner_id: int, aim: float, level: int) -> void:
-	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.REAPERS_SCYTHE)
+## Everyone: a throw of Bone Cleavers from this player (only the host's deal damage).
+func _throw_scythes(owner_id: int, aim: float, level: int, weapon_id: int = AutoWeapons.Id.REAPERS_SCYTHE) -> void:
+	var weapon := AutoWeapons.get_weapon(weapon_id)
+	var thrower: Player = find_player.call(owner_id)
+	var damage := power(thrower, weapon.damage_at(level)) if thrower != null else weapon.damage_at(level)
 	for angle: float in AutoWeapons.scythe_angles(weapon.count_at(level), aim):
 		var scythe := Scythe.new()
 		scythe.owner_id = owner_id
@@ -386,22 +399,26 @@ func _throw_scythes(owner_id: int, aim: float, level: int) -> void:
 		scythe.duration = weapon.duration
 		scythe.reach = weapon.reach
 		scythe.radius = weapon.radius_at(level)
-		scythe.damage = weapon.damage_at(level)
-		scythe.source = DamageSource.of_weapon(AutoWeapons.Id.REAPERS_SCYTHE)
+		scythe.damage = damage
+		scythe.source = DamageSource.of_weapon(weapon_id)
+		if not weapon.sprite.is_empty():
+			scythe.sprite = weapon.sprite
 		_scythes.append(scythe)
 
 
-## Everyone: spears are coming up at these spots.
-func _add_spears(owner_id: int, spots: PackedVector2Array, level: int) -> void:
-	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.BONE_SPEARS)
+## Everyone: Grave Spikes are coming up at these spots (only the host's deal damage).
+func _add_spears(owner_id: int, spots: PackedVector2Array, level: int, weapon_id: int = AutoWeapons.Id.BONE_SPEARS) -> void:
+	var weapon := AutoWeapons.get_weapon(weapon_id)
+	var raiser: Player = find_player.call(owner_id)
+	var damage := power(raiser, weapon.damage_at(level)) if raiser != null else weapon.damage_at(level)
 	for at: Vector2 in spots:
 		var spear := Spear.new()
 		spear.owner_id = owner_id
 		spear.position = at
 		spear.warning = weapon.duration
 		spear.radius = weapon.radius_at(level)
-		spear.damage = weapon.damage_at(level)
-		spear.source = DamageSource.of_weapon(AutoWeapons.Id.BONE_SPEARS)
+		spear.damage = damage
+		spear.source = DamageSource.of_weapon(weapon_id)
 		_spears.append(spear)
 
 
@@ -543,7 +560,7 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 	var damage := power(player, weapon.damage_at(level))
 	match weapon.kind:
 		AutoWeapon.Kind.ORBIT:
-			for skull: Vector2 in AutoWeapons.orbit_positions(player.state.position, level, clock):
+			for skull: Vector2 in AutoWeapons.orbit_positions(player.state.position, level, clock, weapon_id):
 				var enemy := enemies.find_hit(skull, weapon.radius_at(level))
 				if enemy == null:
 					continue
@@ -556,9 +573,18 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 			if _cooldown_done(player, weapon_id, delta, interval):
 				var target := enemies.find_nearest(player.state.position, weapon.reach)
 				if target != null:
-					seeker_fired.emit(player, (target.position - player.state.position).angle(), level)
+					seeker_fired.emit(player, (target.position - player.state.position).angle(), level, weapon_id)
 				else:
 					# Nothing in range: try again soon instead of waiting a full interval.
+					_timers[retry_key] = 0.2
+		AutoWeapon.Kind.DAGGERS:
+			if _cooldown_done(player, weapon_id, delta, interval):
+				if enemies.find_nearest(player.state.position, weapon.reach) != null:
+					# Ahead and behind: running from a crowd means facing away from it
+					# (the same reason Mortimer's scythe throws both ways).
+					seeker_fired.emit(player, player.state.facing, level, weapon_id)
+					seeker_fired.emit(player, player.state.facing + PI, level, weapon_id)
+				else:
 					_timers[retry_key] = 0.2
 		AutoWeapon.Kind.AURA:
 			if _cooldown_done(player, weapon_id, delta, interval):
@@ -566,7 +592,7 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					DamageSource.of_weapon(weapon_id))
 		AutoWeapon.Kind.CHAIN:
 			if _cooldown_done(player, weapon_id, delta, interval):
-				var path := _chain_strike(player, weapon, level, enemies)
+				var path := _chain_strike(player, weapon_id, level, enemies)
 				if path.size() < 2:
 					_timers[retry_key] = 0.2
 				else:
@@ -579,21 +605,21 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 				if enemies.find_nearest(player.state.position, weapon.reach * 1.5) == null:
 					_timers[retry_key] = 0.2
 				else:
-					_throw_scythes(player.peer_id, player.state.aim, level)
+					_throw_scythes(player.peer_id, player.state.aim, level, weapon_id)
 					for peer_id: int in _ready_peers:
-						_receive_scythes.rpc_id(peer_id, player.peer_id, player.state.aim, level)
+						_receive_scythes.rpc_id(peer_id, player.peer_id, player.state.aim, level, weapon_id)
 		AutoWeapon.Kind.TRAIL:
 			if _cooldown_done(player, weapon_id, delta, interval):
-				_burn(player.peer_id, damage, enemies)
+				_burn(player.peer_id, weapon_id, damage, enemies)
 		AutoWeapon.Kind.ERUPTION:
 			if _cooldown_done(player, weapon_id, delta, interval):
 				var spots := _spear_spots(player.state.position, weapon.reach, weapon.count_at(level), enemies)
 				if spots.is_empty():
 					_timers[retry_key] = 0.2
 				else:
-					_add_spears(player.peer_id, spots, level)
+					_add_spears(player.peer_id, spots, level, weapon_id)
 					for peer_id: int in _ready_peers:
-						_receive_spears.rpc_id(peer_id, player.peer_id, spots, level)
+						_receive_spears.rpc_id(peer_id, player.peer_id, spots, level, weapon_id)
 		AutoWeapon.Kind.BLAST, AutoWeapon.Kind.HEX, AutoWeapon.Kind.EFFIGY:
 			if _cooldown_done(player, weapon_id, delta, interval):
 				var at := _ability_spot(player, weapon, level, enemies)
@@ -629,12 +655,14 @@ func _ability_spot(player: Player, weapon: AutoWeapon, level: int, enemies: Enem
 	return crowd.clamp(inner.position, inner.end)
 
 
-## Host: lightning hits the nearest enemy, then jumps on to the closest ones it
-## hasn't hit yet. Returns the path (player first) for drawing.
-func _chain_strike(player: Player, weapon: AutoWeapon, level: int, enemies: EnemyManager) -> PackedVector2Array:
+## Host: Storm Lantern's lightning hits the nearest enemy, then jumps on to the
+## closest ones it hasn't hit yet. Returns the path (player first) for drawing.
+func _chain_strike(player: Player, weapon_id: int, level: int, enemies: EnemyManager) -> PackedVector2Array:
+	var weapon := AutoWeapons.get_weapon(weapon_id)
 	var path := PackedVector2Array([player.state.position])
 	var hit: Dictionary[int, bool] = {}
-	var source := DamageSource.of_weapon(AutoWeapons.Id.CHAIN_LIGHTNING)
+	var source := DamageSource.of_weapon(weapon_id)
+	var damage := power(player, weapon.damage_at(level))
 	var target := enemies.find_nearest_except(player.state.position, weapon.reach, hit)
 	for jump: int in weapon.count_at(level) + 1:
 		if target == null:
@@ -642,21 +670,21 @@ func _chain_strike(player: Player, weapon: AutoWeapon, level: int, enemies: Enem
 		var at := target.position
 		hit[target.pool_index] = true
 		path.append(at)
-		enemies.damage(target, weapon.damage_at(level), player.peer_id, source)
+		enemies.damage(target, damage, player.peer_id, source)
 		target = enemies.find_nearest_except(at, weapon.radius_at(level), hit)
 	return path
 
 
 ## Host: every enemy in one of this player's flames burns (once per tick, however
 ## many flames it stands in).
-func _burn(owner_id: int, damage: int, enemies: EnemyManager) -> void:
+func _burn(owner_id: int, weapon_id: int, damage: int, enemies: EnemyManager) -> void:
 	var burning: Dictionary[Enemy, bool] = {}
 	for flame: Flame in _flames:
-		if flame.owner_id != owner_id:
+		if flame.owner_id != owner_id or flame.weapon_id != weapon_id:
 			continue
 		for enemy: Enemy in enemies.enemies_in_radius(flame.position, flame.radius):
 			burning[enemy] = true
-	var source := DamageSource.of_weapon(AutoWeapons.Id.HELLFIRE_TRAIL)
+	var source := DamageSource.of_weapon(weapon_id)
 	for enemy: Enemy in burning:
 		if enemy.active:
 			enemies.damage(enemy, damage, owner_id, source)
@@ -726,28 +754,13 @@ func _check_altar_pickups(players: Array[Player], ready_peers: Array[int]) -> vo
 			queue_redraw()
 			for peer_id: int in ready_peers:
 				_receive_altar_taken.rpc_id(peer_id, altar_id)
-			if player.weapon_levels.get(weapon_id, 0) >= AutoWeapons.MAX_LEVEL:
+			# The altar's weapon (new or a level), else a level of one they carry.
+			var card := Cards.altar_card(_rng, player, weapon_id)
+			if card < 0:
 				player.coins += MAXED_WEAPON_COINS
 			else:
-				grant(player.peer_id, weapon_id, ready_peers)
+				card_earned.emit(player.peer_id, card)
 			break
-
-
-## Host: give a player a weapon level, here and on every client.
-func grant(peer_id: int, weapon_id: int, ready_peers: Array[int]) -> void:
-	weapon_gained.emit(peer_id, weapon_id)
-	for target: int in ready_peers:
-		_receive_weapon_gained.rpc_id(target, peer_id, weapon_id)
-
-
-## A random weapon this player can still level up (or -1 if every one is maxed).
-## Unowned and low-level weapons are as likely as the rest.
-func random_upgradable_weapon(player: Player) -> int:
-	var choices: Array[int] = []
-	for weapon_id: int in AutoWeapons.PICKUPS:
-		if player.weapon_levels.get(weapon_id, 0) < AutoWeapons.MAX_LEVEL:
-			choices.append(weapon_id)
-	return -1 if choices.is_empty() else choices[_rng.randi() % choices.size()]
 
 
 func _add_altar(altar_id: int, at: Vector2, weapon_id: int) -> void:
@@ -775,8 +788,9 @@ func _receive_bolt(path: PackedVector2Array, seed_value: int) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_scythes(owner_id: int, aim: float, level: int) -> void:
-	_throw_scythes(owner_id, aim, level)
+func _receive_scythes(owner_id: int, aim: float, level: int, weapon_id: int) -> void:
+	if AutoWeapons.is_valid_id(weapon_id):
+		_throw_scythes(owner_id, aim, level, weapon_id)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -794,11 +808,6 @@ func _receive_spear_row(owner_id: int, origin: Vector2, aim: float, seed_value: 
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_spears(owner_id: int, spots: PackedVector2Array, level: int) -> void:
-	_add_spears(owner_id, spots, level)
-
-
-@rpc("authority", "call_remote", "reliable")
-func _receive_weapon_gained(peer_id: int, weapon_id: int) -> void:
+func _receive_spears(owner_id: int, spots: PackedVector2Array, level: int, weapon_id: int) -> void:
 	if AutoWeapons.is_valid_id(weapon_id):
-		weapon_gained.emit(peer_id, weapon_id)
+		_add_spears(owner_id, spots, level, weapon_id)

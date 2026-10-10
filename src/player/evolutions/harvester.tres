@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 4
+amount = 1.0
+
+[sub_resource type="Resource" id="effect_1"]
+script = ExtResource("1_upgrade")
+stat = 29
+amount = 0.4
+
+[sub_resource type="Resource" id="effect_2"]
+script = ExtResource("1_upgrade")
+stat = 33
+amount = 1.0
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Harvester"
+icon = "icon_harvester"
+description = "Evolved Reaper's Scythe: +1 scythe each way, 40% bigger, one more cut, +50% damage"
+stat = 36
+amount = 0.5
+extra_effects = Array[Resource]([SubResource("effect_0"), SubResource("effect_1"), SubResource("effect_2")])

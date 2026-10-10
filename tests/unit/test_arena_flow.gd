@@ -65,7 +65,7 @@ func test_level_up_pauses_until_pick_then_applies_upgrade() -> void:
 	_arena._level_up._pick_locally(choice)
 	await wait_physics_frames(2)
 	assert_eq(_arena._phase, Arena.Phase.PLAYING, "solo resumes right away (no 3, 2, 1)")
-	assert_eq(_local_player().upgrade_ids, [choice])
+	assert_eq(_local_player().card_history, [choice])
 
 
 func _clear_current_stage() -> void:

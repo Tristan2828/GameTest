@@ -4,16 +4,16 @@
 
 [resource]
 script = ExtResource("1_weapon")
-title = "Chain Lightning"
-description = "Lightning strikes the nearest enemy and leaps to the next ones"
-icon = "icon_chain_lightning"
+title = "Storm Lantern"
+description = "A lantern of storm-light strikes the nearest enemy, and the lightning leaps on to the next ones"
+icon = "icon_storm_lantern"
 kind = 3
 color = Color(0.6, 0.85, 1, 1)
 damage = 12
-damage_per_level = 5
-count = 3
+damage_per_level = 4
+count = 2
 count_per_level = 1
-interval = 1.5
+interval = 1.6
 interval_scale_per_level = 0.85
 radius = 100.0
 radius_per_level = 0.0

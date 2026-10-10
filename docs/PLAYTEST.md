@@ -69,6 +69,21 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Watch demos: the weapon part, then the hero steps out of a fan of bullets ("dodge!"). Clear?
 - [ ] Ability upgrades/relics now boost auto weapons: Shadow Step / Cracked Hourglass (recharge faster), Arcane Focus / Holy Water (more damage); Ember Shrine's Focus too. Arcane Focus and Shadow Step only show up once you own an auto weapon.
 
+### 3.0m Build rework: weapons and passives on level-up cards (v0.23.0, check these first)
+- [ ] Level-up cards now offer new weapons, weapon levels (your hero's main weapon too) and passives. Is picking a build fun? Do you know what each card does from its text and numbers?
+  - *Tune: card weights `NEW_WEIGHT` / `LEVEL_WEIGHT` / `MAIN_LEVEL_WEIGHT` in `src/progression/cards.gd`.*
+- [ ] 6 weapon slots (your main weapon is one) and 6 passive slots. Did you fill them? Too few, too many?
+  - *Tune: `WEAPON_SLOTS` in `src/combat/auto_weapons.gd`, `PASSIVE_SLOTS` in `src/progression/upgrades.gd`.*
+- [ ] Main weapon levels (2-6): the old hero upgrades come one per level (e.g. Kael: Extra Bolt, Piercing, Ricochet...). Does your hero's weapon feel like it grows?
+  - *Tune: `main_levels` in `src/player/characters/*.tres`.*
+- [ ] Evolutions: max a weapon, carry its passive, then open a champion's chest or beat a boss (Game Guide > Evolutions). Did you get one? Worth chasing? Clear what you need?
+  - *Tune: `src/combat/weapons/death_spiral.tres` etc., `src/player/evolutions/*.tres`.*
+- [ ] New weapons: Storm Lantern, Bone Cleaver, Grave Spikes, Spirit Daggers (they fly ahead of you and behind). Any useless or too strong?
+- [ ] HUD: under the HP bar, your weapons (main first, pips = level, green bar = evolved) and your passives below. Readable?
+- [ ] Card rerolls: you start with 1, the shop sells more (15 coins). Did you use them? Worth the price?
+  - *Tune: `START_REROLLS` in `src/progression/cards.gd`, `CARD_REROLL_PRICE` in `src/progression/shop_session.gd`.*
+- [ ] Altars now give the weapon shown (or a level of it), else a level of a weapon you carry. Still worth walking to?
+
 ### 3.0l Balance pass: upgrades, pickups, events (v0.22.0, Claude, measured with the autopilot only)
 - [ ] Sharpened Edge is now +25% of your hero's own damage for **all** your weapons (Glass Cannon +50%, Cursed Skull +30%) instead of a flat +4, which was worth +40% to Kael but +13% to Mortimer. Does every hero still feel their damage grow? Is it still the pick you always want?
   - *Tune: `amount` in `src/progression/upgrades/sharpened_bolts.tres`, `glass_cannon.tres`, `src/progression/relics/cursed_skull.tres` (stat 36 = share of starting damage).*

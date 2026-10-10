@@ -9,4 +9,5 @@ icon = "up_heart_container"
 description = "+20 max HP (and heal 20)"
 stat = 3
 amount = 20.0
-max_stacks = 3
+max_stacks = 5
+passive = true

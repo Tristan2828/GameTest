@@ -65,7 +65,7 @@ func test_compendium_fills_every_tab() -> void:
 	add_child_autofree(compendium)
 	compendium.open()
 	var tabs := compendium._tab_buttons
-	assert_eq(tabs.size(), 8)
+	assert_eq(tabs.size(), 9)
 	for tab: Button in tabs:
 		tab.pressed.emit()
 		await wait_process_frames(1)

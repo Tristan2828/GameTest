@@ -14,7 +14,7 @@ enum Stat {
 	RICOCHET, HOMING, DASH_GRACE, BLAST_DAMAGE, BLAST_HEAL, HEX_DURATION, HEX_DAMAGE,
 	EFFIGY_DURATION, EFFIGY_BURST,
 	WEAPON_REACH, WEAPON_SIZE, WEAPON_DELAY, CHAIN_GROWTH, CHAIN_FORK, SCYTHE_CUTS, SPEAR_SHARDS,
-	RECOVERY, DAMAGE_SHARE,
+	RECOVERY, DAMAGE_SHARE, COINS,
 }
 
 @export var title: String = "Upgrade"
@@ -29,9 +29,14 @@ enum Stat {
 ## KILL_HEAL, and a fraction (0.1 = 10%; REVIVE_SPEED +1.0 = twice as fast) for the
 ## others. Can be negative.
 @export var amount: float = 1.0
-## How many times one player can take it. 0 = no limit.
+## How many times one player can take it (a passive's max level). 0 = no limit.
 @export var max_stacks: int = 0
-## No longer offered (the four hero-ability upgrades since v0.22.0). Kept so ids stay stable.
+## A passive item (v0.23.0): offered on level-up cards, takes one of the
+## Upgrades.PASSIVE_SLOTS slots, and levels up to max_stacks. Weapon level steps,
+## evolutions, relic effects and filler cards (heal, coins) aren't passives.
+@export var passive: bool = false
+## No longer offered (the four hero-ability upgrades since v0.22.0; Shadow Step, the
+## trade-offs and two bolt upgrades since v0.23.0). Kept so ids stay stable.
 @export var retired: bool = false
 ## Only offered to heroes with this CharacterStats.MainWeapon (-1 = everyone).
 @export var for_weapon: int = -1

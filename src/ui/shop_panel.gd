@@ -1,11 +1,12 @@
 class_name ShopPanel
 extends Control
 ## The between-stages shop: relic cards with prices, a row of quests for the
-## next stage (pick one, free), Reroll and Ready.
+## next stage (pick one, free), Reroll, a level-up card reroll to buy, and Ready.
 ## Works with mouse and gamepad (focus moves between buttons; A confirms).
 
 signal buy_pressed(relic_id: int)
 signal reroll_pressed
+signal card_reroll_pressed
 signal ready_pressed
 signal quest_pressed(quest_id: int)
 
@@ -30,6 +31,7 @@ var _quest_buttons: Array[Button] = []
 var _quest_icons: Array[SpriteIcon] = []
 var _quest_lines: Array[VBoxContainer] = []
 var _quest_title: Label = null
+var _card_reroll_button: Button = null
 static var _screenshot_taken: bool = false
 
 
@@ -44,6 +46,10 @@ func _ready() -> void:
 		_icons.append(icon)
 	_reroll_button.pressed.connect(func() -> void: reroll_pressed.emit())
 	_ready_button.pressed.connect(func() -> void: ready_pressed.emit())
+	_card_reroll_button = Button.new()
+	_card_reroll_button.pressed.connect(func() -> void: card_reroll_pressed.emit())
+	_reroll_button.get_parent().add_child(_card_reroll_button)
+	_reroll_button.get_parent().move_child(_card_reroll_button, _reroll_button.get_index() + 1)
 	_build_quest_row()
 
 
@@ -117,7 +123,8 @@ func open(offers: Array[int], quests: Array[int] = [], first_time: bool = true) 
 
 
 ## Updates prices/affordability and the status line (called every frame).
-func refresh(coins: int, owned: Array[int], is_ready: bool, status: String, reroll_price: int, chosen_quest: int = -1) -> void:
+func refresh(coins: int, owned: Array[int], is_ready: bool, status: String, reroll_price: int, chosen_quest: int = -1,
+		card_rerolls: int = 0) -> void:
 	_refresh_quests(is_ready, chosen_quest)
 	_coins_label.text = "Coins: %d" % coins
 	var buttons := _cards.get_children()
@@ -144,6 +151,8 @@ func refresh(coins: int, owned: Array[int], is_ready: bool, status: String, rero
 		button.disabled = is_ready or owned_it or not affordable
 	_reroll_button.text = "Reroll (%d coins)" % reroll_price
 	_reroll_button.disabled = is_ready or coins < reroll_price
+	_card_reroll_button.text = "Card reroll (%d coins, have %d)" % [ShopSession.CARD_REROLL_PRICE, card_rerolls]
+	_card_reroll_button.disabled = is_ready or coins < ShopSession.CARD_REROLL_PRICE
 	_ready_button.disabled = is_ready
 	_ready_button.text = "Ready!" if is_ready else "Ready"
 	_status.text = status

@@ -2,11 +2,18 @@
 
 [ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
 
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 7
+amount = 0.1
+
 [resource]
 script = ExtResource("1_upgrade")
 title = "Quick Hands"
 icon = "up_quick_hands"
-description = "Fire 15% faster"
+description = "All your weapons attack 10% faster"
 stat = 1
-amount = 0.15
+amount = 0.1
 max_stacks = 5
+passive = true
+extra_effects = Array[Resource]([SubResource("effect_0")])

@@ -57,8 +57,16 @@ var bounds: Rect2 = Rect2()
 var state: PlayerState = PlayerState.new()
 ## Host-owned; clients get copies from snapshots.
 var health: PlayerHealth = PlayerHealth.new()
-## Every upgrade this player has taken, in order (same on all peers).
+## Every upgrade this player has taken, in order (same on all peers): passives and filler cards.
 var upgrade_ids: Array[int] = []
+## Every card (Cards) applied to this player, in order, so a late joiner can
+## replay the whole build (same on all peers).
+var card_history: Array[int] = []
+## The main weapon's level (1 = as the hero starts) and whether it evolved.
+var main_level: int = 1
+var main_evolved: bool = false
+## Level-up card rerolls left (host decides; every peer gets the count).
+var card_rerolls: int = Cards.START_REROLLS
 ## Relics owned, in purchase order (same on all peers).
 var relic_ids: Array[int] = []
 ## Automatic weapons owned: weapon id -> level (same on all peers).
@@ -150,7 +158,49 @@ func display_name() -> String:
 func apply_upgrade(upgrade_id: int) -> void:
 	upgrade_ids.append(upgrade_id)
 	Upgrades.apply(upgrade_id, stats, health)
+	if Upgrades.get_upgrade(upgrade_id).stat == Upgrade.Stat.COINS and multiplayer.is_server():
+		coins += roundi(Upgrades.get_upgrade(upgrade_id).amount)
 	queue_redraw()
+
+
+## Runs on every peer when the host announces a card for this player (a level-up
+## pick, an altar, a chest, an evolution). Cards that no longer fit are ignored.
+func apply_card(card: int) -> void:
+	if not Cards.is_valid(card):
+		return
+	card_history.append(card)
+	if Cards.is_upgrade(card):
+		apply_upgrade(card)
+	elif Cards.is_weapon(card):
+		gain_weapon(Cards.weapon_id(card))
+	elif card == Cards.MAIN_LEVEL:
+		var step := Cards.next_main_step(self)
+		if step != null:
+			main_level += 1
+			Upgrades.apply_effect(step, stats, health)
+	elif card == Cards.MAIN_EVOLUTION:
+		if not main_evolved and stats.evolution != null:
+			main_evolved = true
+			Upgrades.apply_effect(stats.evolution as Upgrade, stats, health)
+			stats.main_weapon_name = stats.evolved_weapon_name
+			stats.main_weapon_icon = stats.evolved_weapon_icon
+	else:
+		_evolve_weapon(Cards.weapon_id(card))
+	queue_redraw()
+
+
+## The base weapon's slot now holds its evolution (same place in the row).
+func _evolve_weapon(evolved_id: int) -> void:
+	var base := AutoWeapons.get_weapon(evolved_id).evolves_from
+	if not weapon_levels.has(base):
+		return
+	var fresh: Dictionary[int, int] = {}
+	for weapon_id: int in weapon_levels:
+		if weapon_id == base:
+			fresh[evolved_id] = 1
+		else:
+			fresh[weapon_id] = weapon_levels[weapon_id]
+	weapon_levels = fresh
 
 
 ## Host: an enemy bullet hit this player. Returns true if it landed.
@@ -203,9 +253,9 @@ func apply_relic(relic_id: int) -> void:
 	queue_redraw()
 
 
-## Runs on every peer when the host announces a weapon pickup.
+## Adds a weapon or its next level (through apply_card in a run).
 func gain_weapon(weapon_id: int) -> void:
-	weapon_levels[weapon_id] = mini(weapon_levels.get(weapon_id, 0) + 1, AutoWeapons.MAX_LEVEL)
+	weapon_levels[weapon_id] = mini(weapon_levels.get(weapon_id, 0) + 1, AutoWeapons.get_weapon(weapon_id).max_level())
 
 
 ## Host: count a kill toward heal-on-kill relics.
@@ -403,7 +453,7 @@ func _draw_weapons() -> void:
 				draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(weapon.color, 0.25 + 0.2 * pulse), 1.0)
 			AutoWeapon.Kind.ORBIT:
 				# Same math as the host's hit checks, relative to where we're drawn.
-				for skull: Vector2 in AutoWeapons.orbit_positions(Vector2.ZERO, level, weapon_clock):
+				for skull: Vector2 in AutoWeapons.orbit_positions(Vector2.ZERO, level, weapon_clock, weapon_id):
 					PixelArt.draw(self, "skull", skull)
 
 
@@ -434,6 +484,8 @@ func _simulate(input: PlayerInput, delta: float) -> void:
 		# Downed players lie still until revived: no moving or attacking.
 		input.move = Vector2.ZERO
 		input.fire = false
+	if input.move.length_squared() > 0.01:
+		state.facing = input.move.angle()
 	var result := PlayerMotor.step(state, input, stats, bounds, delta)
 	if result & PlayerMotor.FIRED:
 		shot_requested.emit(self, input.seq)

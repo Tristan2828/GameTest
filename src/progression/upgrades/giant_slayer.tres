@@ -6,7 +6,8 @@
 script = ExtResource("1_upgrade")
 title = "Giant Slayer"
 icon = "up_giant_slayer"
-description = "All your damage +25% against bosses"
+description = "All your damage +15% against bosses"
 stat = 17
-amount = 0.25
-max_stacks = 3
+amount = 0.15
+max_stacks = 5
+passive = true

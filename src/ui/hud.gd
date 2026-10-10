@@ -34,9 +34,19 @@ func set_health(current: int, maximum: int) -> void:
 	_health.set_health(current, maximum)
 
 
-## Auto weapon icons with level pips (weapon id -> level).
-func set_weapons(levels: Dictionary[int, int]) -> void:
-	_weapon_icons.set_weapons(levels)
+var _passive_icons: WeaponIcons = null
+
+
+## This player's build under the HP bar: weapons (main weapon first) and, below
+## them, passives, each with level pips.
+func set_build(player: Player) -> void:
+	if _passive_icons == null:
+		_passive_icons = WeaponIcons.new()
+		_passive_icons.position = _weapon_icons.position + Vector2(0, 15)
+		add_child(_passive_icons)
+		move_child(_passive_icons, _weapon_icons.get_index() + 1)
+	_weapon_icons.set_entries(WeaponIcons.weapon_entries(player))
+	_passive_icons.set_entries(WeaponIcons.passive_entries(player))
 
 
 func set_coins(count: int) -> void:
@@ -80,11 +90,11 @@ const QUEST_COLOR: Color = Color(0.85, 0.8, 0.95)
 const QUEST_DONE_COLOR: Color = Color(0.55, 0.95, 0.5)
 
 
-## Left side, under the weapon icons: "Quest: Slayer 120/250" ("" hides it).
+## Left side, under the weapon and passive icons: "Quest: Slayer 120/250" ("" hides it).
 func set_quest(text: String, done: bool) -> void:
 	if _quest_label == null:
 		_quest_label = Label.new()
-		_quest_label.position = Vector2(8, 65)
+		_quest_label.position = Vector2(8, 80)
 		_quest_label.size = Vector2(240, 12)
 		_quest_label.add_theme_font_size_override("font_size", 9)
 		_quest_label.mouse_filter = Control.MOUSE_FILTER_IGNORE

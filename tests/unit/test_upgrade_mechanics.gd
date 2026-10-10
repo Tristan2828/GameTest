@@ -1,6 +1,7 @@
 extends GutTest
-## The v0.16 upgrades: hero-only and trade-off rolls, multi-effect upgrades,
-## damage bonuses (crit, bosses, wounded), Ricochet and Hunting Bolts.
+## The v0.16 upgrades: retired ones, multi-effect upgrades, damage bonuses
+## (crit, bosses, wounded), Ricochet and Hunting Bolts. (Which cards are
+## offered is in test_cards.gd.)
 
 var _projectiles: ProjectileManager
 var _enemies: EnemyManager
@@ -26,38 +27,14 @@ func _hero(index: int) -> CharacterStats:
 	return (Characters.ALL[index] as CharacterStats).duplicate() as CharacterStats
 
 
-func _offered_ever(stats: CharacterStats, id: int) -> bool:
-	var owned: Array[int] = []
-	for seed_value: int in 300:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = seed_value
-		if Upgrades.roll(rng, owned, true, stats).has(id):
-			return true
-	return false
+# --- Retired ---
 
-
-# --- Rolling ---
-
-func test_old_ability_upgrades_are_retired() -> void:
-	for title: String in ["Afterimage", "Hallowed Blast", "Deep Hex", "Ossuary"]:
+func test_old_upgrades_are_retired_and_never_passives() -> void:
+	for title: String in ["Afterimage", "Hallowed Blast", "Deep Hex", "Ossuary", "Shadow Step", "Glass Cannon",
+			"Reckless Haste", "Long Shot", "Swift Bolts"]:
 		var id := _id_of(title)
 		assert_true(Upgrades.get_upgrade(id).retired, title)
-		for index: int in Characters.ALL.size():
-			assert_false(_offered_ever(_hero(index), id), "%s offered to %s" % [title, _hero(index).display_name])
-
-
-func test_auto_weapon_boosts_wait_for_an_auto_weapon() -> void:
-	var focus := Upgrades.get_upgrade(_id_of("Arcane Focus"))
-	assert_true(Upgrades.is_offered(focus, 0, true, _hero(0), true))
-	assert_false(Upgrades.is_offered(focus, 0, true, _hero(0), false))
-
-
-func test_hp_cutting_upgrade_not_offered_when_too_low() -> void:
-	var glass_cannon := _id_of("Glass Cannon")
-	var stats := _hero(0)
-	assert_true(_offered_ever(stats, glass_cannon))
-	stats.max_hp = 40
-	assert_false(_offered_ever(stats, glass_cannon))
+		assert_does_not_have(Upgrades.passive_ids(), id, title)
 
 
 func test_hero_text_names_the_hero() -> void:
@@ -178,9 +155,9 @@ func test_damage_share_scales_with_each_heros_own_damage() -> void:
 		var health := PlayerHealth.new()
 		health.reset(stats.max_hp)
 		var base := stats.bullet_damage
-		for i: int in 4:
+		for i: int in 5:
 			Upgrades.apply(sharpened, stats, health)
-		assert_eq(stats.bullet_damage, base * 2, "four +25%% picks double %s's damage" % stats.hero_name)
+		assert_eq(stats.bullet_damage, base * 2, "five +20%% picks double %s's damage" % stats.hero_name)
 
 
 func test_damage_share_also_powers_auto_weapons() -> void:
@@ -191,6 +168,6 @@ func test_damage_share_also_powers_auto_weapons() -> void:
 	add_child_autofree(player)
 	assert_eq(weapons.power(player, 10), 10)
 	Upgrades.apply(_id_of("Sharpened Edge"), player.stats, player.health)
-	assert_eq(weapons.power(player, 10), 13)
+	assert_eq(weapons.power(player, 10), 12)
 	weapons.stage_power = 2.0
-	assert_eq(weapons.power(player, 10), 25)
+	assert_eq(weapons.power(player, 10), 24)

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 4
+amount = 3.0
+
+[sub_resource type="Resource" id="effect_1"]
+script = ExtResource("1_upgrade")
+stat = 29
+amount = 0.3
+
+[sub_resource type="Resource" id="effect_2"]
+script = ExtResource("1_upgrade")
+stat = 34
+amount = 3.0
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Bone Cathedral"
+icon = "icon_bone_cathedral"
+description = "Evolved Bone Spears: +3 spears per row, 30% bigger, +3 shards, +50% damage"
+stat = 36
+amount = 0.5
+extra_effects = Array[Resource]([SubResource("effect_0"), SubResource("effect_1"), SubResource("effect_2")])

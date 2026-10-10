@@ -9,6 +9,8 @@ extends RefCounted
 ##   countdown; the shop closes when everyone is ready or time runs out.
 
 const COUNTDOWN_SECONDS: float = 45.0
+## One level-up card reroll (v0.23.0; kept until used, for any later level-up).
+const CARD_REROLL_PRICE: int = 15
 
 ## peer id -> offered relic ids
 var offers: Dictionary[int, Array] = {}
@@ -61,6 +63,10 @@ func can_buy(peer_id: int, relic_id: int, coins: int, owned: Array[int]) -> bool
 	if not offers[peer_id].has(relic_id) or owned.has(relic_id):
 		return false
 	return coins >= Relics.get_relic(relic_id).price
+
+
+func can_buy_card_reroll(peer_id: int, coins: int) -> bool:
+	return offers.has(peer_id) and not ready.has(peer_id) and coins >= CARD_REROLL_PRICE
 
 
 func reroll_price(peer_id: int) -> int:

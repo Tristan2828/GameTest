@@ -10,3 +10,4 @@ description = "Regenerate 0.4 HP every second"
 stat = 35
 amount = 0.4
 max_stacks = 5
+passive = true
