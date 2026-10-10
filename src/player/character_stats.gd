@@ -26,6 +26,8 @@ enum Ability { DASH, GRAVE_BLAST, BLINK, HEX_SNARE, BONE_EFFIGY }
 ## Dash: speed and duration (you can't be hit while dashing).
 @export var dash_speed: float = 340.0
 @export var dash_duration: float = 0.16
+## Seconds you stay untouchable after a Dash ends (from upgrades).
+@export var dash_grace: float = 0.0
 ## Blink: how far you teleport, and how long you're untouchable after.
 @export var blink_distance: float = 90.0
 @export var blink_invulnerability: float = 0.4
@@ -81,3 +83,17 @@ enum Ability { DASH, GRAVE_BLAST, BLINK, HEX_SNARE, BONE_EFFIGY }
 @export var projectile_count: int = 1
 ## Extra enemies each bolt can pass through.
 @export var pierce: int = 0
+## Times each bolt bounces to another nearby enemy after its last hit.
+@export var ricochet: int = 0
+## How fast bolts turn toward the nearest enemy, in radians per second (0 = straight).
+@export var homing: float = 0.0
+## Chance (0..1) that a main-gun bolt deals double damage.
+@export var crit_chance: float = 0.0
+
+@export_group("Damage bonuses")
+## Extra damage (fraction) against bosses, from every source.
+@export var boss_damage_bonus: float = 0.0
+## Extra damage (fraction) against enemies below half health, from every source.
+@export var wounded_damage_bonus: float = 0.0
+## Enemies this player kills burst for this much damage around them (0 = no burst).
+@export var kill_burst_damage: int = 0

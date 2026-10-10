@@ -15,6 +15,7 @@ extends RefCounted
 ##                                   --autopilot a joining client picks it in the lobby
 ##   --start-stage=<n>               host starts the run at stage n (1-3)
 ##   --give-weapons                  every player starts with all auto weapons at level 2
+##   --give-upgrades=<id,id,...>     every player starts with these upgrades (Upgrades.ALL ids, repeats stack)
 ##   --weak-bosses                   bosses have 2% HP (test stage transitions quickly)
 ##   --screenshot-dir=<folder>       save PNGs: the title screen (when no mode flag), gameplay every 10s,
 ##                                   and the first lobby, level-up, shop and run-end screens
@@ -42,6 +43,8 @@ static var screenshot_dir: String = ""
 static var start_at_seconds: float = 0.0
 static var weak_bosses: bool = false
 static var give_weapons: bool = false
+## --give-upgrades=<id,id,...>: Upgrades.ALL ids every player starts with (test aid).
+static var give_upgrades: Array[int] = []
 static var start_stage: int = 1
 static var character: int = -1
 ## --run-config values (RunConfig names -> parsed values); empty = lobby choice.
@@ -74,6 +77,9 @@ static func parse(args: PackedStringArray) -> void:
 			start_stage = clampi(arg.trim_prefix("--start-stage=").to_int(), 1, 3)
 		elif arg == "--give-weapons":
 			give_weapons = true
+		elif arg.begins_with("--give-upgrades="):
+			for id_text: String in arg.trim_prefix("--give-upgrades=").split(",", false):
+				give_upgrades.append(id_text.to_int())
 		elif arg == "--weak-bosses":
 			weak_bosses = true
 		elif arg.begins_with("--start-at="):

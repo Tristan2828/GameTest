@@ -5,7 +5,9 @@ extends Node2D
 ## Clients: apply those snapshots.
 ## All peers: keep a SpatialGrid of enemy positions for fast hit checks.
 
-signal enemy_killed(enemy: Enemy, killer_peer_id: int)
+signal enemy_killed(enemy: Enemy, killer_peer_id: int, source: int)
+## Every peer: a critical hit landed here (host: right away; clients: from snapshots).
+signal enemy_crit(at: Vector2)
 ## Every peer: an enemy just disappeared here (for death effects).
 signal enemy_vanished(at: Vector2, type_id: int, facing_left: bool)
 ## Host: a ranged enemy fired. The arena turns this into bullets + a network event.
@@ -22,6 +24,7 @@ const SEPARATION_STRENGTH: float = 40.0
 const SNAPSHOT_STRIDE: int = 9
 const FLAG_HIT: int = 1
 const FLAG_HEXED: int = 2
+const FLAG_CRIT: int = 4
 
 ## Host: total damage dealt by each peer id. Handy for tests and debugging.
 var damage_by_peer: Dictionary[int, int] = {}
@@ -31,6 +34,11 @@ var boss_damage_by_peer: Dictionary[int, int] = {}
 var damage_by_source: Dictionary[int, Dictionary] = {}
 var kills_by_source: Dictionary[int, Dictionary] = {}
 var bounds: Rect2 = Rect2(-10000, -10000, 20000, 20000)
+## Host: peer id -> that player's CharacterStats (or null), for upgrade damage
+## bonuses. Set by the arena; without it hits deal their plain damage.
+var stats_of_peer: Callable = Callable()
+## Host: rolls critical hits.
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _pool: Array[Enemy] = []
 var _free_indices: Array[int] = []
@@ -39,6 +47,7 @@ var _nearby: Array[int] = []
 
 
 func _ready() -> void:
+	rng.randomize()
 	for i: int in POOL_SIZE:
 		var enemy: Enemy = ENEMY_SCENE.instantiate()
 		enemy.name = "Enemy%d" % i
@@ -64,6 +73,24 @@ func find_nearest(point: Vector2, max_distance: float) -> Enemy:
 	var best_distance := max_distance * max_distance
 	for enemy: Enemy in _pool:
 		if not enemy.active:
+			continue
+		var distance := enemy.position.distance_squared_to(point)
+		if distance <= best_distance:
+			best = enemy
+			best_distance = distance
+	return best
+
+
+## The closest active enemy within `max_distance` other than pool index `skip`,
+## or null. Uses the grid, so it's cheap enough to call per bullet.
+func find_nearest_nearby(point: Vector2, max_distance: float, skip: int = -1) -> Enemy:
+	_nearby.clear()
+	_grid.query(point, max_distance, _nearby)
+	var best: Enemy = null
+	var best_distance := max_distance * max_distance
+	for index: int in _nearby:
+		var enemy := _pool[index]
+		if index == skip or not enemy.active:
 			continue
 		var distance := enemy.position.distance_squared_to(point)
 		if distance <= best_distance:
@@ -186,6 +213,13 @@ func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id:
 
 ## Host only.
 func damage(enemy: Enemy, amount: int, from_peer_id: int, source: int = DamageSource.MAIN_GUN) -> void:
+	var stats: CharacterStats = stats_of_peer.call(from_peer_id) if stats_of_peer.is_valid() else null
+	if stats != null:
+		var crit := HitBonus.is_crit(stats, source, rng.randf()) if stats.crit_chance > 0.0 else false
+		amount = HitBonus.scaled(amount, stats, enemy.type.is_boss, enemy.hp_ratio, crit)
+		if crit:
+			enemy.crit_since_snapshot = true
+			enemy_crit.emit(enemy.position)
 	if enemy.hexed:
 		amount = roundi(amount * enemy.hex_multiplier)
 	var dealt := mini(amount, enemy.hp)
@@ -197,7 +231,7 @@ func damage(enemy: Enemy, amount: int, from_peer_id: int, source: int = DamageSo
 	if died:
 		_count_source(kills_by_source, from_peer_id, source, 1)
 		_release(enemy)
-		enemy_killed.emit(enemy, from_peer_id)
+		enemy_killed.emit(enemy, from_peer_id, source)
 
 
 func _count_source(table: Dictionary[int, Dictionary], peer_id: int, source: int, amount: int) -> void:
@@ -226,11 +260,17 @@ func send_snapshot(peer_ids: Array[int]) -> void:
 			continue
 		data.encode_u16(offset, enemy.pool_index)
 		data.encode_u8(offset + 2, enemy.type_id)
-		data.encode_u8(offset + 3, (FLAG_HIT if enemy.hit_since_snapshot else 0) | (FLAG_HEXED if enemy.hexed else 0))
+		var flags := FLAG_HIT if enemy.hit_since_snapshot else 0
+		if enemy.hexed:
+			flags |= FLAG_HEXED
+		if enemy.crit_since_snapshot:
+			flags |= FLAG_CRIT
+		data.encode_u8(offset + 3, flags)
 		data.encode_s16(offset + 4, clampi(roundi(enemy.position.x), -32768, 32767))
 		data.encode_s16(offset + 6, clampi(roundi(enemy.position.y), -32768, 32767))
 		data.encode_u8(offset + 8, roundi(enemy.hp_ratio * 255.0))
 		enemy.hit_since_snapshot = false
+		enemy.crit_since_snapshot = false
 		offset += SNAPSHOT_STRIDE
 	for peer_id: int in peer_ids:
 		# The count is also what keeps the RPC valid when there are no enemies:
@@ -262,6 +302,8 @@ func _apply_snapshot(count: int, data: PackedByteArray) -> void:
 		var flags := data.decode_u8(offset + 3)
 		if flags & FLAG_HIT:
 			enemy.flash()
+		if flags & FLAG_CRIT:
+			enemy_crit.emit(at)
 		enemy.set_hexed((flags & FLAG_HEXED) != 0)
 		enemy.target_position = at
 		var ratio := data.decode_u8(offset + 8) / 255.0

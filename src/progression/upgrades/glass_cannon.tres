@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 3
+amount = -1.0
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Glass Cannon"
+icon = "up_glass_cannon"
+description = "+10 damage, but -1 max heart"
+stat = 0
+amount = 10.0
+max_stacks = 1
+extra_effects = Array[Resource]([SubResource("effect_0")])

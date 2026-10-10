@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Steady Nerves"
+icon = "up_steady_nerves"
+description = "Stay safe 0.3s longer after you're hit"
+stat = 14
+amount = 0.3
+max_stacks = 3

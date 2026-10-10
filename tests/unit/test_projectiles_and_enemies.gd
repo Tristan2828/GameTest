@@ -77,7 +77,7 @@ func test_killing_returns_enemy_to_pool_and_signals() -> void:
 	assert_false(enemy.active)
 	assert_eq(_enemies.active_count(), 0)
 	assert_eq(_enemies.damage_by_peer[3], enemy.type.max_hp, "overkill is not counted")
-	assert_signal_emitted_with_parameters(_enemies, "enemy_killed", [enemy, 3])
+	assert_signal_emitted_with_parameters(_enemies, "enemy_killed", [enemy, 3, DamageSource.MAIN_GUN])
 
 
 func test_pool_reuses_enemies_and_has_a_limit() -> void:

@@ -55,6 +55,16 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] "Include screenshot" during a game: the picture in Discord shows the game, not the menu?
 - [ ] Typing in the boxes doesn't move your character or trigger other keys (R, F1, Esc)?
 
+### 3.0d New upgrades (v0.16.0)
+- [ ] 16 new level-up upgrades (25 in total; see the Compendium's Upgrades page). Do the new ones show up and feel worth picking?
+- [ ] Keen Edge: gold sparks on critical hits, visible but not too noisy?
+- [ ] Corpse Blast: green bursts where your kills die. Too strong with a crowd, or too weak? Still smooth with lots of kills in co-op?
+- [ ] Ricochet and Hunting Bolts: bolts bounce / curve toward enemies. Fun, and does it look right on a client?
+- [ ] Glass Cannon and Reckless Haste (trade-offs): tempting, or never worth it?
+- [ ] Hero upgrades (Afterimage, Hallowed Blast, Deep Hex, Ossuary): each hero only sees their own. Strong enough?
+- [ ] With 22 possible upgrades per hero, do you still find a build you like, or does it feel too random?
+  - *Tune: `src/progression/upgrades/*.tres` (amount, max_stacks); crit / boss / wounded math in `src/combat/hit_bonus.gd`; burst size `KILL_BURST_RADIUS` in `src/arena/arena.gd`; `RICOCHET_RANGE` / `HOMING_RANGE` in `src/combat/projectile_manager.gd`.*
+
 ### 3.0b Changes from your second co-op list (v0.15.0, check these first)
 - [ ] Difficulty: level-ups are cheaper again (between v0.13 and v0.14) and Sharpened Bolts (+4) / Quick Hands (15%) are stronger. Can you beat stage 1 now? Too easy?
   - *Tune: `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; upgrade `.tres` files.*
@@ -162,7 +172,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] How often do level-ups pause the game? Too often in co-op? (Rebalanced in v0.14.0, see 3.0a.)
 - [ ] Level-up cards show level pips and your real stat before -> after (e.g. "Damage 13 -> 16"). Useful, and are the numbers right after a few picks and relics?
 - [ ] Run over / Victory screen: headline (what killed you, which stage), run totals, a card per player with stats, build and co-op awards. Readable? Any stat you miss?
-- [ ] Are the 9 upgrades meaningfully different? Any always/never picked?
+- [ ] Are the 25 upgrades meaningfully different? Any always/never picked?
 - [ ] 30-second countdown after the first pick: right length?
   - *Tune: XP curve in `src/progression/team_progress.gd`; upgrades in `src/progression/upgrades/*.tres`.*
 
@@ -222,6 +232,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Coins** go to whoever picks them up; the boss bounty is paid to everyone.
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.
+- **Upgrades (v0.16.0):** the numbers of the 16 new ones, which are trade-offs, and the four hero-only upgrades.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
 - **Abilities:** one per character on a cooldown (Dash / Grave Blast / Hex Snare / Bone Effigy), replacing dash and bombs.
 - **Characters / abilities**, as listed in 3.5.

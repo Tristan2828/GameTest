@@ -29,6 +29,8 @@ var wobble_phase: float = 0.0
 var fire_cooldown: float = 0.0
 ## Host: set when hit, cleared after each snapshot so clients can flash too.
 var hit_since_snapshot: bool = false
+## Host: took a critical hit since the last snapshot (clients show a spark).
+var crit_since_snapshot: bool = false
 ## Clients: latest position from the host, approached smoothly.
 var target_position: Vector2 = Vector2.ZERO
 ## Host: seconds of Hex Snare left (rooted unless a boss; takes extra damage).
@@ -68,6 +70,7 @@ func activate(enemy_type_id: int, at: Vector2, hit_points: int = 0) -> void:
 	# Stagger first volleys so a group doesn't fire in perfect sync.
 	fire_cooldown = type.fire_interval * randf_range(0.5, 1.0)
 	hit_since_snapshot = false
+	crit_since_snapshot = false
 	hexed_left = 0.0
 	hex_multiplier = 1.0
 	hexed = false

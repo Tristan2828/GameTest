@@ -4,6 +4,8 @@ extends RefCounted
 ## The index in ALL is the id sent over the network: only add new ones at the end.
 
 const CHOICES_PER_LEVEL: int = 3
+## Homing turn rate one Hunting Bolts pick adds (radians per second); cards count picks.
+const HOMING_STEP: float = 2.5
 
 const ALL: Array[Upgrade] = [
 	preload("res://src/progression/upgrades/sharpened_bolts.tres"),
@@ -15,6 +17,22 @@ const ALL: Array[Upgrade] = [
 	preload("res://src/progression/upgrades/grave_magnet.tres"),
 	preload("res://src/progression/upgrades/shadow_step.tres"),
 	preload("res://src/progression/upgrades/blood_draught.tres"),
+	preload("res://src/progression/upgrades/long_shot.tres"),
+	preload("res://src/progression/upgrades/steady_nerves.tres"),
+	preload("res://src/progression/upgrades/swift_bolts.tres"),
+	preload("res://src/progression/upgrades/arcane_focus.tres"),
+	preload("res://src/progression/upgrades/keen_edge.tres"),
+	preload("res://src/progression/upgrades/corpse_blast.tres"),
+	preload("res://src/progression/upgrades/giant_slayer.tres"),
+	preload("res://src/progression/upgrades/executioner.tres"),
+	preload("res://src/progression/upgrades/ricochet.tres"),
+	preload("res://src/progression/upgrades/hunting_bolts.tres"),
+	preload("res://src/progression/upgrades/glass_cannon.tres"),
+	preload("res://src/progression/upgrades/reckless_haste.tres"),
+	preload("res://src/progression/upgrades/afterimage.tres"),
+	preload("res://src/progression/upgrades/hallowed_blast.tres"),
+	preload("res://src/progression/upgrades/deep_hex.tres"),
+	preload("res://src/progression/upgrades/ossuary.tres"),
 ]
 
 
@@ -27,20 +45,50 @@ static func is_valid_id(id: int) -> bool:
 
 
 ## Rolls up to CHOICES_PER_LEVEL different upgrade ids. Skips maxed-out ones,
-## and only offers healing to a player who is missing hearts.
-static func roll(rng: RandomNumberGenerator, owned: Array[int], is_hurt: bool) -> Array[int]:
+## only offers healing to a player who is missing hearts, hero-only upgrades to
+## that hero (`stats`; none without it), and never a max-heart cut at 1 max heart.
+static func roll(rng: RandomNumberGenerator, owned: Array[int], is_hurt: bool,
+		stats: CharacterStats = null) -> Array[int]:
 	var pool: Array[int] = []
 	for id: int in ALL.size():
-		var upgrade := ALL[id]
-		if upgrade.stat == Upgrade.Stat.HEAL and not is_hurt:
-			continue
-		if upgrade.max_stacks > 0 and owned.count(id) >= upgrade.max_stacks:
-			continue
-		pool.append(id)
+		if is_offered(ALL[id], owned.count(id), is_hurt, stats):
+			pool.append(id)
 	var result: Array[int] = []
 	while not pool.is_empty() and result.size() < CHOICES_PER_LEVEL:
 		result.append(pool.pop_at(rng.randi() % pool.size()))
 	return result
+
+
+static func is_offered(upgrade: Upgrade, stacks: int, is_hurt: bool, stats: CharacterStats) -> bool:
+	if upgrade.stat == Upgrade.Stat.HEAL and not is_hurt:
+		return false
+	if upgrade.max_stacks > 0 and stacks >= upgrade.max_stacks:
+		return false
+	if upgrade.for_ability >= 0 and (stats == null or stats.ability != upgrade.for_ability):
+		return false
+	if stats != null and stats.max_hearts <= 1:
+		for effect: Upgrade in effects_of(upgrade):
+			if effect.stat == Upgrade.Stat.MAX_HEARTS and effect.amount < 0.0:
+				return false
+	return true
+
+
+## The upgrade's own effect followed by its extra effects.
+static func effects_of(upgrade: Upgrade) -> Array[Upgrade]:
+	var effects: Array[Upgrade] = [upgrade]
+	for extra: Resource in upgrade.extra_effects:
+		effects.append(extra as Upgrade)
+	return effects
+
+
+## "Wanderer only" for hero upgrades (empty for everyone's).
+static func hero_text(upgrade: Upgrade) -> String:
+	if upgrade.for_ability < 0:
+		return ""
+	for character: CharacterStats in Characters.ALL:
+		if character.ability == upgrade.for_ability:
+			return "%s only" % character.display_name
+	return ""
 
 
 ## Applies a level-up upgrade to one player's stats (and health). Every peer runs
@@ -49,8 +97,13 @@ static func apply(id: int, stats: CharacterStats, health: PlayerHealth) -> void:
 	apply_effect(get_upgrade(id), stats, health)
 
 
-## Applies one stat effect (from an upgrade or a relic).
+## Applies one upgrade or relic effect, including its extra effects.
 static func apply_effect(upgrade: Upgrade, stats: CharacterStats, health: PlayerHealth) -> void:
+	for effect: Upgrade in effects_of(upgrade):
+		_apply_stat(effect, stats, health)
+
+
+static func _apply_stat(upgrade: Upgrade, stats: CharacterStats, health: PlayerHealth) -> void:
 	match upgrade.stat:
 		Upgrade.Stat.DAMAGE:
 			stats.bullet_damage += int(upgrade.amount)
@@ -83,6 +136,36 @@ static func apply_effect(upgrade: Upgrade, stats: CharacterStats, health: Player
 			stats.heal_every_kills = int(upgrade.amount)
 		Upgrade.Stat.REVIVE_SPEED:
 			stats.revive_speed *= 1.0 + upgrade.amount
+		Upgrade.Stat.BULLET_RANGE:
+			stats.bullet_lifetime *= 1.0 + upgrade.amount
+		Upgrade.Stat.HIT_INVULNERABILITY:
+			stats.hit_invulnerability = maxf(stats.hit_invulnerability + upgrade.amount, 0.1)
+		Upgrade.Stat.CRIT_CHANCE:
+			stats.crit_chance = clampf(stats.crit_chance + upgrade.amount, 0.0, 1.0)
+		Upgrade.Stat.KILL_BURST:
+			stats.kill_burst_damage += int(upgrade.amount)
+		Upgrade.Stat.BOSS_DAMAGE:
+			stats.boss_damage_bonus += upgrade.amount
+		Upgrade.Stat.WOUNDED_DAMAGE:
+			stats.wounded_damage_bonus += upgrade.amount
+		Upgrade.Stat.RICOCHET:
+			stats.ricochet += int(upgrade.amount)
+		Upgrade.Stat.HOMING:
+			stats.homing += upgrade.amount
+		Upgrade.Stat.DASH_GRACE:
+			stats.dash_grace += upgrade.amount
+		Upgrade.Stat.BLAST_DAMAGE:
+			stats.blast_damage = roundi(stats.blast_damage * (1.0 + upgrade.amount))
+		Upgrade.Stat.BLAST_HEAL:
+			stats.blast_heal += int(upgrade.amount)
+		Upgrade.Stat.HEX_DURATION:
+			stats.hex_duration += upgrade.amount
+		Upgrade.Stat.HEX_DAMAGE:
+			stats.hex_damage_multiplier += upgrade.amount
+		Upgrade.Stat.EFFIGY_DURATION:
+			stats.effigy_duration += upgrade.amount
+		Upgrade.Stat.EFFIGY_BURST:
+			stats.effigy_burst_damage = roundi(stats.effigy_burst_damage * (1.0 + upgrade.amount))
 
 
 ## How many times this player already took this upgrade.
@@ -103,7 +186,8 @@ static func level_text(id: int, owned: Array[int]) -> String:
 
 
 ## Card line with the player's real stat now and after taking it, e.g.
-## "Damage 13 -> 16". Applies the upgrade to copies, so it uses the same math.
+## "Damage 13 -> 16" (one line per effect). Applies the upgrade to copies, so
+## it uses the same math.
 static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -> String:
 	var upgrade := get_upgrade(id)
 	var after_stats := stats.duplicate() as CharacterStats
@@ -111,7 +195,15 @@ static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -
 	after_health.max_hearts = health.max_hearts
 	after_health.hearts = health.hearts
 	apply_effect(upgrade, after_stats, after_health)
-	match upgrade.stat:
+	var lines: PackedStringArray = []
+	for effect: Upgrade in effects_of(upgrade):
+		lines.append(_stat_preview(effect.stat, stats, after_stats, health, after_health))
+	return "\n".join(lines)
+
+
+static func _stat_preview(stat: Upgrade.Stat, stats: CharacterStats, after_stats: CharacterStats,
+		health: PlayerHealth, after_health: PlayerHealth) -> String:
+	match stat:
 		Upgrade.Stat.DAMAGE:
 			return "Damage %d -> %d" % [stats.bullet_damage, after_stats.bullet_damage]
 		Upgrade.Stat.FIRE_RATE:
@@ -138,4 +230,42 @@ static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -
 			return "Heal every %d kills" % after_stats.heal_every_kills
 		Upgrade.Stat.REVIVE_SPEED:
 			return "Revive speed %d%% -> %d%%" % [roundi(stats.revive_speed * 100.0), roundi(after_stats.revive_speed * 100.0)]
+		Upgrade.Stat.BULLET_RANGE:
+			return "Bolt range %d -> %d" % [roundi(stats.bullet_speed * stats.bullet_lifetime),
+				roundi(after_stats.bullet_speed * after_stats.bullet_lifetime)]
+		Upgrade.Stat.HIT_INVULNERABILITY:
+			return "Safe time %.1fs -> %.1fs" % [stats.hit_invulnerability, after_stats.hit_invulnerability]
+		Upgrade.Stat.CRIT_CHANCE:
+			return "Crit chance %d%% -> %d%%" % [roundi(stats.crit_chance * 100.0), roundi(after_stats.crit_chance * 100.0)]
+		Upgrade.Stat.KILL_BURST:
+			return "Burst damage %d -> %d" % [stats.kill_burst_damage, after_stats.kill_burst_damage]
+		Upgrade.Stat.BOSS_DAMAGE:
+			return "Vs bosses +%d%% -> +%d%%" % [roundi(stats.boss_damage_bonus * 100.0),
+				roundi(after_stats.boss_damage_bonus * 100.0)]
+		Upgrade.Stat.WOUNDED_DAMAGE:
+			return "Vs wounded +%d%% -> +%d%%" % [roundi(stats.wounded_damage_bonus * 100.0),
+				roundi(after_stats.wounded_damage_bonus * 100.0)]
+		Upgrade.Stat.RICOCHET:
+			return "Bounces %d -> %d" % [stats.ricochet, after_stats.ricochet]
+		Upgrade.Stat.HOMING:
+			return "Homing %d -> %d" % [roundi(stats.homing / HOMING_STEP), roundi(after_stats.homing / HOMING_STEP)]
+		Upgrade.Stat.DASH_GRACE:
+			return "Safe after Dash %.1fs -> %.1fs" % [stats.dash_grace, after_stats.dash_grace]
+		Upgrade.Stat.BLAST_DAMAGE:
+			return "Blast damage %d -> %d" % [roundi(stats.blast_damage * stats.ability_power),
+				roundi(after_stats.blast_damage * after_stats.ability_power)]
+		Upgrade.Stat.BLAST_HEAL:
+			return "Blast heals %d -> %d" % [stats.blast_heal, after_stats.blast_heal]
+		Upgrade.Stat.HEX_DURATION:
+			return "Hex %.1fs -> %.1fs" % [stats.hex_duration * stats.ability_power,
+				after_stats.hex_duration * after_stats.ability_power]
+		Upgrade.Stat.HEX_DAMAGE:
+			return "Vs hexed +%d%% -> +%d%%" % [roundi((stats.hex_damage_multiplier - 1.0) * 100.0),
+				roundi((after_stats.hex_damage_multiplier - 1.0) * 100.0)]
+		Upgrade.Stat.EFFIGY_DURATION:
+			return "Effigy %.1fs -> %.1fs" % [stats.effigy_duration * stats.ability_power,
+				after_stats.effigy_duration * after_stats.ability_power]
+		Upgrade.Stat.EFFIGY_BURST:
+			return "Burst %d -> %d" % [roundi(stats.effigy_burst_damage * stats.ability_power),
+				roundi(after_stats.effigy_burst_damage * after_stats.ability_power)]
 	return ""

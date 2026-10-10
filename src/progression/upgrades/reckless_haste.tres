@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 2
+amount = -0.1
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Reckless Haste"
+icon = "up_reckless_haste"
+description = "Fire 25% faster, but move 10% slower"
+stat = 1
+amount = 0.25
+max_stacks = 2
+extra_effects = Array[Resource]([SubResource("effect_0")])

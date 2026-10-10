@@ -68,7 +68,7 @@ func host_start(players: Array[Player], level: int, ready_peers: Array[int]) -> 
 		if not reachable:
 			continue
 		var is_hurt := player.health.hearts < player.health.max_hearts
-		var choices := Upgrades.roll(_rng, player.upgrade_ids, is_hurt)
+		var choices := Upgrades.roll(_rng, player.upgrade_ids, is_hurt, player.stats)
 		if not choices.is_empty():
 			offered[player.peer_id] = choices
 	_session.start(offered)
@@ -104,6 +104,16 @@ func host_tick(delta: float, ready_peers: Array[int]) -> bool:
 
 func host_remove_player(peer_id: int) -> void:
 	_session.remove(peer_id)
+
+
+## Host: give a player an upgrade outside a level-up (test flag --give-upgrades),
+## announced the same way as a real pick.
+func host_grant(peer_id: int, upgrade_id: int, ready_peers: Array[int]) -> void:
+	if not Upgrades.is_valid_id(upgrade_id):
+		return
+	upgrade_announced.emit(peer_id, upgrade_id)
+	for target: int in ready_peers:
+		_receive_upgrade_applied.rpc_id(target, peer_id, upgrade_id)
 
 
 ## Host: tell a late joiner about every upgrade each player already has.

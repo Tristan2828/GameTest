@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 25
+amount = 0.25
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Deep Hex"
+icon = "up_deep_hex"
+description = "Hex lasts 1s longer; hexed foes take +25%"
+stat = 24
+amount = 1.0
+max_stacks = 3
+for_ability = 3
+extra_effects = Array[Resource]([SubResource("effect_0")])

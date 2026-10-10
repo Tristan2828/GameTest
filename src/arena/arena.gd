@@ -53,6 +53,10 @@ const CONTROLS_HINT: String = "WASD / L-stick move   Mouse / R-stick aim   LMB /
 const COPIED_FEEDBACK_SECONDS: float = 4.0
 const SPARK_COLOR: Color = Color(1.0, 0.9, 0.6)
 const HURT_COLOR: Color = Color(1.0, 0.25, 0.3)
+const CRIT_COLOR: Color = Color(1.0, 0.85, 0.25)
+## Corpse Blast (upgrade): how far a burst reaches, and its color.
+const KILL_BURST_RADIUS: float = 32.0
+const KILL_BURST_COLOR: Color = Color(0.5, 0.95, 0.55)
 ## In --autopilot test mode, the host restarts by itself this long after a stage ends.
 const AUTOPILOT_RESTART_DELAY: float = 2.0
 
@@ -88,6 +92,10 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _run_stats: RunStats = RunStats.new()
 ## Host: Bone Effigies standing in the arena.
 var _effigies: Array[Effigy] = []
+## Host: Corpse Blast bursts waiting to go off this tick (position, damage, owner).
+var _burst_positions: PackedVector2Array = PackedVector2Array()
+var _burst_damages: PackedInt32Array = PackedInt32Array()
+var _burst_owners: PackedInt32Array = PackedInt32Array()
 ## Host: when (in run seconds) each player first got each auto weapon: peer -> {weapon id: seconds}.
 var _weapon_owned_since: Dictionary[int, Dictionary] = {}
 ## Local: seconds our player has been downed (the camera moves to a teammate after a moment).
@@ -154,6 +162,7 @@ func _ready() -> void:
 	_shop.relic_bought.connect(_on_relic_bought)
 	_weapons.bounds = BOUNDS
 	_enemies.enemy_vanished.connect(_on_enemy_vanished)
+	_enemies.enemy_crit.connect(_on_enemy_crit)
 	_projectiles.hit_at.connect(func(at: Vector2) -> void:
 		_effects.burst(at, SPARK_COLOR, 3, 60.0, 0.15, 1.0)
 		if _near_local_player(at):
@@ -174,6 +183,7 @@ func _ready() -> void:
 		Net.invite.changed.connect(_on_invite_changed)
 		_on_invite_changed()
 		_enemies.enemy_killed.connect(_on_enemy_killed)
+		_enemies.stats_of_peer = _stats_of_peer
 		_enemies.pattern_fired.connect(_fire_enemy_pattern)
 		_gems.collected.connect(_on_gem_collected)
 		_coins.collected.connect(_on_coin_collected)
@@ -230,8 +240,11 @@ func _physics_process(delta: float) -> void:
 			_enemies.rebuild_grid()
 			PerfLog.stop(&"grid", t)
 		t = PerfLog.start()
+		_projectiles.steer(_enemies, delta)
 		_projectiles.step(delta)
 		_projectiles.resolve_hits(_enemies, is_host)
+		if is_host:
+			_resolve_kill_bursts()
 		PerfLog.stop(&"shots", t)
 		t = PerfLog.start()
 		_enemy_bullets.step(delta)
@@ -477,6 +490,8 @@ func _add_player(peer_id: int) -> void:
 		for weapon_id: int in AutoWeapons.ALL.size():
 			for level: int in 2:
 				_weapons.grant(peer_id, weapon_id, _ready_peer_list())
+	for upgrade_id: int in LaunchOptions.give_upgrades:
+		_level_up.host_grant(peer_id, upgrade_id, _ready_peer_list())
 
 
 func _lobby_rank(peer_id: int) -> int:
@@ -864,8 +879,14 @@ func _tick_boss(delta: float) -> void:
 				_fire_enemy_pattern(step.pattern, boss.position, (nearest - boss.position).angle())
 
 
-func _on_enemy_killed(enemy: Enemy, killer_peer_id: int) -> void:
+func _on_enemy_killed(enemy: Enemy, killer_peer_id: int, source: int) -> void:
 	_run_stats.add(killer_peer_id, RunStats.Stat.KILLS, 1)
+	var killer_stats := _stats_of_peer(killer_peer_id)
+	# Corpse Blast: bursts don't set off more bursts (no chain reactions).
+	if killer_stats != null and killer_stats.kill_burst_damage > 0 and source != DamageSource.KILL_BURST:
+		_burst_positions.append(enemy.position)
+		_burst_damages.append(killer_stats.kill_burst_damage)
+		_burst_owners.append(killer_peer_id)
 	if enemy.type.is_boss:
 		# Don't end the stage mid-hit-check; the phase check does it this tick.
 		_boss_defeated = true
@@ -1015,7 +1036,46 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 	for i: int in range(0, bullets.size(), ShotPatterns.STRIDE):
 		var offset := Vector2(bullets[i + 3], bullets[i + 4])
 		_projectiles.spawn(origin + offset, Vector2.from_angle(bullets[i]) * bullets[i + 1], stats.bullet_damage,
-			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2])
+			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2], DamageSource.MAIN_GUN,
+			stats.ricochet, stats.homing)
+
+
+func _stats_of_peer(peer_id: int) -> CharacterStats:
+	var player := _player_by_id(peer_id)
+	return player.stats if player != null else null
+
+
+## Host: set off this tick's Corpse Blast bursts, and show them everywhere (one
+## message for all of them).
+func _resolve_kill_bursts() -> void:
+	if _burst_positions.is_empty():
+		return
+	for i: int in _burst_positions.size():
+		_enemies.damage_in_radius(_burst_positions[i], KILL_BURST_RADIUS, _burst_damages[i], _burst_owners[i],
+			DamageSource.KILL_BURST)
+	_show_kill_bursts(_burst_positions)
+	for peer_id: int in _ready_peers:
+		_receive_kill_bursts.rpc_id(peer_id, _burst_positions.size(), _burst_positions)
+	_burst_positions.clear()
+	_burst_damages.clear()
+	_burst_owners.clear()
+
+
+## Everyone: Corpse Blast bursts. Rings only near this player (they're many).
+func _show_kill_bursts(positions: PackedVector2Array) -> void:
+	for at: Vector2 in positions:
+		_effects.burst(at, KILL_BURST_COLOR, 6, 70.0, 0.3, 1.0)
+		if _near_local_player(at, 260.0):
+			var ring := BombBlast.new()
+			ring.radius = KILL_BURST_RADIUS
+			ring.color = KILL_BURST_COLOR
+			ring.position = at
+			add_child(ring)
+
+
+## Everyone: a critical hit (gold sparks).
+func _on_enemy_crit(at: Vector2) -> void:
+	_effects.burst(at, CRIT_COLOR, 5, 90.0, 0.25, 1.0)
 
 
 ## Host: a player used their ability. Movement (Dash, Blink) already happened in
@@ -1059,8 +1119,11 @@ func _on_player_ability_used(user: Player) -> void:
 			_show_effigy(effigy.position, effigy.time_left, effigy.lure_radius, user.slot)
 			for peer_id: int in _ready_peers:
 				_receive_effigy.rpc_id(peer_id, effigy.position, effigy.time_left, effigy.lure_radius, user.slot)
-		_:
-			pass  # Dash needs nothing extra: dashing players can't be hit.
+		CharacterStats.Ability.DASH:
+			# Dashing players can't be hit; Afterimage keeps them safe a bit longer.
+			if stats.dash_grace > 0.0:
+				var safe := stats.dash_duration * stats.ability_power + stats.dash_grace
+				user.health.invulnerable_left = maxf(user.health.invulnerable_left, safe)
 
 
 ## Where a thrown ability lands: `distance` ahead in the aim direction, inside the arena.
@@ -1536,6 +1599,12 @@ func _receive_hex(at: Vector2, radius: float, seconds: float) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_effigy(at: Vector2, seconds: float, lure_radius: float, slot: int) -> void:
 	_show_effigy(at, seconds, lure_radius, slot)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_kill_bursts(count: int, positions: PackedVector2Array) -> void:
+	if count > 0:
+		_show_kill_bursts(positions)
 
 
 @rpc("authority", "call_remote", "reliable")

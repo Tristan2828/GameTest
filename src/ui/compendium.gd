@@ -86,6 +86,9 @@ func _show_upgrades() -> void:
 		var limit := "No limit" if upgrade.max_stacks <= 0 else "Up to %d times" % upgrade.max_stacks
 		if upgrade.stat == Upgrade.Stat.HEAL:
 			limit = "Only offered when you're hurt"
+		var hero := Upgrades.hero_text(upgrade)
+		if not hero.is_empty():
+			limit = "%s   %s" % [hero, limit]
 		_entry(upgrade.icon, upgrade.title, upgrade.description, limit)
 
 

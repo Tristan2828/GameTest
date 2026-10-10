@@ -79,6 +79,13 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 - **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 upgrades. Each card shows its level as pips (owned / this pick / left to max) and the player's real stat before -> after taking it.
   - **Pacing (v0.15.0):** level n costs 10 + 9·(n−1) XP, times +40% per extra player (spawns grow 60%, so bigger teams level slightly faster). History: v0.13 cost 5 + 5·(n−1) with no team factor (a 2-player team got ~30 level-ups in stage 1: too many pauses); v0.14.0 cost 16 + 14·(n−1) × the spawn factor, which left the team too weak to beat stage 1. Measured with the autopilot (solo, it can't dodge or collect everything): level 13 by the boss and the horde under control, vs level 7 and an overrun arena in v0.14. Sharpened Bolts went +3 → +4 damage and Quick Hands 12% → 15%.
   - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
+  - **v0.16.0: 25 upgrades** (owner asked for more, a mix of stats and new mechanics, a couple of trade-offs and one per hero). New:
+    - *Stats:* Long Shot (bolt range +30%), Steady Nerves (+0.3 s safety after a hit), Swift Bolts (bolt speed +20%), Arcane Focus (ability power +20%).
+    - *Mechanics:* Keen Edge (10% chance a main-gun bolt does double damage; gold sparks), Corpse Blast (enemies you kill burst for 12 damage in 32 px; bursts don't chain), Giant Slayer (+25% damage to bosses) and Executioner (+30% to enemies below half health), both from all your damage sources, Ricochet (after its last hit a bolt bounces to the closest enemy within 110 px), Hunting Bolts (bolts turn toward enemies within 130 px).
+    - *Trade-offs:* Glass Cannon (+10 damage, −1 max heart; once; not offered at 1 max heart) and Reckless Haste (fire 25% faster, move 10% slower).
+    - *Hero-only* (only offered to that hero; the Compendium says whose): Afterimage (Wanderer: untouchable 0.3 s longer after a Dash), Hallowed Blast (Gravekeeper: +40% blast damage, heals 1 more), Deep Hex (Witch: hex +1 s, hexed enemies +25% damage), Ossuary (Necromancer: Effigy +1.5 s, burst +50%).
+    - An upgrade can carry extra effects (`Upgrade.extra_effects`, used by trade-offs and hero upgrades); cards show one before -> after line per effect.
+    - Networking: damage bonuses and crits are rolled by the host (`HitBonus`, in `EnemyManager.damage`); crits reach clients as a snapshot flag. Corpse Blast bursts go to clients as one batched message per tick. Ricochet and homing run on every peer for their own (visual) bolts; the host decides the real hits, as before.
 - **Weapon pickups:** new auto weapons found during stages.
 - **Passive items / relics:** stat boosts and synergies.
 - **Shop between stages:** spend coins on items.
@@ -245,7 +252,10 @@ Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s
 - Posts to the Discord `#feedback` channel through a webhook (owner chose Discord over GitHub issues: no accounts for friends, screenshots attach natively, no GitHub token in the game). The link is baked into builds from a git-ignored file. Without it, Send copies the message to the clipboard.
 - 20 s between sends; messages are capped at 1500 characters and can't ping anyone.
 
-### Where things stand (2026-10-09, v0.15.0 released; v0.16.0 adds in-game feedback)
+### More upgrades (v0.16.0, owner request)
+16 new level-up upgrades (25 in total), see Progression, In-run. The owner chose the mix (stats, new mechanics, a couple of trade-offs, one per hero). Decisions made by Claude (**revisit in the next playtest**): every number (crit 10% / x2, burst 12 damage in 32 px, +25% vs bosses, +30% vs wounded below 50%, ricochet range 110 px, homing turn 2.5 rad/s per pick within 130 px), the stack limits, which upgrades are trade-offs, and the four hero upgrades. With 22 upgrades offered to each hero instead of 9, a favourite shows up less often; **watch** whether runs feel too random. Test aid: `--give-upgrades=<id,id,...>` (`Upgrades.ALL` ids) gives every player those upgrades at the start.
+
+### Where things stand (2026-10-09, v0.15.0 released; v0.16.0 adds in-game feedback and 16 upgrades)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
 ### Before that (v0.14.1, released on GitHub)
@@ -260,7 +270,7 @@ Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s
 ### Next (proposed, in rough priority)
 1. Co-op playtest of v0.15.0: is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, metal music, the run summary pages, and the first one-click update. Then tune numbers.
 2. Working title (replace "GameTest" in the title, window, and build file names).
-3. Content depth: more upgrades/relics/weapons with synergies, more enemy variety per stage, boss attack variety.
+3. Content depth: more relics/weapons with synergies (upgrades done in v0.16.0), more enemy variety per stage, boss attack variety.
 4. Meta/feel: hero portraits, records/stats screen, more animation.
 5. Release prep later: real audio direction, Steam or a relay for joining without port forwarding (see Ideas for Later).
 
