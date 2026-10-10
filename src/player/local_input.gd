@@ -30,7 +30,9 @@ func sample(player: Player, delta: float) -> PlayerInput:
 		facing = input.move.angle()
 	var enemies := player.get_tree().get_first_node_in_group("enemy_manager") as EnemyManager
 	var targets := enemies.active_positions() if enemies != null else PackedVector2Array()
-	var aim := AutoAim.pick(player.stats, player.state.position, facing, targets, _rng.randf())
+	var boss := enemies.find_boss() if enemies != null else null
+	var aim := AutoAim.pick(player.stats, player.state.position, facing, targets, _rng.randf(),
+		boss.position if boss != null else Vector2.INF)
 	input.fire = not is_nan(aim)
 	input.aim = aim if input.fire else facing
 	return input

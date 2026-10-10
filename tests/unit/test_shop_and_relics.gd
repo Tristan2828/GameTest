@@ -40,7 +40,7 @@ func test_cursed_skull_trades_hp_for_damage() -> void:
 	var health := PlayerHealth.new()
 	health.reset(stats.max_hp)
 	Relics.apply(_relic_id("Cursed Skull"), stats, health)
-	assert_eq(stats.bullet_damage, 16)
+	assert_eq(stats.bullet_damage, 13)
 	assert_eq(stats.max_hp, 80)
 	assert_eq(health.hp, 80, "current HP is capped to the new max")
 

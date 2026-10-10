@@ -14,5 +14,5 @@ title = "Bone Charm"
 icon = "rel_bone_charm"
 description = "Your bolts pierce 1 more enemy"
 for_weapon = 0
-price = 55
+price = 70
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

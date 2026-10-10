@@ -69,6 +69,22 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Watch demos: the weapon part, then the hero steps out of a fan of bullets ("dodge!"). Clear?
 - [ ] Ability upgrades/relics now boost auto weapons: Shadow Step / Cracked Hourglass (recharge faster), Arcane Focus / Holy Water (more damage); Ember Shrine's Focus too. Arcane Focus and Shadow Step only show up once you own an auto weapon.
 
+### 3.0l Balance pass: upgrades, pickups, events (v0.22.0, Claude, measured with the autopilot only)
+- [ ] Sharpened Edge is now +25% of your hero's own damage for **all** your weapons (Glass Cannon +50%, Cursed Skull +30%) instead of a flat +4, which was worth +40% to Kael but +13% to Mortimer. Does every hero still feel their damage grow? Is it still the pick you always want?
+  - *Tune: `amount` in `src/progression/upgrades/sharpened_bolts.tres`, `glass_cannon.tres`, `src/progression/relics/cursed_skull.tres` (stat 36 = share of starting damage).*
+- [ ] Auto weapons hit much harder (Holy Aura, Orbiting Skulls, Hellfire, Seeking Bolts, Grave Blast and Bone Effigy got 30-80% more damage, the first three also more size) and grow 2x / 3.5x stronger in stages 2 and 3. Before, all of them together did under 5% of the damage. Now worth finding? Is any one of them still useless, or too strong?
+  - *Tune: `src/combat/weapons/*.tres`, `AUTO_DAMAGE_BY_DEPTH` in `src/arena/arena.gd`.*
+- [ ] Morwen's lightning goes for the boss half the time when one is in reach, and a jump with nobody new to reach strikes the last enemy again at 60% damage (her boss fights took 1.5-3.5 minutes, mostly zapping the adds). Boss fights fair for her now? Does the lightning still feel random enough?
+  - *Tune: `BOSS_FOCUS_SHARE` in `src/player/auto_aim.gd`, `GROUNDED_SHARE` in `src/combat/main_weapons.gd`.*
+- [ ] Corpse Blast 12 -> 10 per pick (it did up to a third of all damage). Still feels good?
+- [ ] Fewer coins from enemies (75% in stage 1, 25% in stages 2-3; events and bosses unchanged) and relics cost ~30% more: the autopilot ended runs with 500-1000 coins and every relic. Now you should afford 2-3 relics per shop and have to choose. Too stingy?
+  - *Tune: `COIN_DROP_BY_DEPTH` in `src/arena/arena.gd`, `price` in `src/progression/relics/*.tres`.*
+- [ ] Power-ups are rarer (1% of kills, at most one per 18 s: about 6-9 per stage instead of 10-20; Holy Bomb 15% of drops, Heart 40%). Still exciting when one drops? Do you miss the Hearts?
+  - *Tune: `DROP_CHANCE`, `DROP_COOLDOWN`, `WEIGHTS` in `src/progression/power_ups.gd`.*
+- [ ] Rituals give 1.5 levels of XP (was 0.6: less than standing still and fighting for 15 s). Worth the stand now?
+- [ ] Co-op: more altars (2 players: 2 per wave, 4 players: 3, each near a different player), so everyone finds weapons.
+- [ ] Quests got harder where they had become trivial: Slayer 1000 kills, Gold Digger 80 coins, Arsenal 12000 auto weapon damage; Untouchable is 45 s now (60 s with touch damage that never pauses was nearly impossible). Any still too easy or too hard?
+
 ### 3.0j Embers and the Ember Shrine (v0.21.0)
 - [ ] Finish a run: the run summary says "+N Embers". Title menu > **Ember Shrine**: buy a boost, see the rank pips fill. Clear? Works with mouse and gamepad?
 - [ ] Earning pace: about 40 for a victory and about 15 for dying in stage 2; everything costs about 1950 (around 100 runs). Feels rewarding enough, or too slow?
@@ -262,7 +278,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
   - *Tune: `src/combat/weapons/*.tres`, `ALTAR_TIMES` in `src/combat/weapon_system.gd`.*
 
 ### 3.9 Grave Blast (auto weapon)
-- [ ] Goes off by itself when enemies get close (every 12 s at level 1): clear radius big enough to save you? Damage noticeable?
+- [ ] Goes off by itself when enemies get close (every 10 s at level 1): clear radius big enough to save you? Damage noticeable?
   - *Tune: `src/combat/weapons/grave_blast.tres`, `BLAST_WAKE_FACTOR` / `BLAST_HEAL_SHARE` in `src/combat/auto_weapons.gd`.*
 
 ### 3.10 Co-op (session D)
@@ -305,7 +321,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Upgrades (v0.16.0):** the numbers of the 16 new ones, which are trade-offs, and the four hero-only upgrades.
 - **Map events (v0.17.0):** one champion lair and one ritual per stage at the start, then pop-ups (thief 1:10, ritual 2:20, thief 3:20); champions are recolored, crowned regular enemies (Ghoul / Plague / Paladin Champion); every reward number.
 - **Quests (v0.17.0):** the nine quests, their targets and rewards; a random offer if you don't pick.
-- **Weapons and pickups (v0.17.0):** the four new weapons' numbers; pickup drop chance (1.2% per kill, at most one per 10 s) and odds.
+- **Weapons and pickups (v0.17.0):** the four new weapons' numbers; pickup drop chance (1% per kill, at most one per 18 s since v0.22.0) and odds.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
 - **Auto-fire redesign (v0.22.0):** the targeting rules' details (reach, random picks), Mortimer's back throw, every HP and damage number, the healing amounts, the four perks, the three ability weapons' numbers and when they go off, Dash removed, the hidden cursor, the Watch demo's dodge part, and the Recovery upgrade and relic (Ghoul Blood, Bloodstone).
 - **Characters**, as listed in 3.5.

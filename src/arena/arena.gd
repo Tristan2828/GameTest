@@ -29,6 +29,14 @@ const BOSS_HP_BY_DEPTH: Array[float] = [1.0, 4.5, 12.0]
 const SPAWN_RATE_BY_DEPTH: Array[float] = [1.0, 1.4, 1.8]
 ## How much harder enemies hit (touch and bullets) at each run depth.
 const DAMAGE_BY_DEPTH: Array[float] = [1.0, 1.3, 1.6]
+## Auto weapons hit this much harder at each run depth (they only have 3 levels,
+## while enemies get 4x / 9x tougher; v0.22.0's balance check had every auto
+## weapon together under 5% of the team's damage).
+const AUTO_DAMAGE_BY_DEPTH: Array[float] = [1.0, 2.0, 3.5]
+## Enemies drop coins this much less often at each run depth (later stages bring
+## far more kills of coin-rich enemies; v0.22.0 ended runs with 500-1000 coins
+## unspent and every relic bought). Event and boss coins aren't affected.
+const COIN_DROP_BY_DEPTH: Array[float] = [0.75, 0.25, 0.25]
 ## Later stages start their spawn ramp this many seconds in, so the opening
 ## minute isn't a stroll for a team that's already strong.
 const RAMP_HEAD_START_BY_DEPTH: Array[float] = [0.0, 45.0, 90.0]
@@ -78,8 +86,9 @@ const CHEST_COINS_WHEN_MAXED: int = 30
 const RITUAL_HEAL_SHARE: float = 0.25
 ## Every team level-up heals each living player this share of their max HP.
 const LEVEL_UP_HEAL_SHARE: float = 0.05
-## A finished ritual's XP: this share of the current level's cost.
-const RITUAL_XP_SHARE: float = 0.6
+## A finished ritual's XP: this share of the current level's cost. (0.6 in
+## v0.17-0.22: less than 15 s of normal fighting earned, so not worth the stand.)
+const RITUAL_XP_SHARE: float = 1.5
 ## Enemies called per ritual wave (+1 per extra player), and from how far.
 const RITUAL_WAVE_SIZE: int = 2
 const RITUAL_WAVE_DISTANCE: float = 200.0
@@ -242,6 +251,7 @@ func _ready() -> void:
 		_events.chest_opened.connect(_on_chest_opened)
 		_events.ritual_completed.connect(_on_ritual_completed)
 		_events.runner_caught.connect(_on_runner_caught)
+		_events.runner_escaped.connect(func(_at: Vector2) -> void: _balance_count("thief escaped"))
 		_events.wave_requested.connect(_on_ritual_wave)
 		_events.coin_dropped.connect(func(at: Vector2) -> void: _coins.spawn_host(at, 1))
 		_weapons.seeker_fired.connect(_fire_seeker)
@@ -833,6 +843,14 @@ func _update_phase() -> void:
 var _balance_start: PackedInt32Array = PackedInt32Array([0, 0, 0, 0])
 var _balance_boss_at: float = -1.0
 var _balance_peak_alive: int = 0
+## Host: events, pickups and quests this stage (name -> count), for `[balance-detail]`.
+var _balance_counts: Dictionary[String, int] = {}
+var _balance_coins_start: int = 0
+var _balance_source_start: Dictionary[int, int] = {}
+
+
+func _balance_count(what: String) -> void:
+	_balance_counts[what] = _balance_counts.get(what, 0) + 1
 
 
 ## One line per stage for tuning difficulty: how long the waves and the boss
@@ -858,6 +876,48 @@ func _print_balance(phase: Phase) -> void:
 	_balance_start = now
 	_balance_boss_at = -1.0
 	_balance_peak_alive = 0
+	_print_balance_detail()
+
+
+## Second balance line: coins, pickups, events and quests, and each damage
+## source's share this stage. Then each player's picks so far.
+func _print_balance_detail() -> void:
+	var coins := _run_stats.total(RunStats.Stat.COINS_EARNED)
+	var by_source: Dictionary[int, int] = {}
+	for peer_id: int in _enemies.damage_by_source:
+		var sources: Dictionary = _enemies.damage_by_source[peer_id]
+		for source: int in sources:
+			by_source[source] = by_source.get(source, 0) + int(sources[source])
+	var total := 0
+	for source: int in by_source:
+		total += by_source[source] - _balance_source_start.get(source, 0)
+	var shares: PackedStringArray = []
+	for source: int in by_source:
+		var dealt: int = by_source[source] - _balance_source_start.get(source, 0)
+		if dealt > 0:
+			var stats := _player_nodes()[0].stats if not _player_nodes().is_empty() else null
+			shares.append("%s %d%%" % [DamageSource.title(source, stats), roundi(100.0 * dealt / maxf(total, 1.0))])
+	var counts: PackedStringArray = []
+	for what: String in _balance_counts:
+		counts.append("%s %d" % [what, _balance_counts[what]])
+	# Coins left on the ground and the boss bounty are paid after this line (next stage's count).
+	print("[balance-detail] stage %d: coins picked up %d (+%d on the ground)  %s  damage: %s" % [_run_depth(),
+		coins - _balance_coins_start, _coins.total_value(), "  ".join(counts), ", ".join(shares)])
+	for player: Player in _player_nodes():
+		var picks: PackedStringArray = []
+		for id: int in player.upgrade_ids:
+			picks.append(Upgrades.get_upgrade(id).title)
+		var weapons: PackedStringArray = []
+		for weapon_id: int in player.weapon_levels:
+			weapons.append("%s %d" % [AutoWeapons.get_weapon(weapon_id).title, player.weapon_levels[weapon_id]])
+		var relics: PackedStringArray = []
+		for relic_id: int in player.relic_ids:
+			relics.append(Relics.get_relic(relic_id).title)
+		print("[balance-picks] %s: coins %d  weapons [%s]  relics [%s]  upgrades [%s]" % [player.display_name(),
+			player.coins, ", ".join(weapons), ", ".join(relics), ", ".join(picks)])
+	_balance_counts.clear()
+	_balance_coins_start = coins
+	_balance_source_start = by_source
 
 
 func _end_stage(phase: Phase) -> void:
@@ -1014,6 +1074,7 @@ func _setup_stage() -> void:
 	_boss_brain = BossBrain.new(stage.boss_phase_one, stage.boss_phase_two)
 	_boss_spin = 0.0
 	_events.champion_type = stage.champion_type
+	_weapons.stage_power = by_depth(AUTO_DAMAGE_BY_DEPTH, _run_depth())
 	_floor.apply_stage(stage)
 
 
@@ -1081,7 +1142,7 @@ func _on_enemy_killed(enemy: Enemy, killer_peer_id: int, source: int) -> void:
 	if not _gems.spawn_host(enemy.position, enemy.type.xp_value):
 		# Too many gems on the ground: grant the XP directly instead.
 		_on_gem_collected(enemy.type.xp_value, killer_peer_id)
-	if _rng.randf() < enemy.type.coin_chance * _config.coin_rate:
+	if _rng.randf() < enemy.type.coin_chance * _config.coin_rate * by_depth(COIN_DROP_BY_DEPTH, _run_depth()):
 		var offset := Vector2.from_angle(_rng.randf() * TAU) * 5.0
 		if not _coins.spawn_host(enemy.position + offset, enemy.type.coin_value):
 			_on_coin_collected(enemy.type.coin_value, killer_peer_id)
@@ -1169,6 +1230,7 @@ func _pay_quest(peer_id: int) -> void:
 		player.coins += coins
 		_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, coins)
 	var text := "%s completed a quest: %s! (%s)" % [player.display_name(), Quests.TITLES[quest_id], reward]
+	_balance_count("quest")
 	print(text)
 	_show_quest_done(peer_id, text)
 	for target: int in _ready_peers:
@@ -1212,6 +1274,7 @@ func _on_power_up_collected(kind: int, collector_peer_id: int) -> void:
 	if player == null or not PowerUps.is_valid_kind(kind):
 		return
 	_quest_count(collector_peer_id, Quests.Id.SCAVENGER)
+	_balance_count(PowerUps.TITLES[kind])
 	var at := player.state.position
 	match kind:
 		PowerUps.Kind.HEART:
@@ -1260,6 +1323,7 @@ func _spawn_event_enemy(type_id: int, at: Vector2) -> Enemy:
 
 ## Host: a champion died: a pile of coins and a power-up next to its chest.
 func _on_champion_slain(at: Vector2, _champion_type: int) -> void:
+	_balance_count("champion")
 	for player: Player in _player_nodes():
 		_quest_count(player.peer_id, Quests.Id.CHAMPION_HUNTER)
 	_scatter_coins(at, CHAMPION_COINS, 3, 26.0)
@@ -1289,6 +1353,7 @@ func _on_chest_opened(peer_id: int, at: Vector2) -> void:
 
 ## Host: everyone in the circle heals, and a ring of XP gems worth most of a level appears.
 func _on_ritual_completed(at: Vector2, inside: Array[int]) -> void:
+	_balance_count("ritual")
 	for peer_id: int in inside:
 		_quest_count(peer_id, Quests.Id.RITUALIST)
 	for peer_id: int in inside:
@@ -1309,6 +1374,7 @@ func _on_ritual_completed(at: Vector2, inside: Array[int]) -> void:
 
 ## Host: the thief bursts into a shower of coins.
 func _on_runner_caught(at: Vector2) -> void:
+	_balance_count("thief caught")
 	for player: Player in _player_nodes():
 		_quest_count(player.peer_id, Quests.Id.THIEF_CATCHER)
 	_scatter_coins(at, RUNNER_COINS, 2, 30.0)
@@ -1419,7 +1485,7 @@ func _fire_seeker(shooter: Player, aim: float, level: int) -> void:
 func _spawn_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
 	var weapon := AutoWeapons.get_weapon(AutoWeapons.Id.SEEKING_BOLTS)
 	var shooter := _player_by_id(shooter_id)
-	var damage := WeaponSystem.power(shooter, weapon.damage_at(level)) if shooter != null else weapon.damage_at(level)
+	var damage := _weapons.power(shooter, weapon.damage_at(level)) if shooter != null else weapon.damage_at(level)
 	for angle: float in AutoWeapons.seeker_angles(level, aim):
 		_projectiles.spawn(origin, Vector2.from_angle(angle) * weapon.speed, damage,
 			weapon.reach / weapon.speed, shooter_id, 0, 0.0, DamageSource.of_weapon(AutoWeapons.Id.SEEKING_BOLTS))
@@ -1594,7 +1660,7 @@ func _on_ability_cast(caster: Player, weapon_id: int, level: int, at: Vector2) -
 		AutoWeapon.Kind.BLAST:
 			caster.health.invulnerable_left = maxf(caster.health.invulnerable_left, weapon.duration)
 			caster.health.heal_share(AutoWeapons.BLAST_HEAL_SHARE)
-			_enemies.damage_in_radius(at, weapon.radius_at(level), WeaponSystem.power(caster, weapon.damage_at(level)),
+			_enemies.damage_in_radius(at, weapon.radius_at(level), _weapons.power(caster, weapon.damage_at(level)),
 				caster.peer_id, source)
 			_detonate_blast(at, weapon.reach)
 			for peer_id: int in _ready_peers:
@@ -1612,7 +1678,7 @@ func _on_ability_cast(caster: Player, weapon_id: int, level: int, at: Vector2) -
 			effigy.time_left = weapon.duration * power
 			effigy.lure_radius = weapon.reach
 			effigy.burst_radius = weapon.radius_at(level)
-			effigy.burst_damage = WeaponSystem.power(caster, weapon.damage_at(level))
+			effigy.burst_damage = _weapons.power(caster, weapon.damage_at(level))
 			effigy.owner_peer_id = caster.peer_id
 			effigy.source = source
 			_effigies.append(effigy)

@@ -179,6 +179,12 @@ static func _apply_stat(upgrade: Upgrade, stats: CharacterStats, health: PlayerH
 			stats.homing += upgrade.amount
 		Upgrade.Stat.RECOVERY:
 			stats.recovery += upgrade.amount
+		Upgrade.Stat.DAMAGE_SHARE:
+			# Rounded from the running total, so +25% four times is exactly +100%.
+			var base := Characters.base_damage(stats.main_weapon)
+			var before := roundi(base * stats.damage_share)
+			stats.damage_share += upgrade.amount
+			stats.bullet_damage = maxi(stats.bullet_damage + roundi(base * stats.damage_share) - before, 1)
 		Upgrade.Stat.WEAPON_REACH:
 			stats.weapon_reach *= 1.0 + upgrade.amount
 		Upgrade.Stat.WEAPON_SIZE:
@@ -231,7 +237,7 @@ static func preview_text(id: int, stats: CharacterStats, health: PlayerHealth) -
 static func _stat_preview(stat: Upgrade.Stat, stats: CharacterStats, after_stats: CharacterStats,
 		health: PlayerHealth, after_health: PlayerHealth) -> String:
 	match stat:
-		Upgrade.Stat.DAMAGE:
+		Upgrade.Stat.DAMAGE, Upgrade.Stat.DAMAGE_SHARE:
 			return "Damage %d -> %d" % [stats.bullet_damage, after_stats.bullet_damage]
 		Upgrade.Stat.FIRE_RATE:
 			var rate_name := "Shots/s" if stats.main_weapon == CharacterStats.MainWeapon.BOLTS else "Attacks/s"

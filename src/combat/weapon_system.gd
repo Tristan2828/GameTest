@@ -24,6 +24,10 @@ signal ability_cast(caster: Player, weapon_id: int, level: int, at: Vector2)
 
 ## Stage times (seconds) when an altar appears.
 const ALTAR_TIMES: Array[float] = [80.0, 160.0]
+## Altars that appear at each of those times, by team size (1-4 players), each
+## near a different player: loot is first come, first served, so a bigger team
+## needs more of it.
+const ALTARS_BY_PLAYERS: Array[int] = [1, 2, 2, 3]
 const ALTAR_DISTANCE_MIN: float = 140.0
 const ALTAR_DISTANCE_MAX: float = 240.0
 const ALTAR_PICKUP_RADIUS: float = 16.0
@@ -43,6 +47,9 @@ const MAIN_SCYTHE_RADIUS_PER_SCALE: float = 5.0
 const SPEAR_COLOR: Color = Color(0.9, 0.86, 0.72)
 
 var bounds: Rect2 = Rect2(0, 0, 1600, 1000)
+## Auto weapon damage multiplier for this stage (the arena sets it on every peer
+## from Arena.AUTO_DAMAGE_BY_DEPTH, so found weapons keep up with tougher enemies).
+var stage_power: float = 1.0
 ## Set by the arena: peer id -> Player (or null), for main-weapon messages.
 var find_player: Callable = func(_peer_id: int) -> Player: return null
 
@@ -475,8 +482,10 @@ func _raise_spear_row(raiser: Player, origin: Vector2, aim: float, seed_value: i
 
 
 ## Chain Lightning: strikes the enemy closest to the aim, then jumps on to the
-## nearest ones it hasn't hit (and splits with Split Bolt). Returns the paths to
-## draw; a miss is a short zap into the air. Only the host deals the damage.
+## nearest ones it hasn't hit (and splits with Split Bolt). On the main chain,
+## jumps with nobody left to jump to strike the last enemy again, weaker
+## (MainWeapons.GROUNDED_SHARE), so a lone boss isn't safe. Returns the paths
+## to draw; a miss is a short zap into the air. Only the host deals the damage.
 func _main_lightning(shooter: Player, origin: Vector2, aim: float, enemies: EnemyManager,
 		is_host: bool) -> Array[PackedVector2Array]:
 	var stats := shooter.stats
@@ -491,10 +500,17 @@ func _main_lightning(shooter: Player, origin: Vector2, aim: float, enemies: Enem
 	for chain: int in 1 + stats.chain_forks:
 		var path := PackedVector2Array([origin, first_at]) if chain == 0 else PackedVector2Array([first_at])
 		var at := first_at
+		var last := first
+		var grounded := false
 		for jump: int in range(1, stats.projectile_count + 1):
-			var target := enemies.find_nearest_except(at, stats.weapon_radius, hit)
+			var target: Enemy = null if grounded else enemies.find_nearest_except(at, stats.weapon_radius, hit)
 			if target == null:
-				break
+				grounded = true
+				if is_host and chain == 0 and last.active:
+					enemies.damage(last, MainWeapons.grounded_damage(stats.bullet_damage), shooter.peer_id,
+						DamageSource.MAIN_GUN)
+				continue
+			last = target
 			hit[target.pool_index] = true
 			at = target.position
 			path.append(at)
@@ -587,9 +603,10 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 					_timers[retry_key] = 0.2
 
 
-## An auto weapon's damage for this player (relics raise it).
-static func power(player: Player, amount: int) -> int:
-	return roundi(amount * player.stats.auto_power)
+## An auto weapon's damage for this player: relics and Arcane Focus (auto_power),
+## Sharpened Edge and friends (damage_share), and the stage (stage_power).
+func power(player: Player, amount: int) -> int:
+	return roundi(amount * player.stats.auto_power * (1.0 + player.stats.damage_share) * stage_power)
 
 
 ## Host: where Grave Blast / Hex Snare / Bone Effigy should go off now, or
@@ -675,9 +692,13 @@ func _maybe_spawn_altar(clock: float, players: Array[Player], ready_peers: Array
 	for player: Player in players:
 		if not player.is_downed():
 			alive.append(player)
-	if alive.is_empty():
-		return
-	var around := alive[_rng.randi() % alive.size()].state.position
+	var altars := ALTARS_BY_PLAYERS[clampi(players.size(), 1, ALTARS_BY_PLAYERS.size()) - 1]
+	for i: int in mini(altars, alive.size()):
+		_spawn_altar(alive.pop_at(_rng.randi() % alive.size()).state.position, ready_peers)
+
+
+## Host: an altar with a random weapon somewhere near `around`.
+func _spawn_altar(around: Vector2, ready_peers: Array[int]) -> void:
 	var inner := bounds.grow(-30.0)
 	var at := around
 	for attempt: int in 10:

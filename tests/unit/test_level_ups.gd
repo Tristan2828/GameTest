@@ -45,8 +45,8 @@ func test_apply_changes_only_the_target_stat() -> void:
 	var health := PlayerHealth.new()
 	health.reset(stats.max_hp)
 	var base_speed := stats.move_speed
-	Upgrades.apply(0, stats, health)  # Sharpened Bolts
-	assert_eq(stats.bullet_damage, 14)
+	Upgrades.apply(0, stats, health)  # Sharpened Edge: +25% of Kael's 10, rounded
+	assert_eq(stats.bullet_damage, 13)
 	assert_eq(stats.move_speed, base_speed)
 
 
@@ -177,7 +177,7 @@ func test_preview_shows_stat_before_and_after_without_changing_it() -> void:
 	var health := PlayerHealth.new()
 	health.reset(100)
 	health.hp = 10
-	assert_eq(Upgrades.preview_text(0, stats, health), "Damage 10 -> 14")
+	assert_eq(Upgrades.preview_text(0, stats, health), "Damage 10 -> 13")
 	assert_eq(Upgrades.preview_text(4, stats, health), "Bolts 2 -> 3")
 	assert_eq(Upgrades.preview_text(8, stats, health), "HP 10 -> 50")
 	assert_eq(stats.bullet_damage, 10)

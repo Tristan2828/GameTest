@@ -13,5 +13,5 @@ script = ExtResource("1_relic")
 title = "Cracked Hourglass"
 icon = "rel_hourglass"
 description = "Your auto weapons recharge 20% faster"
-price = 60
+price = 80
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

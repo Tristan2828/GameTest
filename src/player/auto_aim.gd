@@ -4,7 +4,8 @@ extends RefCounted
 ## decision: movement is the only control). Each weapon has its own rule:
 ## - Bolt Gun: the nearest enemy.
 ## - Reaper's Scythe: the way you face (your last movement direction).
-## - Chain Lightning, Bone Spears: a random enemy nearby.
+## - Chain Lightning, Bone Spears: a random enemy nearby (lightning goes for a
+##   boss in reach half the time, BOSS_FOCUS_SHARE).
 ##
 ## Runs on the player's own computer from the enemies that screen shows; the
 ## result travels in PlayerInput like the old mouse aim, so the shooter's
@@ -14,16 +15,28 @@ extends RefCounted
 const SCYTHE_WAKE_FACTOR: float = 1.5
 ## Lightning and spears look a little past their reach so they start early.
 const RANDOM_REACH_MARGIN: float = 10.0
+## Lightning goes for a boss in reach this often instead of a random enemy.
+## Without it, Morwen spent boss fights zapping the adds (stage 3 boss fights
+## took 2-3 minutes, the other heroes' about one). Spears don't: with it Vesper
+## became the fastest boss killer by far.
+const BOSS_FOCUS_SHARE: float = 0.5
 
 
 ## The aim angle for `stats`' main weapon, or NAN when there's nothing worth
-## attacking. `roll` (0..1) picks among enemies for the random weapons.
-static func pick(stats: CharacterStats, from: Vector2, facing: float, enemies: PackedVector2Array, roll: float) -> float:
+## attacking. `roll` (0..1) picks among enemies for the random weapons; `boss`
+## is the boss's position (Vector2.INF when there's none).
+static func pick(stats: CharacterStats, from: Vector2, facing: float, enemies: PackedVector2Array, roll: float,
+		boss: Vector2 = Vector2.INF) -> float:
 	var reach := reach_of(stats)
 	match stats.main_weapon:
 		CharacterStats.MainWeapon.SCYTHE:
 			return facing if nearest(from, enemies, reach) != Vector2.INF else NAN
 		CharacterStats.MainWeapon.LIGHTNING, CharacterStats.MainWeapon.SPEARS:
+			if stats.main_weapon == CharacterStats.MainWeapon.LIGHTNING and boss.is_finite() \
+					and from.distance_to(boss) <= reach:
+				if roll < BOSS_FOCUS_SHARE:
+					return (boss - from).angle()
+				roll = (roll - BOSS_FOCUS_SHARE) / (1.0 - BOSS_FOCUS_SHARE)
 			var target := random_within(from, enemies, reach, roll)
 			return (target - from).angle() if target != Vector2.INF else NAN
 		_:

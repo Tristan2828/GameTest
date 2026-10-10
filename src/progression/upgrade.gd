@@ -14,7 +14,7 @@ enum Stat {
 	RICOCHET, HOMING, DASH_GRACE, BLAST_DAMAGE, BLAST_HEAL, HEX_DURATION, HEX_DAMAGE,
 	EFFIGY_DURATION, EFFIGY_BURST,
 	WEAPON_REACH, WEAPON_SIZE, WEAPON_DELAY, CHAIN_GROWTH, CHAIN_FORK, SCYTHE_CUTS, SPEAR_SHARDS,
-	RECOVERY,
+	RECOVERY, DAMAGE_SHARE,
 }
 
 @export var title: String = "Upgrade"
@@ -24,7 +24,8 @@ enum Stat {
 @export var stat: Stat = Stat.DAMAGE
 ## Meaning depends on the stat: flat amount for DAMAGE/MAX_HP/EXTRA_BOLT/PIERCE/HEAL/
 ## KILL_BURST/RICOCHET/CHAIN_FORK/SCYTHE_CUTS/SPEAR_SHARDS, seconds for HIT_INVULNERABILITY,
-## HP per second for RECOVERY, radians per second for HOMING, kills per HP healed for
+## HP per second for RECOVERY, radians per second for HOMING, a share of the hero's
+## starting damage for DAMAGE_SHARE (0.25 = +25%), kills per HP healed for
 ## KILL_HEAL, and a fraction (0.1 = 10%; REVIVE_SPEED +1.0 = twice as fast) for the
 ## others. Can be negative.
 @export var amount: float = 1.0

@@ -13,6 +13,6 @@ script = ExtResource("1_relic")
 title = "Mourner's Bell"
 icon = "rel_mourners_bell"
 description = "Revive downed teammates twice as fast"
-price = 40
+price = 45
 co_op_only = true
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

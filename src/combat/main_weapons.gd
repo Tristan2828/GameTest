@@ -22,6 +22,11 @@ const SHARD_DAMAGE_SHARE: float = 0.4
 const LIGHTNING_CONE_DEGREES: float = 35.0
 ## How much a target off to the side counts as farther away (picks what you aim at).
 const LIGHTNING_ANGLE_WEIGHT: float = 2.0
+## A Chain Lightning jump with no new enemy to reach strikes the last one again
+## at this share of the base damage, without Conductor's growth (v0.22.0: Morwen
+## barely hurt a lone boss; 50% with growth made her melt them, 40% without
+## still left her the slowest).
+const GROUNDED_SHARE: float = 0.6
 ## Enemies this close are struck whichever way you aim (they're on top of you).
 const LIGHTNING_POINT_BLANK: float = 14.0
 
@@ -75,6 +80,11 @@ static func shard_damage(spear_damage: int) -> int:
 ## Damage of the strike that is jump number `jump` (0 = the first target).
 static func chain_damage(base: int, growth: float, jump: int) -> int:
 	return roundi(base * pow(1.0 + growth, jump))
+
+
+## Damage of a jump that has nobody new to reach (GROUNDED_SHARE).
+static func grounded_damage(base: int) -> int:
+	return maxi(roundi(base * GROUNDED_SHARE), 1)
 
 
 ## How good `target` is as Chain Lightning's first target from `from` aiming at

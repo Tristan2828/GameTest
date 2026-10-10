@@ -95,6 +95,10 @@ enum MainWeapon { BOLTS, SCYTHE, LIGHTNING, SPEARS }
 @export var spear_shards: int = 0
 
 @export_group("Damage bonuses")
+## Damage added as a share of the hero's starting damage (0.25 = +25%; Sharpened
+## Edge, Glass Cannon, Cursed Skull). Raises bullet_damage, and auto weapons hit
+## this much harder too.
+@export var damage_share: float = 0.0
 ## Extra damage (fraction) against bosses, from every source.
 @export var boss_damage_bonus: float = 0.0
 ## Extra damage (fraction) against enemies below half health, from every source.

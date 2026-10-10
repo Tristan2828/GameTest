@@ -121,3 +121,15 @@ func test_maxed_weapon_altar_gives_coins_instead() -> void:
 	_weapons.tick_host(DELTA, 0.0, _players(), _enemies, no_peers)
 	assert_signal_not_emitted(_weapons, "weapon_gained")
 	assert_eq(_player.coins, WeaponSystem.MAXED_WEAPON_COINS)
+
+
+func test_bigger_teams_get_an_altar_near_more_players() -> void:
+	var no_peers: Array[int] = []
+	var team: Array[Player] = []
+	for i: int in 4:
+		var player: Player = PLAYER_SCENE.instantiate()
+		player.setup(i + 1, i, Vector2(300 + 300 * i, 500), Rect2(0, 0, 1600, 1000))
+		add_child_autofree(player)
+		team.append(player)
+	_weapons.tick_host(DELTA, WeaponSystem.ALTAR_TIMES[0], team, _enemies, no_peers)
+	assert_eq(_weapons.altar_count(), WeaponSystem.ALTARS_BY_PLAYERS[3])

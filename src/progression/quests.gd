@@ -25,7 +25,10 @@ const DESCRIPTIONS: Array[String] = [
 	"Grab %d power-ups.",
 	"Revive a teammate.",
 ]
-const TARGETS: Array[int] = [1, 1, 1, 250, 60, 40, 4000, 2, 1]
+## v0.22.x: Slayer 250 -> 1000, Untouchable 60 -> 45, Gold Digger 40 -> 80 and
+## Arsenal 4000 -> 12000 (stronger auto weapons, fewer coins; stage 2 alone
+## brings ~2000 kills solo).
+const TARGETS: Array[int] = [1, 1, 1, 1000, 45, 80, 12000, 2, 1]
 const REWARDS: Array[int] = [45, RELIC_REWARD, 35, 40, RELIC_REWARD, RELIC_REWARD, 45, 35, RELIC_REWARD]
 const ICONS: Array[String] = ["crown", "icon_ritual", "coin_big", "up_sharpened_bolts", "up_steady_nerves", "coin_big",
 	"icon_chain_lightning", "pickup_bomb", "rel_mourners_bell"]

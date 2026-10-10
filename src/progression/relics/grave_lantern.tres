@@ -13,5 +13,5 @@ script = ExtResource("1_relic")
 title = "Grave Lantern"
 icon = "rel_grave_lantern"
 description = "Pick up gems and coins from 60% farther"
-price = 40
+price = 50
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

@@ -10,11 +10,13 @@ extends RefCounted
 enum Kind { HEART, SOUL_MAGNET, HOLY_BOMB, FROST_HOURGLASS }
 
 ## Chance that a regular enemy's death drops a pickup (when not on cooldown).
-const DROP_CHANCE: float = 0.012
+## (v0.22.0's 1.2% / 10 s gave 10-20 per stage, and Holy Bombs alone did up to
+## a fifth of the damage; now about 6-9 per stage, plus one from each champion.)
+const DROP_CHANCE: float = 0.01
 ## At most one random drop per this many seconds of play.
-const DROP_COOLDOWN: float = 10.0
+const DROP_COOLDOWN: float = 18.0
 ## Relative odds of each Kind for a random drop (same order as Kind).
-const WEIGHTS: Array[int] = [35, 25, 20, 20]
+const WEIGHTS: Array[int] = [40, 25, 15, 20]
 ## A Heart heals this share of max HP.
 const HEART_HEAL_SHARE: float = 0.3
 ## Holy Bomb: reach (about a screen) and damage to every regular enemy in it

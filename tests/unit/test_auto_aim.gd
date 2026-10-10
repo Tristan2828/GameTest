@@ -61,3 +61,20 @@ func test_crowd_center_finds_the_biggest_group() -> void:
 	assert_almost_eq(center.x, 201.5, 1.0)
 	assert_almost_eq(center.y, 99.75, 1.0)
 	assert_eq(AutoWeapons.crowd_center(FROM, points, 20.0), Vector2.INF, "nobody in reach")
+
+
+func test_lightning_goes_for_a_boss_in_reach_half_the_time() -> void:
+	var boss := FROM + Vector2(60, 0)
+	var add := FROM + Vector2(0, 60)
+	var enemies := PackedVector2Array([boss, add])
+	var adds_only := PackedVector2Array([add])
+	assert_almost_eq(AutoAim.pick(_hero(Characters.Id.NECROMANCER), FROM, 0.0, adds_only, 0.2, boss), PI / 2.0, 0.0001,
+		"spears stay random")
+	for id: int in [Characters.Id.HEXBLADE_WITCH]:
+		var stats := _hero(id)
+		assert_almost_eq(AutoAim.pick(stats, FROM, 0.0, enemies, 0.2, boss), 0.0, 0.0001, "low roll: the boss")
+		assert_almost_eq(AutoAim.pick(stats, FROM, 0.0, adds_only, 0.9, boss), PI / 2.0, 0.0001,
+			"high roll: a random enemy")
+		var far_boss := FROM + Vector2(2000, 0)
+		assert_almost_eq(AutoAim.pick(stats, FROM, 0.0, adds_only, 0.2, far_boss), PI / 2.0, 0.0001,
+			"a boss out of reach is ignored")

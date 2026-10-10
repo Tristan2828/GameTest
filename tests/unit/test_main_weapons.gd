@@ -237,3 +237,13 @@ func test_run_summary_names_the_main_weapon() -> void:
 	var keeper := Characters.get_character(Characters.Id.GRAVEKEEPER)
 	assert_eq(DamageSource.title(DamageSource.MAIN_GUN, keeper), "Reaper's Scythe")
 	assert_eq(DamageSource.icon(DamageSource.MAIN_GUN, keeper), "icon_reapers_scythe")
+
+
+func test_lightning_with_nobody_to_jump_to_strikes_the_last_enemy_again() -> void:
+	var witch := _hero_player(Characters.Id.HEXBLADE_WITCH)
+	var lone := _ghoul(Vector2(600, 500))
+	_fire(witch)
+	var grounded := MainWeapons.grounded_damage(witch.stats.bullet_damage)
+	assert_lt(grounded, witch.stats.bullet_damage, "weaker than a real jump")
+	var expected := witch.stats.bullet_damage + grounded * witch.stats.projectile_count
+	assert_eq(lone.max_hp - lone.hp, expected, "first strike plus every unused jump")

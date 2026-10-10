@@ -13,5 +13,5 @@ script = ExtResource("1_relic")
 title = "Vampire Fang"
 icon = "rel_vampire_fang"
 description = "Heal 1 HP every 3 kills"
-price = 80
+price = 100
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

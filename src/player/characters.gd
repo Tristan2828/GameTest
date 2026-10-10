@@ -19,3 +19,11 @@ static func get_character(id: int) -> CharacterStats:
 
 static func is_valid_id(id: int) -> bool:
 	return id >= 0 and id < ALL.size()
+
+
+## The starting damage of the hero with this main weapon (each hero has their own).
+static func base_damage(main_weapon: int) -> int:
+	for character: CharacterStats in ALL:
+		if character.main_weapon == main_weapon:
+			return character.bullet_damage
+	return 10

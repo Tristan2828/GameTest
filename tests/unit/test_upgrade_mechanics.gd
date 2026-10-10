@@ -73,9 +73,9 @@ func test_trade_off_applies_both_effects_and_previews_both() -> void:
 	var health := PlayerHealth.new()
 	health.reset(stats.max_hp)
 	var id := _id_of("Glass Cannon")
-	assert_eq(Upgrades.preview_text(id, stats, health), "Damage 10 -> 20\nMax HP 100 -> 80")
+	assert_eq(Upgrades.preview_text(id, stats, health), "Damage 10 -> 15\nMax HP 100 -> 80")
 	Upgrades.apply(id, stats, health)
-	assert_eq(stats.bullet_damage, 20)
+	assert_eq(stats.bullet_damage, 15)
 	assert_eq(stats.max_hp, 80)
 	assert_eq(health.hp, 80)
 
@@ -169,3 +169,28 @@ func test_homing_bolts_curve_toward_an_enemy() -> void:
 		_projectiles.step(1.0 / 60.0)
 	assert_lt(_projectiles.position_of(0).y, 299.0, "homing bolt turned up toward the enemy")
 	assert_almost_eq(_projectiles.position_of(1).y, 300.0, 0.01, "plain bolt flies straight")
+
+
+func test_damage_share_scales_with_each_heros_own_damage() -> void:
+	var sharpened := _id_of("Sharpened Edge")
+	for id: int in Characters.ALL.size():
+		var stats := Characters.get_character(id).duplicate() as CharacterStats
+		var health := PlayerHealth.new()
+		health.reset(stats.max_hp)
+		var base := stats.bullet_damage
+		for i: int in 4:
+			Upgrades.apply(sharpened, stats, health)
+		assert_eq(stats.bullet_damage, base * 2, "four +25%% picks double %s's damage" % stats.hero_name)
+
+
+func test_damage_share_also_powers_auto_weapons() -> void:
+	var weapons := WeaponSystem.new()
+	add_child_autofree(weapons)
+	var player: Player = preload("res://src/player/player.tscn").instantiate()
+	player.setup(1, 0, Vector2(500, 500), Rect2(0, 0, 1600, 1000))
+	add_child_autofree(player)
+	assert_eq(weapons.power(player, 10), 10)
+	Upgrades.apply(_id_of("Sharpened Edge"), player.stats, player.health)
+	assert_eq(weapons.power(player, 10), 13)
+	weapons.stage_power = 2.0
+	assert_eq(weapons.power(player, 10), 25)
