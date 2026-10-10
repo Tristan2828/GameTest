@@ -1,4 +1,4 @@
-# Playtest Review (v0.16.0)
+# Playtest Review (v0.17.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (312 unit tests, plus online host+client runs).
@@ -52,7 +52,7 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
-### 3.0e Map events, quests, weapons, pickups, host pause (v0.16.0, your fourth list)
+### 3.0e Map events, quests, weapons, pickups, host pause (v0.17.0, your fourth list)
 - [ ] Champion lair: a dark crowned statue on a red ring somewhere on the map. It wakes when you get close. Fun to hunt down? Too tough or too easy?
 - [ ] Champion's chest: the first player to touch it gets an auto weapon (or a level). Worth the detour?
 - [ ] Ritual circle: standing in it calls waves; when the gold ring is full everyone inside heals and XP gems drop. Is 15 s the right length? Too dangerous or too safe?
@@ -249,9 +249,9 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.
 - **Upgrades (v0.16.0):** the numbers of the 16 new ones, which are trade-offs, and the four hero-only upgrades.
-- **Map events (v0.16.0):** one champion lair and one ritual per stage at the start, then pop-ups (thief 1:10, ritual 2:20, thief 3:20); champions are recolored, crowned regular enemies (Ghoul / Plague / Paladin Champion); every reward number.
-- **Quests (v0.16.0):** the nine quests, their targets and rewards; a random offer if you don't pick.
-- **Weapons and pickups (v0.16.0):** the four new weapons' numbers; pickup drop chance (1.2% per kill, at most one per 10 s) and odds.
+- **Map events (v0.17.0):** one champion lair and one ritual per stage at the start, then pop-ups (thief 1:10, ritual 2:20, thief 3:20); champions are recolored, crowned regular enemies (Ghoul / Plague / Paladin Champion); every reward number.
+- **Quests (v0.17.0):** the nine quests, their targets and rewards; a random offer if you don't pick.
+- **Weapons and pickups (v0.17.0):** the four new weapons' numbers; pickup drop chance (1.2% per kill, at most one per 10 s) and odds.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
 - **Abilities:** one per character on a cooldown (Dash / Grave Blast / Hex Snare / Bone Effigy), replacing dash and bombs.
 - **Characters / abilities**, as listed in 3.5.

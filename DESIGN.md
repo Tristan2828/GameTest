@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-09 (v0.16.0)
+> Last updated: 2026-10-09 (v0.17.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -86,8 +86,8 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
     - *Hero-only* (only offered to that hero; the Compendium says whose): Afterimage (Wanderer: untouchable 0.3 s longer after a Dash), Hallowed Blast (Gravekeeper: +40% blast damage, heals 1 more), Deep Hex (Witch: hex +1 s, hexed enemies +25% damage), Ossuary (Necromancer: Effigy +1.5 s, burst +50%).
     - An upgrade can carry extra effects (`Upgrade.extra_effects`, used by trade-offs and hero upgrades); cards show one before -> after line per effect.
     - Networking: damage bonuses and crits are rolled by the host (`HitBonus`, in `EnemyManager.damage`); crits reach clients as a snapshot flag. Corpse Blast bursts go to clients as one batched message per tick. Ricochet and homing run on every peer for their own (visual) bolts; the host decides the real hits, as before.
-- **Weapon pickups:** new auto weapons found during stages (altars and champions' chests). v0.16.0: 7 weapons (see Playtest 4 changes).
-- **Power-up pickups (v0.16.0):** Heart, Soul Magnet, Holy Bomb, Frost Hourglass (see Playtest 4 changes).
+- **Weapon pickups:** new auto weapons found during stages (altars and champions' chests). v0.17.0: 7 weapons (see Playtest 4 changes).
+- **Power-up pickups (v0.17.0):** Heart, Soul Magnet, Holy Bomb, Frost Hourglass (see Playtest 4 changes).
 - **Passive items / relics:** stat boosts and synergies.
 - **Shop between stages:** spend coins on items.
 
@@ -106,7 +106,7 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
 | Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 hearts you lie in a circle (30 px) and can't move, shoot or use your ability. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max hearts (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Fire / Ability cycles, ending on your own body). Teammates see a pulsing arrow with a "+" and a "Red is down!" line. Run ends if everyone is down at once |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
-| Pause | **The host's pause menu freezes the game for everyone** (v0.16.0, owner request); friends see a "Paused" banner, and closing it plays the "3, 2, 1" countdown. A friend's Esc menu doesn't pause (only blocks their own controls). Solo pauses too, also with the countdown |
+| Pause | **The host's pause menu freezes the game for everyone** (v0.17.0, owner request); friends see a "Paused" banner, and closing it plays the "3, 2, 1" countdown. A friend's Esc menu doesn't pause (only blocks their own controls). Solo pauses too, also with the countdown |
 | Map events and quests | Events are shared (anyone can wake a champion, hold a ritual, catch a thief); a chest goes to whoever touches it first. Quests are personal (each player picks their own) |
 
 ## 6. Art & audio
@@ -258,7 +258,7 @@ Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s
 ### More upgrades (v0.16.0, owner request)
 16 new level-up upgrades (25 in total), see Progression, In-run. The owner chose the mix (stats, new mechanics, a couple of trade-offs, one per hero). Decisions made by Claude (**revisit in the next playtest**): every number (crit 10% / x2, burst 12 damage in 32 px, +25% vs bosses, +30% vs wounded below 50%, ricochet range 110 px, homing turn 2.5 rad/s per pick within 130 px), the stack limits, which upgrades are trade-offs, and the four hero upgrades. With 22 upgrades offered to each hero instead of 9, a favourite shows up less often; **watch** whether runs feel too random. Test aid: `--give-upgrades=<id,id,...>` (`Upgrades.ALL` ids) gives every player those upgrades at the start.
 
-### Playtest 4 changes (v0.16.0, owner's fourth list)
+### Playtest 4 changes (v0.17.0, owner's fourth list)
 The owner asked for map events (a reason to explore), arrows to them, quests picked in the shop, more weapons and pickups, and a real host pause. The owner chose in a Q&A: champion lairs, ritual circles and treasure thieves (not cursed shrines); a few events placed at stage start plus pop-ups; edge arrows + minimap; free personal quests (1 of 3, no penalty); all four proposed weapons and pickups; host-only pause; rewards that vary by event.
 1. **Map events** (`MapEvents`, host-run, synced as a small snapshot 10 times a second):
    - **Champion lair** (one per stage, placed at the start away from the middle): a dark statue of the stage's champion on a red ring. It wakes when a player comes within 150 px. Champions are crowned, recolored, bigger versions of a stage enemy that shoot back (Ghoul Champion: 8-bullet rings; Plague Champion: 12-bullet bursts; Paladin Champion: 7-bullet aimed fans), 1200–1600 HP in stage 1, +60% per extra player. Killing one drops 10 coins (3 each), a power-up and a **chest**: the first player to touch it gets a random auto weapon they can still level (30 coins if all are maxed).
@@ -279,7 +279,7 @@ The owner asked for map events (a reason to explore), arrows to them, quests pic
 
 Decisions made by Claude (**revisit in the next playtest**): every number above, the champion designs (recolored stage enemies with a crown instead of new sprites), pop-up times, the quest list and rewards, the weapon and pickup numbers, freezing bullets in place rather than clearing them, and that the Grave Robber does no contact damage.
 
-### Where things stand (2026-10-09, v0.15.0 released; v0.16.0 adds in-game feedback, 16 upgrades, map events, quests, 4 weapons, 4 pickups and host pause)
+### Where things stand (2026-10-10, v0.16.0 released with in-game feedback and 16 upgrades; v0.17.0 adds map events, quests, 4 weapons, 4 pickups and host pause)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
 ### Before that (v0.14.1, released on GitHub)
@@ -308,8 +308,8 @@ Decisions made by Claude (**revisit in the next playtest**): every number above,
 
 ## 9. Ideas for Later
 
-- **Cursed shrines** (offered with the v0.16.0 events, not picked): walk up to one for a gamble, e.g. more damage but faster enemies until the stage ends, or a free heal.
-- **Risky bounties / team quests** (the quest options not picked in v0.16.0): quests with a cost or curse for a bigger reward, or one shared team quest chosen by vote.
+- **Cursed shrines** (offered with the v0.17.0 events, not picked): walk up to one for a gamble, e.g. more damage but faster enemies until the stage ends, or a free heal.
+- **Risky bounties / team quests** (the quest options not picked in v0.17.0): quests with a cost or curse for a bigger reward, or one shared team quest chosen by vote.
 - **Clients asking for a pause** ("Request pause" shown to the host), if friends miss being able to pause.
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
 - **Support hero:** a character whose ability or passive heals teammates or revives them faster (`CharacterStats.revive_speed` is already in place; owner idea, v0.15.0).
