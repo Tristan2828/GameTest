@@ -78,3 +78,15 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
 - **Wrong release:** delete it on GitHub (Releases -> the release -> Delete) and delete its tag
   (`git push origin :refs/tags/v<version>` then `git tag -d v<version>`), fix, and run the script again.
   The Discord post has to be deleted by hand.
+- **"Windows protected your PC" (SmartScreen) or a browser saying the download is uncommon:** expected.
+  The exe isn't code-signed and few people have downloaded it, so Windows has no reputation for it. It's
+  not a virus detection. Friends can **Unblock** the zip before extracting (right-click > Properties) or
+  click **More info -> Run anyway**; the README and every release's notes say so. In-game updates
+  (**Update now**) don't get the warning because the game downloads them itself. The exe carries a
+  name, version, description and icon (Properties > Details; set in `export_presets.cfg`, icon drawn
+  by `tools/make_icon.gd`), but only signing removes the warning: Microsoft Trusted Signing (Azure,
+  about $10/month) or a code-signing certificate, and even then the warning fades as downloads add up.
+  Shipping through the itch.io app or Steam avoids it entirely.
+- **Windows Defender quarantines or deletes the exe** (a real "threat found" alert, not the blue screen
+  above): a false positive. Submit the exe at https://www.microsoft.com/en-us/wdsi/filesubmission
+  ("Software developer", "Incorrectly detected as malware").

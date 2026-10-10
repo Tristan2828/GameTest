@@ -50,6 +50,8 @@ if ($previousTag) {
 	$notes.Add("")
 }
 $notes.Add("**Download** ``GameTest-$version-windows.zip`` below, unzip it, and run ``GameTest.exe``. Everyone in a game needs the same version.")
+$notes.Add("")
+$notes.Add("**First download?** Right-click the zip > Properties > tick **Unblock** > OK before unzipping, or Windows will warn about the game (if it does: **More info** > **Run anyway**). Already playing? Use **Update now** on the title screen instead; updates don't get the warning.")
 $notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "GameTest-$tag-notes.md"
 $notes | Set-Content -Encoding utf8 $notesFile
 

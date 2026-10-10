@@ -46,6 +46,15 @@ if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
 New-Item -ItemType Directory -Force $outDir | Out-Null
 
 & $godot --headless --path $project --import 2>&1 | Out-Null
+# The exe's icon, drawn from the game's pixel art (export_presets.cfg points at it).
+# With the version, name and description it fills in the exe's Properties > Details.
+$icon = Join-Path $project "builds\icon.ico"
+if (Test-Path $icon) { Remove-Item $icon }
+& $godot --headless --path $project -s tools/make_icon.gd -- $icon 2>&1 | Out-Null
+if (-not (Test-Path $icon)) {
+	Write-Host "FAILED: could not draw the exe icon (tools/make_icon.gd)." -ForegroundColor Red
+	exit 1
+}
 $output = & $godot --headless --path $project --export-release "Windows Desktop" $exe 2>&1 | ForEach-Object { "$_" }
 $exitCode = $LASTEXITCODE
 $output | Write-Output
