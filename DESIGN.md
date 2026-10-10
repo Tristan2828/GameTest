@@ -302,7 +302,7 @@ Decisions made by Claude (**revisit in the next playtest**): every number above,
 
 Decisions made by Claude (**revisit in the next playtest**): names on the title menu (not the lobby), 12 characters, name tags only over teammates; the party card layout; the Highlights lines; the chest radius; the minimap shapes; "Game Guide" as the new name; every balance number in item 13.
 
-### Hero main weapons (v0.19.0, owner request)
+### Hero main weapons (v0.19.0, owner request; released)
 The owner asked for a unique main weapon per hero instead of everyone's bolt gun (one hero keeps it), reusing the existing weapons. Q&A choices: every main weapon stays **aimed** (Claude advised against heroes that don't aim: half the controls would do nothing and co-op skill levels would drift apart), the three weapons that became main weapons leave the pickup pool, each main weapon gets **its own upgrade set**, and the Wanderer stays as is.
 1. **Main weapons** (`CharacterStats.main_weapon`, append-only enum `MainWeapon`; numbers in `characters/*.tres`; pure math in `MainWeapons`):
    - **Bolt Gun** (Wanderer): unchanged.
