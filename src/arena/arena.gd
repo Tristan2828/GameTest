@@ -18,6 +18,8 @@ const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
 ## A run is this many stages; beating the last boss is Victory.
 const STAGE_COUNT: int = 3
+## Your own attack sound, by CharacterStats.MainWeapon.
+const MAIN_WEAPON_SOUNDS: Array[StringName] = [&"shoot", &"scythe", &"zap", &"spear"]
 ## How much tougher each stage of a run is (index = run depth - 1; a single-stage
 ## custom game always uses the first column). v0.18.0: the old +50% HP / +35%
 ## spawns per stage made stages 2-3 easy, since a team's damage roughly triples
@@ -211,6 +213,8 @@ func _ready() -> void:
 		if _near_local_player(at, 80.0):
 			Sfx.play(&"pickup", -4.0))
 	_weapons.weapon_gained.connect(_on_weapon_gained)
+	_weapons.shards_requested.connect(_on_shards_requested)
+	_weapons.find_player = _player_by_id
 	_events.announced.connect(_on_event_announced)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	_hud.run_summary.return_requested.connect(_request_restart)
@@ -548,11 +552,11 @@ func _add_player(peer_id: int) -> void:
 	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id),
 		"hearts_bonus": _config.hearts_bonus})
 	if _config.start_with_weapons:
-		for weapon_id: int in AutoWeapons.ALL.size():
+		for weapon_id: int in AutoWeapons.PICKUPS:
 			_weapons.grant(peer_id, weapon_id, _ready_peer_list())
 	if LaunchOptions.give_weapons:
 		# Test aid: same path as real pickups (new joiners also get it via history).
-		for weapon_id: int in AutoWeapons.ALL.size():
+		for weapon_id: int in AutoWeapons.PICKUPS:
 			for level: int in 2:
 				_weapons.grant(peer_id, weapon_id, _ready_peer_list())
 	for upgrade_id: int in LaunchOptions.give_upgrades:
@@ -776,6 +780,12 @@ func _event_screenshots() -> void:
 	if not _event_screenshots_taken.has("power_up") and _power_ups.count() > 0:
 		_event_screenshots_taken["power_up"] = true
 		Main.save_screenshot(get_tree(), "power_up.png")
+	# The hero's main weapon in a crowd (a few moments into each stage).
+	for seconds: int in [30, 90]:
+		var name := "stage%d_%ds.png" % [_stage, seconds]
+		if not _event_screenshots_taken.has(name) and _elapsed >= seconds:
+			_event_screenshots_taken[name] = true
+			Main.save_screenshot(get_tree(), name)
 
 
 func _is_spectating() -> bool:
@@ -1116,7 +1126,7 @@ func _pay_quest(peer_id: int) -> void:
 	var reward := "%d coins" % Quests.REWARDS[quest_id]
 	var coins := Quests.REWARDS[quest_id]
 	if coins == Quests.RELIC_REWARD:
-		var relics := Relics.roll_offers(_rng, player.relic_ids, _player_nodes().size() > 1)
+		var relics := Relics.roll_offers(_rng, player.relic_ids, _player_nodes().size() > 1, player.stats)
 		if relics.is_empty():
 			coins = QUEST_COINS_WHEN_NO_RELIC
 			reward = "%d coins" % coins
@@ -1461,6 +1471,12 @@ func _on_player_shot_requested(shooter: Player, input_seq: int) -> void:
 	var origin := shooter.muzzle_position()
 	var aim := shooter.state.aim
 	var seed_value := ShotPatterns.make_seed(shooter.peer_id, input_seq)
+	if shooter.stats.main_weapon != CharacterStats.MainWeapon.BOLTS:
+		# Scythe, lightning and spears: the weapon system shows them (and tells clients).
+		_weapons.fire_main(shooter, origin, seed_value, _enemies, multiplayer.is_server())
+		if shooter.is_local():
+			Sfx.play(MAIN_WEAPON_SOUNDS[shooter.stats.main_weapon], -10.0)
+		return
 	_spawn_shot(shooter.peer_id, pattern, origin, aim, seed_value)
 	if shooter.is_local():
 		Sfx.play(&"shoot", -14.0)
@@ -1482,6 +1498,14 @@ func _spawn_shot(shooter_id: int, pattern: ShotPatterns.Id, origin: Vector2, aim
 		_projectiles.spawn(origin + offset, Vector2.from_angle(bullets[i]) * bullets[i + 1], stats.bullet_damage,
 			stats.bullet_lifetime, shooter_id, stats.pierce, -bullets[i + 2], DamageSource.MAIN_GUN,
 			stats.ricochet, stats.homing)
+
+
+## Everyone: a Bone Spear's Splinters shards (simulated on every peer like bolts;
+## the host decides the hits).
+func _on_shards_requested(owner_id: int, at: Vector2, angles: PackedFloat32Array, damage: int) -> void:
+	for angle: float in angles:
+		_projectiles.spawn(at, Vector2.from_angle(angle) * MainWeapons.SHARD_SPEED, damage, MainWeapons.SHARD_LIFETIME,
+			owner_id, 0, 0.0, DamageSource.MAIN_GUN)
 
 
 func _stats_of_peer(peer_id: int) -> CharacterStats:

@@ -41,21 +41,14 @@ func test_character_trade_offs() -> void:
 	assert_eq(Characters.get_character(Characters.Id.NECROMANCER).ability, CharacterStats.Ability.BONE_EFFIGY)
 
 
-func test_necromancer_fires_a_bone_fan_and_extra_bolt_adds_shards() -> void:
-	var necro := Characters.get_character(Characters.Id.NECROMANCER)
-	var pattern := necro.shot_pattern as ShotPatterns.Id
-	assert_eq(pattern, ShotPatterns.Id.BONE_FAN)
-	assert_eq(ShotPatterns.angles(pattern, 0.0, 7, 1).size(), 3)
-	assert_eq(ShotPatterns.angles(pattern, 0.0, 7, 2).size(), 5)
-
-
-func test_gravekeeper_shotgun_fires_a_wide_fan_and_extra_bolt_adds_pellets() -> void:
-	var keeper := Characters.get_character(Characters.Id.GRAVEKEEPER)
-	var pattern := keeper.shot_pattern as ShotPatterns.Id
-	var pellets := ShotPatterns.angles(pattern, 0.0, 7, 1)
-	assert_eq(pellets.size(), 5)
-	assert_gt(pellets[4] - pellets[0], deg_to_rad(20.0), "wide spread")
-	assert_eq(ShotPatterns.angles(pattern, 0.0, 7, 2).size(), 7)
+func test_every_hero_has_their_own_main_weapon() -> void:
+	assert_eq(Characters.get_character(Characters.Id.WANDERER).main_weapon, CharacterStats.MainWeapon.BOLTS)
+	assert_eq(Characters.get_character(Characters.Id.GRAVEKEEPER).main_weapon, CharacterStats.MainWeapon.SCYTHE)
+	assert_eq(Characters.get_character(Characters.Id.HEXBLADE_WITCH).main_weapon, CharacterStats.MainWeapon.LIGHTNING)
+	assert_eq(Characters.get_character(Characters.Id.NECROMANCER).main_weapon, CharacterStats.MainWeapon.SPEARS)
+	for stats: CharacterStats in Characters.ALL:
+		assert_true(PixelArt.has_sprite(stats.main_weapon_icon), stats.display_name)
+		assert_false(stats.main_weapon_name.is_empty(), stats.display_name)
 
 
 func test_every_character_has_a_different_ability() -> void:

@@ -4,10 +4,10 @@
 
 [resource]
 script = ExtResource("1_upgrade")
-title = "Piercing Bolts"
-icon = "up_piercing_bolts"
-description = "Bolts pass through 1 more enemy"
-stat = 5
-amount = 1.0
-max_stacks = 3
-for_weapon = 0
+title = "Splinters"
+icon = "up_splinters"
+description = "Each spear sprays 3 bone shards"
+stat = 34
+amount = 3.0
+max_stacks = 1
+for_weapon = 3

@@ -12,6 +12,7 @@ var _streams: Dictionary[StringName, AudioStreamWAV] = {}
 ## Minimum seconds between two plays of the same sound (keeps hordes listenable).
 var _min_gap: Dictionary[StringName, float] = {
 	&"shoot": 0.06, &"hit": 0.04, &"death": 0.03, &"gem": 0.03, &"enemy_shot": 0.08, &"ui": 0.04,
+	&"scythe": 0.1, &"zap": 0.08, &"spear": 0.1,
 }
 var _last_played: Dictionary[StringName, float] = {}
 var _voices: Array[AudioStreamPlayer] = []
@@ -60,6 +61,16 @@ func _build_sounds() -> void:
 	var W := Synth.Wave
 	# Your gun: a soft, short blip (it plays constantly, so it must not be harsh).
 	_add(&"shoot", Synth.voice(W.SQUARE, 760.0, 520.0, 0.06, 0.16, 0.002, 2.0, 0.45))
+	# Main weapons. Reaper's Scythe: an airy whoosh that rises and falls.
+	_add(&"scythe", Synth.voice(W.NOISE, 1200.0, 2600.0, 0.14, 0.2, 0.03, 1.2, 0.5))
+	# Chain Lightning: a bright, crackly zap.
+	_add(&"zap", Synth.mix([
+		Synth.voice(W.NOISE, 5000.0, 2500.0, 0.06, 0.16, 0.001, 2.0, 0.8),
+		Synth.voice(W.SQUARE, 1500.0, 700.0, 0.05, 0.08, 0.001, 2.0, 0.3)]))
+	# Bone Spears: a dry crack of bone.
+	_add(&"spear", Synth.mix([
+		Synth.voice(W.NOISE, 2000.0, 900.0, 0.05, 0.2, 0.001, 2.0, 0.5),
+		Synth.voice(W.TRIANGLE, 300.0, 160.0, 0.07, 0.18, 0.001, 2.0)]))
 	# Bullet hits: a tick of noise over a tiny thud.
 	_add(&"hit", Synth.mix([
 		Synth.voice(W.NOISE, 3000.0, 1200.0, 0.035, 0.18, 0.001, 2.0, 0.6),

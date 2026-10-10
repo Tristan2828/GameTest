@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1_upgrade")
-title = "Sharpened Bolts"
+title = "Sharpened Edge"
 icon = "up_sharpened_bolts"
-description = "+4 bullet damage"
+description = "+4 main weapon damage"
 stat = 0
 amount = 4.0
 max_stacks = 0

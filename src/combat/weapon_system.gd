@@ -1,6 +1,8 @@
 class_name WeaponSystem
 extends Node2D
-## Runs every player's automatic weapons and the weapon altars.
+## Runs every player's automatic weapons, the aimed main weapons that aren't
+## bolts (Reaper's Scythe, Chain Lightning, Bone Spears; see `fire_main`) and
+## the weapon altars.
 ##
 ## Host: deals all weapon damage, fires Seeking Bolts, spawns altars, and decides
 ## who grabs them. Everyone: draws the altars. (Players draw their own skulls and
@@ -14,6 +16,8 @@ extends Node2D
 signal weapon_gained(peer_id: int, weapon_id: int)
 ## Host: fire a Seeking Bolts volley (the arena spawns it and tells clients).
 signal seeker_fired(shooter: Player, aim: float, level: int)
+## Everyone: a Bone Spear with Splinters struck; the arena spawns its shards.
+signal shards_requested(owner_id: int, at: Vector2, angles: PackedFloat32Array, damage: int)
 
 ## Stage times (seconds) when an altar appears.
 const ALTAR_TIMES: Array[float] = [80.0, 160.0]
@@ -31,9 +35,13 @@ const BOLT_SECONDS: float = 0.25
 const SPEAR_SHOW_SECONDS: float = 0.35
 ## Scythes spin this fast (radians per second, drawing only).
 const SCYTHE_SPIN: float = 14.0
+## Main-weapon scythes are drawn one size bigger per this much hit radius.
+const MAIN_SCYTHE_RADIUS_PER_SCALE: float = 5.0
 const SPEAR_COLOR: Color = Color(0.9, 0.86, 0.72)
 
 var bounds: Rect2 = Rect2(0, 0, 1600, 1000)
+## Set by the arena: peer id -> Player (or null), for main-weapon messages.
+var find_player: Callable = func(_peer_id: int) -> Player: return null
 
 ## altar id -> [position, weapon id]
 var _altars: Dictionary[int, Array] = {}
@@ -67,6 +75,11 @@ class Scythe:
 	var reach: float
 	var radius: float
 	var damage: int
+	## How often it can cut the same enemy in one throw (2: out and back).
+	var cuts: int = 2
+	var source: int
+	## Drawing size (main-weapon scythes are bigger, and grow with Heavy Blade).
+	var scale: float = 1.0
 	var position: Vector2 = Vector2.INF
 	## Host: enemy pool index -> scythe age when it was last cut (once per pass).
 	var hit_at: Dictionary[int, float] = {}
@@ -89,6 +102,10 @@ class Spear:
 	var warning: float
 	var radius: float
 	var damage: int
+	var source: int
+	## Splinters: shards sprayed on the strike, and their seed.
+	var shards: int = 0
+	var shard_seed: int = 0
 	var struck: bool = false
 
 
@@ -145,8 +162,10 @@ func tick_effects(delta: float, players: Array[Player], enemies: EnemyManager, i
 		if not spear.struck and spear.age >= spear.warning:
 			spear.struck = true
 			if is_host:
-				enemies.damage_in_radius(spear.position, spear.radius, spear.damage, spear.owner_id,
-					DamageSource.of_weapon(AutoWeapons.Id.BONE_SPEARS))
+				enemies.damage_in_radius(spear.position, spear.radius, spear.damage, spear.owner_id, spear.source)
+			if spear.shards > 0:
+				shards_requested.emit(spear.owner_id, spear.position,
+					MainWeapons.shard_angles(spear.shard_seed, spear.shards), MainWeapons.shard_damage(spear.damage))
 		if spear.age >= spear.warning + SPEAR_SHOW_SECONDS:
 			_spears.remove_at(i)
 	for i: int in range(_bolts.size() - 1, -1, -1):
@@ -259,7 +278,7 @@ func _draw_overlay() -> void:
 		if not scythe.position.is_finite():
 			continue
 		_overlay.draw_set_transform(scythe.position.round(), snappedf(scythe.age * SCYTHE_SPIN, PI / 4.0))
-		PixelArt.draw(_overlay, "scythe", Vector2.ZERO)
+		PixelArt.draw(_overlay, "scythe", Vector2.ZERO, Color.WHITE, false, false, scythe.scale)
 	_overlay.draw_set_transform(Vector2.ZERO)
 	var bolt_color := AutoWeapons.get_weapon(AutoWeapons.Id.CHAIN_LIGHTNING).color
 	for bolt: Bolt in _bolts:
@@ -340,11 +359,11 @@ func _drop_flames(players: Array[Player]) -> void:
 func _scythe_hits(scythe: Scythe, enemies: EnemyManager) -> void:
 	for enemy: Enemy in enemies.enemies_in_radius(scythe.position, scythe.radius):
 		var last: float = scythe.hit_at.get(enemy.pool_index, -INF)
-		if scythe.age - last < scythe.duration / 2.0:
+		if scythe.age - last < scythe.duration / maxi(scythe.cuts, 1):
 			continue
 		scythe.hit_at[enemy.pool_index] = scythe.age
 		if enemy.active:
-			enemies.damage(enemy, scythe.damage, scythe.owner_id, DamageSource.of_weapon(AutoWeapons.Id.REAPERS_SCYTHE))
+			enemies.damage(enemy, scythe.damage, scythe.owner_id, scythe.source)
 
 
 ## Everyone: a throw of scythes from this player.
@@ -358,6 +377,7 @@ func _throw_scythes(owner_id: int, aim: float, level: int) -> void:
 		scythe.reach = weapon.reach
 		scythe.radius = weapon.radius_at(level)
 		scythe.damage = weapon.damage_at(level)
+		scythe.source = DamageSource.of_weapon(AutoWeapons.Id.REAPERS_SCYTHE)
 		_scythes.append(scythe)
 
 
@@ -371,6 +391,7 @@ func _add_spears(owner_id: int, spots: PackedVector2Array, level: int) -> void:
 		spear.warning = weapon.duration
 		spear.radius = weapon.radius_at(level)
 		spear.damage = weapon.damage_at(level)
+		spear.source = DamageSource.of_weapon(AutoWeapons.Id.BONE_SPEARS)
 		_spears.append(spear)
 
 
@@ -380,6 +401,117 @@ func _add_bolt(points: PackedVector2Array, seed_value: int) -> void:
 	bolt.seed_value = seed_value
 	_bolts.append(bolt)
 	_overlay.queue_redraw()
+
+
+# --- Main weapons ------------------------------------------------------------
+
+## Runs on the host for every player's attack, and on a client for its own
+## (predicted) attacks, like the Bolt Gun's shots. Only the host deals damage
+## and tells the other peers.
+func fire_main(shooter: Player, origin: Vector2, seed_value: int, enemies: EnemyManager, is_host: bool) -> void:
+	var aim := shooter.state.aim
+	match shooter.stats.main_weapon:
+		CharacterStats.MainWeapon.SCYTHE:
+			_throw_main_scythes(shooter, aim)
+			if is_host:
+				for peer_id: int in _others(shooter):
+					_receive_main_scythes.rpc_id(peer_id, shooter.peer_id, aim)
+		CharacterStats.MainWeapon.SPEARS:
+			_raise_spear_row(shooter, origin, aim, seed_value)
+			if is_host:
+				for peer_id: int in _others(shooter):
+					_receive_spear_row.rpc_id(peer_id, shooter.peer_id, origin, aim, seed_value)
+		CharacterStats.MainWeapon.LIGHTNING:
+			var seed_bits := seed_value & 0xffff
+			for path: PackedVector2Array in _main_lightning(shooter, origin, aim, enemies, is_host):
+				_add_bolt(path, seed_bits)
+				if is_host:
+					for peer_id: int in _others(shooter):
+						_receive_bolt.rpc_id(peer_id, path, seed_bits)
+
+
+## Host: every ready peer except the shooter (who already showed its own attack).
+func _others(shooter: Player) -> Array[int]:
+	var peers: Array[int] = []
+	for peer_id: int in _ready_peers:
+		if peer_id != shooter.peer_id:
+			peers.append(peer_id)
+	return peers
+
+
+func _throw_main_scythes(thrower: Player, aim: float) -> void:
+	var stats := thrower.stats
+	for angle: float in MainWeapons.scythe_angles(stats.projectile_count, aim):
+		var scythe := Scythe.new()
+		scythe.owner_id = thrower.peer_id
+		scythe.angle = angle
+		scythe.duration = stats.weapon_duration
+		scythe.reach = stats.weapon_reach
+		scythe.radius = stats.weapon_radius
+		scythe.damage = stats.bullet_damage
+		scythe.cuts = stats.scythe_cuts
+		scythe.source = DamageSource.MAIN_GUN
+		scythe.scale = maxf(roundf(stats.weapon_radius / MAIN_SCYTHE_RADIUS_PER_SCALE), 1.0)
+		_scythes.append(scythe)
+
+
+func _raise_spear_row(raiser: Player, origin: Vector2, aim: float, seed_value: int) -> void:
+	var stats := raiser.stats
+	var spots := MainWeapons.spear_row(origin, aim, stats.projectile_count)
+	for i: int in spots.size():
+		var spear := Spear.new()
+		spear.owner_id = raiser.peer_id
+		spear.position = spots[i]
+		spear.warning = MainWeapons.spear_warning(i, stats.weapon_duration)
+		spear.radius = stats.weapon_radius
+		spear.damage = stats.bullet_damage
+		spear.source = DamageSource.MAIN_GUN
+		spear.shards = stats.spear_shards
+		spear.shard_seed = seed_value + i
+		_spears.append(spear)
+
+
+## Chain Lightning: strikes the enemy closest to the aim, then jumps on to the
+## nearest ones it hasn't hit (and splits with Split Bolt). Returns the paths to
+## draw; a miss is a short zap into the air. Only the host deals the damage.
+func _main_lightning(shooter: Player, origin: Vector2, aim: float, enemies: EnemyManager,
+		is_host: bool) -> Array[PackedVector2Array]:
+	var stats := shooter.stats
+	var first := _lightning_target(shooter.state.position, aim, stats.weapon_reach, enemies)
+	if first == null:
+		return [PackedVector2Array([origin, origin + Vector2.from_angle(aim) * stats.weapon_reach * 0.6])]
+	var hit: Dictionary[int, bool] = {first.pool_index: true}
+	var first_at := first.position
+	if is_host:
+		enemies.damage(first, stats.bullet_damage, shooter.peer_id, DamageSource.MAIN_GUN)
+	var paths: Array[PackedVector2Array] = []
+	for chain: int in 1 + stats.chain_forks:
+		var path := PackedVector2Array([origin, first_at]) if chain == 0 else PackedVector2Array([first_at])
+		var at := first_at
+		for jump: int in range(1, stats.projectile_count + 1):
+			var target := enemies.find_nearest_except(at, stats.weapon_radius, hit)
+			if target == null:
+				break
+			hit[target.pool_index] = true
+			at = target.position
+			path.append(at)
+			if is_host:
+				enemies.damage(target, MainWeapons.chain_damage(stats.bullet_damage, stats.chain_damage_growth, jump),
+					shooter.peer_id, DamageSource.MAIN_GUN)
+		if path.size() >= 2:
+			paths.append(path)
+	return paths
+
+
+func _lightning_target(from: Vector2, aim: float, reach: float, enemies: EnemyManager) -> Enemy:
+	var best: Enemy = null
+	var best_score := INF
+	for enemy: Enemy in enemies.enemies_in_radius(from, reach):
+		var score := MainWeapons.lightning_score(from, aim, enemy.position, reach + enemy.type.radius)
+		if score >= 0.0 and score < best_score:
+			best = enemy
+			best_score = score
+	return best
 
 
 # --- Host: weapons -----------------------------------------------------------
@@ -518,7 +650,7 @@ func _maybe_spawn_altar(clock: float, players: Array[Player], ready_peers: Array
 	at = at.clamp(inner.position, inner.end).round()
 	var altar_id := _next_altar_id
 	_next_altar_id += 1
-	var weapon_id := _rng.randi() % AutoWeapons.ALL.size()
+	var weapon_id := AutoWeapons.PICKUPS[_rng.randi() % AutoWeapons.PICKUPS.size()]
 	_add_altar(altar_id, at, weapon_id)
 	for peer_id: int in ready_peers:
 		_receive_altar_spawned.rpc_id(peer_id, altar_id, at, weapon_id)
@@ -553,7 +685,7 @@ func grant(peer_id: int, weapon_id: int, ready_peers: Array[int]) -> void:
 ## Unowned and low-level weapons are as likely as the rest.
 func random_upgradable_weapon(player: Player) -> int:
 	var choices: Array[int] = []
-	for weapon_id: int in AutoWeapons.ALL.size():
+	for weapon_id: int in AutoWeapons.PICKUPS:
 		if player.weapon_levels.get(weapon_id, 0) < AutoWeapons.MAX_LEVEL:
 			choices.append(weapon_id)
 	return -1 if choices.is_empty() else choices[_rng.randi() % choices.size()]
@@ -586,6 +718,20 @@ func _receive_bolt(path: PackedVector2Array, seed_value: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_scythes(owner_id: int, aim: float, level: int) -> void:
 	_throw_scythes(owner_id, aim, level)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_main_scythes(owner_id: int, aim: float) -> void:
+	var thrower: Player = find_player.call(owner_id)
+	if thrower != null:
+		_throw_main_scythes(thrower, aim)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_spear_row(owner_id: int, origin: Vector2, aim: float, seed_value: int) -> void:
+	var raiser: Player = find_player.call(owner_id)
+	if raiser != null:
+		_raise_spear_row(raiser, origin, aim, seed_value)
 
 
 @rpc("authority", "call_remote", "reliable")

@@ -22,7 +22,7 @@ $g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
 & $g -- --solo --start-stage=3 --start-at=230      # Cathedral boss (Ashen Bishop)
 & $g -- --solo --start-stage=2                     # A full stage 2 from the start
 & $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (tests the flow, not balance)
-& $g -- --solo --give-weapons                      # Start with all 7 auto weapons at level 2
+& $g -- --solo --give-weapons                      # Start with all 4 auto weapons at level 2
 & $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
 & $g -- --solo --run-config=single_stage=true,stage=3,bonus_levels=5   # Custom game without the lobby pages
 & $g -- --solo --run-config=soundtrack=1           # Metal soundtrack (2 = metal boss fights only, 3 = shuffle)
@@ -51,6 +51,16 @@ Session D is the most valuable if you only have time for one.
 ## 3. Checklists
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
+
+### 3.0g Every hero has their own main weapon (v0.19.0)
+- [ ] Gravekeeper: hold fire to throw the **Reaper's Scythe** where you aim; it comes back to you. Fun? Does a slow tank with a short-range weapon feel strong enough?
+- [ ] Hexblade Witch: **Chain Lightning** hits the enemy you aim at and jumps on. Does it hit what you meant to hit? Too easy, since you only need to aim roughly?
+- [ ] Necromancer: **Bone Spears** rise in a row along your aim after a short warning. Satisfying, or does the delay feel laggy?
+- [ ] Wanderer: still the Bolt Gun. Does the Wanderer feel boring next to the others?
+- [ ] Each hero's own upgrades show up on level-up cards ("Gravekeeper only" and so on): Twin Scythes, Long Reach, Heavy Blade, Grim Harvest / Forked Lightning, Long Arc, Conductor, Split Bolt / Longer Row, Wide Spikes, Quick Rise, Splinters. Any that feel useless or too strong?
+- [ ] Online: your scythe / lightning / spears show up instantly for you, and your friends see them too.
+- [ ] Altars and chests only give Orbiting Skulls, Seeking Bolts, Holy Aura and Hellfire Trail now. Enough variety?
+  - *Tune: `src/player/characters/*.tres` (fire_interval, bullet_damage, projectile_count, weapon_reach / weapon_radius / weapon_duration), `src/combat/main_weapons.gd`, upgrades in `src/progression/upgrades/*.tres`.*
 
 ### 3.0f Fixes and improvements from your fifth list (v0.18.0)
 - [ ] Title menu: type **Your name**. It shows on your lobby card, over your hero for friends, on their edge arrows, in "Waiting for..." lines and on the run summary. Friends see it too?
@@ -191,11 +201,11 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 | Character | Feels distinct? | Too strong / weak? | Ability noticeable? |
 |---|---|---|---|
 | Wanderer (Dash) | | | |
-| Gravekeeper (shotgun, 5 hearts, Grave Blast) | | | |
-| Hexblade Witch (fast, 2 hearts, piercing hexes, Hex Snare) | | | |
-| Necromancer (3 hearts, bone-shard fan, Bone Effigy decoy) | | | |
+| Gravekeeper (Reaper's Scythe, 5 hearts, Grave Blast) | | | |
+| Hexblade Witch (fast, 2 hearts, Chain Lightning, Hex Snare) | | | |
+| Necromancer (3 hearts, Bone Spears, Bone Effigy decoy) | | | |
 
-- [ ] Gravekeeper's shotgun range (short). Fun or frustrating?
+- [ ] Gravekeeper's scythe range (short). Fun or frustrating?
 - [ ] Witch with 2 hearts. Too fragile?
   - *Tune: `src/player/characters/*.tres`.*
 
@@ -203,7 +213,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] How often do level-ups pause the game? Too often in co-op? (Rebalanced in v0.14.0, see 3.0a.)
 - [ ] Level-up cards show level pips and your real stat before -> after (e.g. "Damage 13 -> 16"). Useful, and are the numbers right after a few picks and relics?
 - [ ] Run over / Victory screen: headline (what killed you, which stage), run totals, a card per player with stats, build and co-op awards. Readable? Any stat you miss?
-- [ ] Are the 25 upgrades meaningfully different? Any always/never picked?
+- [ ] Are the 37 upgrades meaningfully different? Any always/never picked?
 - [ ] 30-second countdown after the first pick: right length?
   - *Tune: XP curve in `src/progression/team_progress.gd`; upgrades in `src/progression/upgrades/*.tres`.*
 
@@ -217,7 +227,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 
 ### 3.8 Auto weapons and altars
 - [ ] Did you notice the altars (glowing pedestals at ~1:20 and ~2:40)? Worth walking to?
-- [ ] Orbiting Skulls / Seeking Bolts / Holy Aura: any too strong or useless? Is max level 3 enough?
+- [ ] Orbiting Skulls / Seeking Bolts / Holy Aura / Hellfire Trail: any too strong or useless? Is max level 3 enough?
 - [ ] Do weapons make the screen too busy to read enemy bullets?
   - *Tune: `src/combat/weapons/*.tres`, `ALTAR_TIMES` in `src/combat/weapon_system.gd`.*
 

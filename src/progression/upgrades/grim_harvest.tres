@@ -4,10 +4,10 @@
 
 [resource]
 script = ExtResource("1_upgrade")
-title = "Piercing Bolts"
-icon = "up_piercing_bolts"
-description = "Bolts pass through 1 more enemy"
-stat = 5
+title = "Grim Harvest"
+icon = "up_grim_harvest"
+description = "Your scythe can cut each enemy 3 times per throw"
+stat = 33
 amount = 1.0
-max_stacks = 3
-for_weapon = 0
+max_stacks = 1
+for_weapon = 1

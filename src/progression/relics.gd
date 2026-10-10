@@ -30,16 +30,21 @@ static func is_valid_id(id: int) -> bool:
 
 
 ## Up to OFFERS_PER_SHOP relics the player doesn't own yet (co-op-only relics
-## only when `co_op`).
-static func roll_offers(rng: RandomNumberGenerator, owned: Array[int], co_op: bool = true) -> Array[int]:
+## only when `co_op`; weapon-only relics only to that weapon's hero, `stats`).
+static func roll_offers(rng: RandomNumberGenerator, owned: Array[int], co_op: bool = true,
+		stats: CharacterStats = null) -> Array[int]:
 	var pool: Array[int] = []
 	for id: int in ALL.size():
-		if not owned.has(id) and (co_op or not ALL[id].co_op_only):
+		if not owned.has(id) and (co_op or not ALL[id].co_op_only) and fits_weapon(ALL[id], stats):
 			pool.append(id)
 	var result: Array[int] = []
 	while not pool.is_empty() and result.size() < OFFERS_PER_SHOP:
 		result.append(pool.pop_at(rng.randi() % pool.size()))
 	return result
+
+
+static func fits_weapon(relic: Relic, stats: CharacterStats) -> bool:
+	return relic.for_weapon < 0 or (stats != null and stats.main_weapon == relic.for_weapon)
 
 
 ## Every peer runs this when a purchase is announced, so stats stay identical.

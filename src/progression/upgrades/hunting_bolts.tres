@@ -10,3 +10,4 @@ description = "Bolts curve toward nearby enemies"
 stat = 20
 amount = 2.5
 max_stacks = 3
+for_weapon = 0

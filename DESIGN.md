@@ -66,11 +66,12 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
   - **One character ability** on one button, on a cooldown (owner decision after the first playtest; replaces the separate dash and bomb). Dash and a bomb-like blast are abilities of specific characters.
 
 ### Weapons
-- **Main gun:** aimed and fired manually by the player. Defined by the character.
-- **Auto weapons:** gained through level-ups and pickups, fire automatically (orbitals, auras, homing shots, etc.).
+- **Main weapon (v0.19.0):** each hero has their own, always aimed with the mouse / right stick and used by holding fire (owner decision: unique weapons instead of everyone shooting bolts; every hero keeps aiming so the twin-stick feel stays). See *Hero main weapons (v0.19.0)* in Milestones.
+  - Wanderer: **Bolt Gun** (unchanged). Gravekeeper: **Reaper's Scythe**. Hexblade Witch: **Chain Lightning**. Necromancer: **Bone Spears**.
+- **Auto weapons:** found on altars and in champions' chests, fire automatically: Orbiting Skulls, Seeking Bolts, Holy Aura, Hellfire Trail. (Reaper's Scythe, Chain Lightning and Bone Spears were auto weapons in v0.17–0.18; they're main weapons now and no longer drop.)
 
 ### Characters
-- Multiple playable characters, each with a **unique kit** (main gun, stats, unique ability).
+- Multiple playable characters, each with a **unique kit** (main weapon, stats, unique ability, and their own weapon upgrades).
 - Encourages team composition in co-op.
 
 ## 4. Progression
@@ -301,7 +302,27 @@ Decisions made by Claude (**revisit in the next playtest**): every number above,
 
 Decisions made by Claude (**revisit in the next playtest**): names on the title menu (not the lobby), 12 characters, name tags only over teammates; the party card layout; the Highlights lines; the chest radius; the minimap shapes; "Game Guide" as the new name; every balance number in item 13.
 
-### Where things stand (2026-10-10, v0.17.0 adds map events, quests, 4 weapons, 4 pickups; v0.18.0 implements the fifth list)
+### Hero main weapons (v0.19.0, owner request)
+The owner asked for a unique main weapon per hero instead of everyone's bolt gun (one hero keeps it), reusing the existing weapons. Q&A choices: every main weapon stays **aimed** (Claude advised against heroes that don't aim: half the controls would do nothing and co-op skill levels would drift apart), the three weapons that became main weapons leave the pickup pool, each main weapon gets **its own upgrade set**, and the Wanderer stays as is.
+1. **Main weapons** (`CharacterStats.main_weapon`, append-only enum `MainWeapon`; numbers in `characters/*.tres`; pure math in `MainWeapons`):
+   - **Bolt Gun** (Wanderer): unchanged.
+   - **Reaper's Scythe** (Gravekeeper): every 0.8 s a scythe flies 115 px toward your aim and back to you (0.7 s), 30 damage per cut, each enemy cut once out and once back. Replaces the 5-pellet shotgun.
+   - **Chain Lightning** (Hexblade Witch): every 0.3 s lightning strikes the enemy closest to your aim (within 150 px and 35° of the aim, any side within 14 px) for 16, then jumps to 2 more within 70 px. Nothing ahead: a short zap into the air. Replaces the rapid piercing hexes.
+   - **Bone Spears** (Necromancer): every 0.5 s a row of 5 spears rises along your aim (22 px apart, from 22 px out), each after a 0.3 s warning plus 0.04 s per spear (the row runs outward), 20 damage in 11 px. In a line rather than at the cursor: the game only sends aim direction, and a gamepad stick has no distance. Replaces the bone-shard fan.
+   - Networking: like bolts, an attack is predicted by the shooter and decided by the host; the host tells the other peers (scythe throw: aim; spear row: origin + aim + seed; lightning: the paths it hit). Only the host deals damage. The shooter's own lightning is drawn from its own view of the enemies.
+   - **Balance check** (solo invincible autopilot, `--fixed-fps 60`, compared with v0.18.0): Witch and Necromancer within noise of before (both win; stage boss fights 61/49/72 s and 33/53/79 s vs 9/40/49 s and 39/72/181 s). The first scythe (100 px, 24 damage) was clearly weaker (stage 2 boss 181 s vs 92 s); at 115 px / 30 damage two runs won with stage 2 bosses of 117 s and 81 s. Not measured: co-op and real players.
+   - All main-weapon damage is still `DamageSource.MAIN_GUN`; the run summary shows the hero's weapon name and icon. Crits (Keen Edge) work on every main weapon.
+2. **Upgrades:** Sharpened Bolts became **Sharpened Edge** (+4 main weapon damage), Quick Hands, Keen Edge, Glass Cannon and Reckless Haste work for every main weapon. The six bolt upgrades (Extra Bolt, Piercing Bolts, Long Shot, Swift Bolts, Ricochet, Hunting Bolts) are **Wanderer only** (`Upgrade.for_weapon`). 12 new weapon-only upgrades (37 in total):
+   - *Scythe:* Twin Scythes (+1 scythe, fanned 25°; x2), Long Reach (+25% distance; x3), Heavy Blade (+30% size; x3), Grim Harvest (can cut each enemy 3 times per throw; once).
+   - *Lightning:* Forked Lightning (+1 jump; x3), Long Arc (+25% strike and jump range; x3), Conductor (each jump +20% damage over the last; x2), Split Bolt (a second chain splits off at the first enemy; once).
+   - *Spears:* Longer Row (+1 spear; x3), Wide Spikes (+25% size; x3), Quick Rise (warning 30% shorter; x2), Splinters (each spear sprays 3 bone shards for 40% damage; once).
+3. **Relics:** Bone Charm (pierce) and Hunter's Eye (bolt speed) are only offered to bolt heroes (`Relic.for_weapon`).
+4. **Auto weapons:** altars, chests, the "start with weapons" custom setting and `--give-weapons` only use `AutoWeapons.PICKUPS` (4 weapons). The old auto-weapon resources stay registered (append-only ids).
+5. Three new attack sounds (scythe whoosh, lightning zap, bone crack), 12 upgrade icons, and Game Guide hero entries that describe each main weapon.
+
+Decisions made by Claude (**revisit in the next playtest**): which weapon goes to which hero, every number above, spears in a line instead of at the cursor, the 12 upgrades, and that the auto-weapon pool is down to 4 (more auto weapons could refill it later; see Ideas for Later).
+
+### Where things stand (2026-10-10, v0.17.0 adds map events, quests, 4 weapons, 4 pickups; v0.18.0 implements the fifth list; v0.19.0 gives each hero their own main weapon)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
 ### Before that (v0.14.1, released on GitHub)
@@ -330,6 +351,7 @@ Decisions made by Claude (**revisit in the next playtest**): names on the title 
 
 ## 9. Ideas for Later
 
+- **More auto weapons** to refill the pickup pool (4 since v0.19.0 moved three to heroes' main weapons).
 - **Cursed shrines** (offered with the v0.17.0 events, not picked): walk up to one for a gamble, e.g. more damage but faster enemies until the stage ends, or a free heal.
 - **Risky bounties / team quests** (the quest options not picked in v0.17.0): quests with a cost or curse for a bigger reward, or one shared team quest chosen by vote.
 - **Clients asking for a pause** ("Request pause" shown to the host), if friends miss being able to pause.

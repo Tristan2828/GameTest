@@ -6,7 +6,7 @@
 script = ExtResource("1_upgrade")
 title = "Keen Edge"
 icon = "up_keen_edge"
-description = "10% chance for a bolt to deal double damage"
+description = "10% chance for a main weapon hit to deal double damage"
 stat = 15
 amount = 0.1
 max_stacks = 4

@@ -8,7 +8,7 @@ const CRIT_MULTIPLIER: float = 2.0
 const WOUNDED_RATIO: float = 0.5
 
 
-## Only main-gun bolts can crit. `roll` is a random number in 0..1.
+## Only main-weapon hits can crit. `roll` is a random number in 0..1.
 static func is_crit(stats: CharacterStats, source: int, roll: float) -> bool:
 	return source == DamageSource.MAIN_GUN and roll < stats.crit_chance
 

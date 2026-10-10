@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="Upgrade" format=3]
+
+[ext_resource type="Script" path="res://src/progression/upgrade.gd" id="1_upgrade"]
+
+[sub_resource type="Resource" id="effect_0"]
+script = ExtResource("1_upgrade")
+stat = 29
+amount = 0.25
+
+[resource]
+script = ExtResource("1_upgrade")
+title = "Long Arc"
+icon = "up_long_arc"
+description = "Lightning strikes and jumps 25% farther"
+stat = 28
+amount = 0.25
+max_stacks = 3
+for_weapon = 2
+extra_effects = Array[Resource]([SubResource("effect_0")])

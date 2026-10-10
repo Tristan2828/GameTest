@@ -10,3 +10,4 @@ description = "+1 bolt per shot, fanned out"
 stat = 4
 amount = 1.0
 max_stacks = 3
+for_weapon = 0

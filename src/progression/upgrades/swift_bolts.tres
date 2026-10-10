@@ -10,3 +10,4 @@ description = "Bolts fly 20% faster (and reach farther)"
 stat = 10
 amount = 0.2
 max_stacks = 3
+for_weapon = 0

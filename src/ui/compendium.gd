@@ -48,20 +48,36 @@ func _show_heroes() -> void:
 	clear_list()
 	for stats: CharacterStats in Characters.ALL:
 		var text := _entry(stats.sprite, stats.display_name, stats.blurb, hero_details(stats))
+		text.add_child(label("Main weapon - %s: %s" % [stats.main_weapon_name, main_weapon_text(stats)], 9, TITLE_COLOR, true))
 		text.add_child(label("Ability - %s: %s" % [stats.ability_name, stats.ability_description], 9, TITLE_COLOR, true))
 
 
 static func hero_details(stats: CharacterStats) -> String:
-	var bolts := "" if stats.projectile_count <= 1 else "  Bolts %d" % stats.projectile_count
-	return "Hearts %d   Speed %d   Damage %d   Shots/s %.1f%s   Ability cooldown %.1fs" % [
-		stats.max_hearts, roundi(stats.move_speed), stats.bullet_damage, 1.0 / stats.fire_interval, bolts,
+	var count := ""
+	if stats.projectile_count > 1:
+		count = "  %s %d" % [Upgrades.COUNT_NAMES[stats.main_weapon], stats.projectile_count]
+	return "Hearts %d   Speed %d   Damage %d   Attacks/s %.1f%s   Ability cooldown %.1fs" % [
+		stats.max_hearts, roundi(stats.move_speed), stats.bullet_damage, 1.0 / stats.fire_interval, count,
 		stats.ability_cooldown]
+
+
+## What the hero's main weapon does (hold fire, aim with the mouse or right stick).
+static func main_weapon_text(stats: CharacterStats) -> String:
+	match stats.main_weapon:
+		CharacterStats.MainWeapon.SCYTHE:
+			return "Throw a scythe where you aim. It flies out and comes back, cutting everything twice."
+		CharacterStats.MainWeapon.LIGHTNING:
+			return "Lightning strikes the enemy closest to your aim, then leaps to the next ones."
+		CharacterStats.MainWeapon.SPEARS:
+			return "A row of bone spears bursts from the ground along your aim after a short warning."
+	return "Fires a steady stream of bolts where you aim."
 
 
 func _show_weapons() -> void:
 	clear_list()
-	add_heading("On glowing altars (twice per stage) and in champions' chests. Taking one again levels it up (max %d)." % AutoWeapons.MAX_LEVEL)
-	for weapon: AutoWeapon in AutoWeapons.ALL:
+	add_heading("On glowing altars (twice per stage) and in champions' chests. Taking one again levels it up (max %d). They fire on their own, next to your hero's main weapon." % AutoWeapons.MAX_LEVEL)
+	for weapon_id: int in AutoWeapons.PICKUPS:
+		var weapon := AutoWeapons.get_weapon(weapon_id)
 		_entry(weapon.icon, weapon.title, weapon.description, weapon_details(weapon), weapon.color)
 
 

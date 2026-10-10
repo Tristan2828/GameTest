@@ -6,6 +6,9 @@ extends RefCounted
 enum Id { ORBITING_SKULLS, SEEKING_BOLTS, HOLY_AURA, CHAIN_LIGHTNING, REAPERS_SCYTHE, HELLFIRE_TRAIL, BONE_SPEARS }
 
 const MAX_LEVEL: int = 3
+## Weapons found on altars and in chests. Reaper's Scythe, Chain Lightning and
+## Bone Spears are heroes' main weapons now (see MainWeapons), so they're left out.
+const PICKUPS: Array[int] = [Id.ORBITING_SKULLS, Id.SEEKING_BOLTS, Id.HOLY_AURA, Id.HELLFIRE_TRAIL]
 ## Angle between bolts in a Seeking Bolts volley.
 const SEEKER_SPREAD_DEGREES: float = 10.0
 

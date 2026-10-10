@@ -123,7 +123,7 @@ func test_starting_level_ups_and_weapons() -> void:
 	await wait_physics_frames(3)
 	assert_eq(arena._phase, Arena.Phase.LEVEL_UP, "starting level-ups are picked right away")
 	assert_eq(arena._team.level, 3)
-	assert_eq(arena._player_by_id(1).weapon_levels.size(), AutoWeapons.ALL.size())
+	assert_eq(arena._player_by_id(1).weapon_levels.size(), AutoWeapons.PICKUPS.size())
 
 
 func test_xp_rate_makes_levels_cheaper() -> void:

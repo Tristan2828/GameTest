@@ -13,5 +13,6 @@ script = ExtResource("1_relic")
 title = "Hunter's Eye"
 icon = "rel_hunters_eye"
 description = "Bolts fly 30% faster (and farther)"
+for_weapon = 0
 price = 55
 effects = Array[ExtResource("2_upgrade")]([SubResource("effect_0")])

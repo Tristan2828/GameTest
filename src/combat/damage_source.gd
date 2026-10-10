@@ -22,11 +22,11 @@ static func weapon_id(source: int) -> int:
 	return source - FIRST_WEAPON if source >= FIRST_WEAPON and source < KILL_BURST else -1
 
 
-## "Main gun", the ability's name, or the weapon's name.
+## The main weapon's or ability's name, or the auto weapon's name.
 static func title(source: int, stats: CharacterStats) -> String:
 	match source:
 		MAIN_GUN:
-			return "Main gun"
+			return stats.main_weapon_name
 		ABILITY:
 			return stats.ability_name
 		KILL_BURST:
@@ -37,11 +37,11 @@ static func title(source: int, stats: CharacterStats) -> String:
 	return AutoWeapons.get_weapon(id).title if id >= 0 and id < AutoWeapons.ALL.size() else "?"
 
 
-## PixelArt sprite for the breakdown rows.
-static func icon(source: int) -> String:
+## PixelArt sprite for the breakdown rows (`stats` picks the main weapon's).
+static func icon(source: int, stats: CharacterStats = null) -> String:
 	match source:
 		MAIN_GUN:
-			return "icon_main_gun"
+			return stats.main_weapon_icon if stats != null else "icon_main_gun"
 		ABILITY:
 			return "icon_ability"
 		KILL_BURST:

@@ -488,7 +488,7 @@ func _weapon_card(player: Player, stats: RunStats, width: int, player_count: int
 		entry.tooltip_text = "%s\n%d damage (%d%%)\n%d dps while owned\n%d kills" % [title, damage, roundi(share * 100.0),
 			roundi(RunStats.dps(damage, row[3])), row[2]]
 		var line := _weapon_columns(title, "%d%%" % roundi(share * 100.0), compact(damage),
-			compact(roundi(RunStats.dps(damage, row[3]))), compact(row[2]), extra, VALUE_COLOR, DamageSource.icon(source))
+			compact(roundi(RunStats.dps(damage, row[3]))), compact(row[2]), extra, VALUE_COLOR, DamageSource.icon(source, player.stats))
 		entry.add_child(line)
 		entry.add_child(_share_bar(share, width - 12))
 		lines.add_child(entry)
@@ -499,7 +499,7 @@ func _weapon_card(player: Player, stats: RunStats, width: int, player_count: int
 		idle.add_theme_constant_override("separation", 3)
 		idle.add_child(_label("No damage:", 9, LABEL_COLOR, false))
 		for source: int in unused:
-			var icon := SpriteIcon.new(DamageSource.icon(source), Vector2(11, 11))
+			var icon := SpriteIcon.new(DamageSource.icon(source, player.stats), Vector2(11, 11))
 			icon.max_scale = 1
 			icon.modulate = Color(1, 1, 1, 0.5)
 			icon.tooltip_text = DamageSource.title(source, player.stats)
@@ -617,7 +617,7 @@ static func highlights(stats: RunStats, players: Array[Player], multiplier: floa
 		var hero: CharacterStats = by_id[top_peer].stats if by_id.has(top_peer) else null
 		var whose := "%s's " % name_of.call(top_peer) if co_op else ""
 		var weapon := DamageSource.title(top[0], hero) if hero != null else "Their weapon"
-		result.append([DamageSource.icon(top[0]), "Deadliest weapon", "%s%s  -  %s damage, %d kills" % [whose,
+		result.append([DamageSource.icon(top[0], hero), "Deadliest weapon", "%s%s  -  %s damage, %d kills" % [whose,
 			weapon, compact(top[1]), top[2]], AWARD_COLOR])
 
 	# Kill rate and the team's haul.

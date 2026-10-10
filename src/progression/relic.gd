@@ -12,3 +12,5 @@ extends Resource
 @export var effects: Array[Upgrade] = []
 ## Only offered in co-op games (e.g. revive relics are useless solo).
 @export var co_op_only: bool = false
+## Only offered to heroes with this CharacterStats.MainWeapon (-1 = everyone).
+@export var for_weapon: int = -1
