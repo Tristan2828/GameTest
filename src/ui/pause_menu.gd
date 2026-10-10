@@ -4,6 +4,8 @@ extends CanvasLayer
 ## keeps running for everyone else, so only your own controls are blocked.
 
 signal leave_requested
+## "Send feedback" was pressed (Main hides this menu, takes a screenshot, opens the screen).
+signal feedback_requested
 
 @onready var _resume_button: Button = %ResumeButton
 @onready var _leave_button: Button = %LeaveButton
@@ -11,6 +13,7 @@ signal leave_requested
 @onready var _settings_button: Button = %SettingsButton
 @onready var _box: Control = $Center/Box
 @onready var _settings: SettingsPanel = %Settings
+@onready var _feedback_button: Button = %FeedbackButton
 
 
 func _ready() -> void:
@@ -24,6 +27,7 @@ func _ready() -> void:
 	_settings.closed.connect(func() -> void:
 		_box.show()
 		_settings_button.grab_focus())
+	_feedback_button.pressed.connect(func() -> void: feedback_requested.emit())
 	_leave_button.pressed.connect(func() -> void:
 		close()
 		leave_requested.emit())
@@ -40,6 +44,12 @@ func open() -> void:
 		_hint_label.text = "Paused."
 		get_tree().paused = true
 	_resume_button.grab_focus()
+
+
+## Back from the feedback screen (still paused / input still blocked).
+func show_after_feedback() -> void:
+	show()
+	_feedback_button.grab_focus()
 
 
 func close() -> void:

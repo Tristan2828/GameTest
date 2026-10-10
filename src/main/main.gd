@@ -11,6 +11,7 @@ const LOBBY_SCENE: PackedScene = preload("res://src/lobby/lobby.tscn")
 @onready var _level: Node = $Level
 @onready var _menu: MainMenu = $MainMenu
 @onready var _pause_menu: PauseMenu = $PauseMenu
+var _feedback: FeedbackScreen = null
 
 
 func _ready() -> void:
@@ -21,6 +22,15 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_pause_menu.leave_requested.connect(_leave_game.bind("You left the game."))
+	_feedback = FeedbackScreen.new()
+	add_child(_feedback)
+	_menu.feedback_requested.connect(func() -> void: _feedback.open(null, _feedback_context()))
+	_pause_menu.feedback_requested.connect(_open_feedback_from_pause)
+	_feedback.closed.connect(func() -> void:
+		if _menu.visible:
+			_menu.show_panel_after_feedback()
+		elif _level.get_child_count() > 0:
+			_pause_menu.show_after_feedback())
 	_menu.show_menu()
 	Music.play(&"menu")
 	# Every button anywhere clicks softly when pressed (menus, cards, shop).
@@ -31,9 +41,29 @@ func _ready() -> void:
 	_apply_launch_options()
 
 
+## From the pause menu: hide it for a moment so the screenshot shows the game.
+func _open_feedback_from_pause() -> void:
+	_pause_menu.hide()
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var image := get_tree().root.get_texture().get_image()
+	_feedback.open(image, _feedback_context())
+
+
+## Version, OS and where the player is (title menu, lobby, or the arena's details).
+func _feedback_context() -> String:
+	var where := "Title menu"
+	var arena := _level.get_node_or_null("Arena") as Arena
+	if arena != null:
+		where = arena.feedback_context()
+	elif _level.get_node_or_null("Lobby") != null:
+		where = "In the lobby (%s)" % ("host" if multiplayer.is_server() else "client")
+	return "%s, %s\n%s" % [BuildInfo.describe(), OS.get_name(), where]
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause") and not _menu.visible and not _pause_menu.visible \
-			and _level.get_child_count() > 0:
+			and not _feedback.visible and _level.get_child_count() > 0:
 		_pause_menu.open()
 		get_viewport().set_input_as_handled()
 
@@ -81,6 +111,10 @@ func _screenshot_info_pages() -> void:
 	await get_tree().create_timer(0.2).timeout
 	await save_screenshot(get_tree(), "settings.png")
 	_menu.show_menu()
+	_feedback.open(null, _feedback_context())
+	await get_tree().create_timer(0.2).timeout
+	await save_screenshot(get_tree(), "feedback_title.png")
+	_feedback.close()
 
 
 func _apply_character_flag() -> void:
@@ -103,7 +137,15 @@ func _take_screenshots_periodically() -> void:
 	while is_inside_tree():
 		await get_tree().create_timer(10.0).timeout
 		index += 1
-		save_screenshot(get_tree(), "gameplay_%02d.png" % index)
+		await save_screenshot(get_tree(), "gameplay_%02d.png" % index)
+		if index == 2 and _level.get_node_or_null("Arena") != null:
+			# The feedback screen as opened from the pause menu, once.
+			_pause_menu.open()
+			await _open_feedback_from_pause()
+			await get_tree().create_timer(0.3).timeout
+			await save_screenshot(get_tree(), "feedback_ingame.png")
+			_feedback.close()
+			_pause_menu.close()
 
 
 func _start_solo() -> void:

@@ -386,6 +386,24 @@ func _request_restart() -> void:
 		restart_requested.emit()
 
 
+## Game info sent with feedback: where the run is, this player's state, the session.
+func feedback_context() -> String:
+	var lines := PackedStringArray()
+	var clock := "boss fight" if _boss_seen else "%s into the wave" % RunStats.format_time(_elapsed)
+	lines.append("Stage %d/%d: %s, %s (%s), team level %d" % [_run_depth(), _stage_count(), Stages.get_stage(_stage).title,
+		clock, Phase.keys()[_phase].to_lower().replace("_", " "), _team.level])
+	var local := _local_player()
+	if local != null:
+		lines.append("%s (%s) at %s, hearts %d/%d%s, %d upgrades, %d relics, %d weapons" % [local.stats.display_name,
+			local.display_name(), local.world_position().round(), local.health.hearts, local.health.max_hearts,
+			" (downed)" if local.is_downed() else "", local.upgrade_ids.size(), local.relic_ids.size(), local.weapon_levels.size()])
+	var session := "Solo"
+	if Net.is_online():
+		session = "Co-op, %d players, %s" % [_player_nodes().size(), "host" if multiplayer.is_server() else "client, ping %d ms" % Net.ping_ms()]
+	lines.append("%s. %s" % [session, _config.summary()])
+	return "\n".join(lines)
+
+
 ## A text summary for headless smoke tests (see LaunchOptions --run-for).
 func debug_report() -> String:
 	var lines := PackedStringArray()

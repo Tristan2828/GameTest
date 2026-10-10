@@ -10,6 +10,7 @@ extends CanvasLayer
 signal solo_requested
 signal host_requested(port: int)
 signal join_requested(address: String, port: int)
+signal feedback_requested
 
 @onready var _solo_button: Button = %SoloButton
 @onready var _host_button: Button = %HostButton
@@ -23,6 +24,7 @@ signal join_requested(address: String, port: int)
 @onready var _compendium_button: Button = %CompendiumButton
 @onready var _checklist_button: Button = %ChecklistButton
 @onready var _records_button: Button = %RecordsButton
+@onready var _feedback_button: Button = %FeedbackButton
 @onready var _panel: Control = $Center/Panel
 @onready var _backdrop: TextureRect = %Backdrop
 var compendium: Compendium = null
@@ -45,6 +47,9 @@ func _ready() -> void:
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
 	_join_button.pressed.connect(_on_join_pressed)
 	_settings_button.pressed.connect(open_settings)
+	_feedback_button.pressed.connect(func() -> void:
+		_panel.hide()
+		feedback_requested.emit())
 	_settings.closed.connect(func() -> void:
 		_panel.show()
 		_settings_button.grab_focus())
@@ -120,6 +125,12 @@ func show_menu(message: String = "") -> void:
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()
+
+
+## Back from the feedback screen.
+func show_panel_after_feedback() -> void:
+	_panel.show()
+	_feedback_button.grab_focus()
 
 
 func open_settings() -> void:

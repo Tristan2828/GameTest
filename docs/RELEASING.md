@@ -58,8 +58,17 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
   - Events: "Let me select individual events" -> **Pushes** and **Releases** only
   
   Discord understands GitHub's format at that `/github` address, so no code is needed.
+- **In-game feedback webhook (v0.16.0, not done yet):** the game's "Send feedback" screen posts to a Discord channel.
+  In Discord, `#feedback` gear -> Integrations -> Webhooks -> New Webhook (name it "GameTest feedback") -> Copy URL.
+  Paste the link alone into `feedback_webhook.txt` in the repo folder (git-ignored: it is **never** committed).
+  `tools/build.ps1` (and so `release.ps1`) bakes it into the exported game; without it the screen copies messages to
+  the clipboard instead. Anyone determined could dig the link out of the exe and post to that one channel: if that
+  ever happens, delete the webhook in Discord, make a new one, update the file and release again.
 
 ## Troubleshooting
+
+- **"Sending isn't set up in this build"** on the feedback screen: `feedback_webhook.txt` was missing or not a
+  Discord webhook link when the build was made (build.ps1 prints a note). Fix the file and rebuild.
 
 - **No post in `#builds`:** open the repo's **Actions** tab -> "Announce release in Discord".
   A red run shows the error (usually the secret is missing or the webhook was deleted). After fixing,

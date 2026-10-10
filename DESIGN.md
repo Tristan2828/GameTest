@@ -239,7 +239,13 @@ Owner and friend played more v0.14 runs. Requested and done:
 
 Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s, 30 px circle, half hearts, slow drain, no bleed-out timer), the spectate delay and controls, the Mourner's Bell relic (40 coins, co-op only), the cursor default (cyan crosshair, medium), the score formula, and the metal track arrangements. Test aid: `--test-down=<s>` knocks out the first client's player so revives can be checked without dying; the autopilot now walks to downed teammates.
 
-### Where things stand (2026-10-09, v0.15.0, built, not released yet)
+### In-game feedback (v0.16.0, owner request)
+- **Send feedback** on the title menu and the pause menu: your name (remembered), kind (Suggestion / Bug report / Praise), a message, and a **screenshot of the game** (checkbox, on by default in a game; the pause menu hides itself for the picture).
+- Game info is added automatically: version and build, OS, stage and map, time into the wave or boss fight, phase, team level, your hero, position, hearts and build counts, solo / co-op (host or client, ping) and the run settings.
+- Posts to the Discord `#feedback` channel through a webhook (owner chose Discord over GitHub issues: no accounts for friends, screenshots attach natively, no GitHub token in the game). The link is baked into builds from a git-ignored file. Without it, Send copies the message to the clipboard.
+- 20 s between sends; messages are capped at 1500 characters and can't ping anyone.
+
+### Where things stand (2026-10-09, v0.15.0 released; v0.16.0 adds in-game feedback)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
 ### Before that (v0.14.1, released on GitHub)

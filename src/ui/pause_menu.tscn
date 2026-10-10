@@ -44,6 +44,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Settings"
 
+[node name="FeedbackButton" type="Button" parent="Center/Box"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Send feedback"
+
 [node name="LeaveButton" type="Button" parent="Center/Box"]
 unique_name_in_owner = true
 layout_mode = 2

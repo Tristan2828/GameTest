@@ -14,6 +14,8 @@ var screen_shake: bool = true
 var cursor_style: int = 1
 var cursor_size: int = 1
 var cursor_color: int = 2
+## Name used on the feedback screen (remembered).
+var player_name: String = ""
 
 
 func _enter_tree() -> void:
@@ -40,6 +42,7 @@ func load_settings() -> void:
 	cursor_style = clampi(config.get_value("cursor", "style", cursor_style), 0, GameCursor.STYLES.size() - 1)
 	cursor_size = clampi(config.get_value("cursor", "size", cursor_size), 0, GameCursor.SIZES.size() - 1)
 	cursor_color = clampi(config.get_value("cursor", "color", cursor_color), 0, GameCursor.COLORS.size() - 1)
+	player_name = str(config.get_value("player", "name", player_name))
 
 
 func save() -> void:
@@ -52,6 +55,7 @@ func save() -> void:
 	config.set_value("cursor", "style", cursor_style)
 	config.set_value("cursor", "size", cursor_size)
 	config.set_value("cursor", "color", cursor_color)
+	config.set_value("player", "name", player_name)
 	config.save(PATH)
 
 

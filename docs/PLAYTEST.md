@@ -50,6 +50,11 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0c In-game feedback (v0.16.0)
+- [ ] "Send feedback" from the title menu and from the pause menu (Esc / Start). The message (with your name and the game info) arrives in Discord #feedback?
+- [ ] "Include screenshot" during a game: the picture in Discord shows the game, not the menu?
+- [ ] Typing in the boxes doesn't move your character or trigger other keys (R, F1, Esc)?
+
 ### 3.0b Changes from your second co-op list (v0.15.0, check these first)
 - [ ] Difficulty: level-ups are cheaper again (between v0.13 and v0.14) and Sharpened Bolts (+4) / Quick Hands (15%) are stronger. Can you beat stage 1 now? Too easy?
   - *Tune: `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; upgrade `.tres` files.*

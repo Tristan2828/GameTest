@@ -15,6 +15,20 @@ $versionLine = Select-String -Path (Join-Path $project "project.godot") -Pattern
 $version = if ($versionLine) { $versionLine.Matches[0].Groups[1].Value } else { "dev" }
 
 # Stamp which build this is (shown on the title screen). Not committed.
+# In-game feedback posts to a Discord webhook. The link is a secret: it lives in
+# the git-ignored feedback_webhook.txt (or $env:GAMETEST_FEEDBACK_WEBHOOK) and only
+# goes into the exported game. Without it, the feedback screen copies to the clipboard.
+$webhook = $env:GAMETEST_FEEDBACK_WEBHOOK
+$webhookFile = Join-Path $project "feedback_webhook.txt"
+if (-not $webhook -and (Test-Path $webhookFile)) { $webhook = (Get-Content -Raw $webhookFile).Trim() }
+if ($webhook -and $webhook -notmatch '^https://(discord|discordapp)\.com/api/webhooks/') {
+	Write-Host "WARNING: feedback_webhook.txt doesn't look like a Discord webhook link; ignoring it." -ForegroundColor Yellow
+	$webhook = ""
+}
+if (-not $webhook) {
+	Write-Host "Note: no feedback webhook (feedback_webhook.txt); in-game feedback will copy to the clipboard." -ForegroundColor Yellow
+}
+
 $commit = (git -C $project rev-parse --short HEAD 2>$null)
 if (-not $commit) { $commit = "unknown" }
 $dirty = if (git -C $project status --porcelain 2>$null) { "+changes" } else { "" }
@@ -22,7 +36,10 @@ $dirty = if (git -C $project status --porcelain 2>$null) { "+changes" } else { "
 	"[build]",
 	"version=""$version""",
 	"commit=""$commit$dirty""",
-	"date=""$(Get-Date -Format 'yyyy-MM-dd HH:mm')"""
+	"date=""$(Get-Date -Format 'yyyy-MM-dd HH:mm')""",
+	"",
+	"[feedback]",
+	"webhook=""$webhook"""
 ) | Set-Content -Encoding utf8 (Join-Path $project "build_info.cfg")
 
 if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
