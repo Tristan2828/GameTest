@@ -314,7 +314,7 @@ func _card_frame(player: Player, width: int, player_count: int) -> Array:
 	var name_label := _label(player.display_name() + you, 9, color, false)
 	name_label.clip_text = true
 	names.add_child(name_label)
-	names.add_child(_label(player.stats.display_name, 9, LABEL_COLOR, false))
+	names.add_child(_label(player.stats.full_name(), 9, LABEL_COLOR, false))
 	if is_mvp:
 		var mvp := VBoxContainer.new()
 		mvp.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -348,11 +348,11 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 			LABEL_COLOR, VALUE_COLOR)
 	_grid_number(grid, "Score", _score(stats, player.peer_id), _best_score(stats) == player.peer_id, AWARD_COLOR, AWARD_COLOR)
 	if player.is_local() and local_record_rank == 0:
-		var best := _label("NEW BEST %s RUN!" % player.stats.display_name.to_upper(), 9, VICTORY_COLOR, true)
+		var best := _label("NEW BEST %s RUN!" % player.stats.hero_name.to_upper(), 9, VICTORY_COLOR, true)
 		lines.add_child(best)
 		_pulse(best)
 	elif player.is_local() and local_record_rank > 0:
-		lines.add_child(_label("#%d of your %s runs" % [local_record_rank + 1, player.stats.display_name], 9, LABEL_COLOR, true))
+		lines.add_child(_label("#%d of your %s runs" % [local_record_rank + 1, player.stats.hero_name], 9, LABEL_COLOR, true))
 
 	# Build: auto weapons, upgrades and relics as icons (hover for names).
 	lines.add_child(_divider())

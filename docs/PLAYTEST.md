@@ -1,7 +1,7 @@
-# Playtest Review (v0.19.0)
+# Playtest Review (v0.20.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (340 unit tests, plus online host+client runs).
+Automated tests prove it *works* (344 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -52,12 +52,19 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0h Hero names, Watch demos, quieter floors (v0.20.0, your sixth list)
+- [ ] Heroes have names: Kael (Wanderer), Mortimer (Gravekeeper), Morwen (Hexblade Witch), Vesper (Necromancer). Do they fit? Want different ones?
+- [ ] In Choose Hero, press **Watch** under a hero: a looping demo shows their main weapon, then their ability. Does it explain the hero well? Anything missing or confusing?
+- [ ] The demo's **Pick** button picks that hero; Back / Esc / B closes it. Works with a gamepad?
+- [ ] Floor decorations (tombstones, bones, skull piles, reeds, pews) are now about half a monster's size and faded into the floor. Still distracting, or now too hard to see?
+  - *Tune: names in `src/player/characters/*.tres` (`hero_name`); the demo in `src/lobby/hero_demo.gd` (timing constants at the top); props in `src/arena/floor_baker.gd` (`PROP_OPACITY`, `PROP_BRIGHTNESS`) and the prop sprites in `src/art/pixel_art.gd`.*
+
 ### 3.0g Every hero has their own main weapon (v0.19.0)
 - [ ] Gravekeeper: hold fire to throw the **Reaper's Scythe** where you aim; it comes back to you. Fun? Does a slow tank with a short-range weapon feel strong enough?
 - [ ] Hexblade Witch: **Chain Lightning** hits the enemy you aim at and jumps on. Does it hit what you meant to hit? Too easy, since you only need to aim roughly?
 - [ ] Necromancer: **Bone Spears** rise in a row along your aim after a short warning. Satisfying, or does the delay feel laggy?
 - [ ] Wanderer: still the Bolt Gun. Does the Wanderer feel boring next to the others?
-- [ ] Each hero's own upgrades show up on level-up cards ("Gravekeeper only" and so on): Twin Scythes, Long Reach, Heavy Blade, Grim Harvest / Forked Lightning, Long Arc, Conductor, Split Bolt / Longer Row, Wide Spikes, Quick Rise, Splinters. Any that feel useless or too strong?
+- [ ] Each hero's own upgrades show up on level-up cards ("Mortimer only" and so on): Twin Scythes, Long Reach, Heavy Blade, Grim Harvest / Forked Lightning, Long Arc, Conductor, Split Bolt / Longer Row, Wide Spikes, Quick Rise, Splinters. Any that feel useless or too strong?
 - [ ] Online: your scythe / lightning / spears show up instantly for you, and your friends see them too.
 - [ ] Altars and chests only give Orbiting Skulls, Seeking Bolts, Holy Aura and Hellfire Trail now. Enough variety?
   - *Tune: `src/player/characters/*.tres` (fire_interval, bullet_damage, projectile_count, weapon_reach / weapon_radius / weapon_duration), `src/combat/main_weapons.gd`, upgrades in `src/progression/upgrades/*.tres`.*
@@ -281,6 +288,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Abilities:** one per character on a cooldown (Dash / Grave Blast / Hex Snare / Bone Effigy), replacing dash and bombs.
 - **Characters / abilities**, as listed in 3.5.
 - **Mid-run joiners** play the Wanderer.
+- **Watch demos (sixth list):** a scripted mini-scene drawn in code (no video files): ~8 s loop, weapon for 4 s then the ability; Shamblers walk a bit faster than real ones and the effigy bursts sooner than in a real game, so the loop stays short.
 - **Sound** is synthesized placeholder; no music yet.
 
 ---

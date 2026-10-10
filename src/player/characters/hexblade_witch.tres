@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_stats")
 display_name = "Hexblade Witch"
+hero_name = "Morwen"
 blurb = "Fast and fragile. Lightning strikes the enemy you aim at and leaps to the next ones."
 sprite = "hexblade_witch"
 ability = 3

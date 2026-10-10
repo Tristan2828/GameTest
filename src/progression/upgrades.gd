@@ -98,13 +98,13 @@ static func effects_of(upgrade: Upgrade) -> Array[Upgrade]:
 	return effects
 
 
-## "Wanderer only" for hero and weapon upgrades (empty for everyone's).
+## "Kael only" for hero and weapon upgrades (empty for everyone's).
 static func hero_text(upgrade: Upgrade) -> String:
 	if upgrade.for_ability < 0 and upgrade.for_weapon < 0:
 		return ""
 	for character: CharacterStats in Characters.ALL:
 		if character.ability == upgrade.for_ability or character.main_weapon == upgrade.for_weapon:
-			return "%s only" % character.display_name
+			return "%s only" % character.hero_name
 	return ""
 
 

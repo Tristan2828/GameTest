@@ -13,8 +13,11 @@ const WALL: int = 6
 ## Keep props out of the middle, where everyone spawns.
 const CLEAR_RADIUS: float = 90.0
 const SHADOW_COLOR: Color = Color(0.0, 0.0, 0.0, 0.35)
-## Props are dimmed so they never compete with bullets and pickups for attention.
-const PROP_BRIGHTNESS: float = 0.72
+## Props are dimmed and partly see-through, so they read as floor detail and
+## never compete with monsters, bullets and pickups for attention (they're also
+## drawn about half a monster's size, without the black outline creatures have).
+const PROP_BRIGHTNESS: float = 0.8
+const PROP_OPACITY: float = 0.55
 const CANDLE_GLOW: Color = Color(1.0, 0.62, 0.25)
 const CARPET_COLOR: Color = Color(0.33, 0.07, 0.09)
 const CARPET_EDGE_COLOR: Color = Color(0.72, 0.52, 0.2)
@@ -187,26 +190,28 @@ static func _props(image: Image, area: Rect2i, stage: StageDef, rng: RandomNumbe
 			if stage.prop_style == StageDef.PropStyle.CATHEDRAL and _on_aisle(at, area):
 				continue
 			var lit := sprite == "candle" or sprite == "candelabra"
-			_stamp(image, sprite, at, 1.0 if lit else PROP_BRIGHTNESS)
+			_stamp(image, sprite, at, 1.0 if lit else PROP_BRIGHTNESS, 1.0 if lit else PROP_OPACITY)
 			if lit:
 				_glow(image, at, 18 if sprite == "candelabra" else 12)
 
 
 ## Draws a sprite with a soft shadow under it; `at` is its bottom-middle.
-static func _stamp(image: Image, sprite: String, at: Vector2i, brightness: float = 1.0) -> void:
+## `opacity` below 1 lets the floor show through.
+static func _stamp(image: Image, sprite: String, at: Vector2i, brightness: float = 1.0, opacity: float = 1.0) -> void:
 	var sprite_image := PixelArt.texture(sprite).get_image()
-	if brightness < 1.0:
+	if brightness < 1.0 or opacity < 1.0:
 		sprite_image = sprite_image.duplicate()
 		for y: int in sprite_image.get_height():
 			for x: int in sprite_image.get_width():
 				var pixel := sprite_image.get_pixel(x, y)
 				if pixel.a > 0.0:
-					sprite_image.set_pixel(x, y, Color(pixel.r * brightness, pixel.g * brightness, pixel.b * brightness, pixel.a))
+					sprite_image.set_pixel(x, y, Color(pixel.r * brightness, pixel.g * brightness, pixel.b * brightness, pixel.a * opacity))
 	var size := sprite_image.get_size()
+	var shadow := Color(SHADOW_COLOR, SHADOW_COLOR.a * opacity)
 	for dx: int in range(-size.x / 2, size.x / 2 + 1):
 		var shadow_at := at + Vector2i(dx, 0)
 		if Rect2i(Vector2i.ZERO, image.get_size()).has_point(shadow_at):
-			image.set_pixelv(shadow_at, image.get_pixelv(shadow_at).blend(SHADOW_COLOR))
+			image.set_pixelv(shadow_at, image.get_pixelv(shadow_at).blend(shadow))
 	image.blend_rect(sprite_image, Rect2i(Vector2i.ZERO, size), at - Vector2i(size.x / 2, size.y))
 
 

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_stats")
 display_name = "Wanderer"
+hero_name = "Kael"
 blurb = "Balanced all-rounder with a steady bolt gun."
 sprite = "wanderer"
 ability = 0

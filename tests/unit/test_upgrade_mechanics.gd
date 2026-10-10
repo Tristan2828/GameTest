@@ -66,9 +66,9 @@ func test_heart_cutting_upgrade_not_offered_at_one_max_heart() -> void:
 
 
 func test_hero_text_names_the_hero() -> void:
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Deep Hex"))), "Hexblade Witch only")
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Ricochet"))), "Wanderer only", "a bolt upgrade")
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Twin Scythes"))), "Gravekeeper only")
+	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Deep Hex"))), "Morwen only")
+	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Ricochet"))), "Kael only", "a bolt upgrade")
+	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Twin Scythes"))), "Mortimer only")
 	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Sharpened Edge"))), "")
 
 

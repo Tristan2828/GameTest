@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_stats")
 display_name = "Necromancer"
+hero_name = "Vesper"
 blurb = "A crowd-shaper. Raises a row of bone spears along your aim."
 sprite = "necromancer"
 ability = 4

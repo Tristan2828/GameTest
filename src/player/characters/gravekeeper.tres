@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_stats")
 display_name = "Gravekeeper"
+hero_name = "Mortimer"
 blurb = "Slow and sturdy. Throws a scythe that flies out and back, cutting everything twice."
 sprite = "gravekeeper"
 ability = 1

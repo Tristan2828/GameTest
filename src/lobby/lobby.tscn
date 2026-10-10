@@ -121,7 +121,7 @@ theme_override_constants/separation = 6
 
 [node name="Card0" type="Button" parent="Picker/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(148, 172)
+custom_minimum_size = Vector2(148, 190)
 layout_mode = 2
 toggle_mode = true
 
@@ -175,7 +175,7 @@ horizontal_alignment = 1
 
 [node name="Card1" type="Button" parent="Picker/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(148, 172)
+custom_minimum_size = Vector2(148, 190)
 layout_mode = 2
 toggle_mode = true
 
@@ -229,7 +229,7 @@ horizontal_alignment = 1
 
 [node name="Card2" type="Button" parent="Picker/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(148, 172)
+custom_minimum_size = Vector2(148, 190)
 layout_mode = 2
 toggle_mode = true
 
@@ -283,7 +283,7 @@ horizontal_alignment = 1
 
 [node name="Card3" type="Button" parent="Picker/Box/Cards"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(148, 172)
+custom_minimum_size = Vector2(148, 190)
 layout_mode = 2
 toggle_mode = true
 

@@ -12,7 +12,10 @@ enum Ability { DASH, GRAVE_BLAST, BLINK, HEX_SNARE, BONE_EFFIGY }
 ## .tres files and sent over the network: only add new ones at the end.
 enum MainWeapon { BOLTS, SCYTHE, LIGHTNING, SPEARS }
 
+## The hero's class ("Wanderer"); shown under their name.
 @export var display_name: String = "Wanderer"
+## The hero's own name ("Kael"), shown first in menus and on the run summary.
+@export var hero_name: String = "Kael"
 @export_multiline var blurb: String = ""
 ## PixelArt sprite name (P/p pixels take the player's color).
 @export var sprite: String = "wanderer"
@@ -122,3 +125,8 @@ enum MainWeapon { BOLTS, SCYTHE, LIGHTNING, SPEARS }
 @export var wounded_damage_bonus: float = 0.0
 ## Enemies this player kills burst for this much damage around them (0 = no burst).
 @export var kill_burst_damage: int = 0
+
+
+## "Kael the Wanderer".
+func full_name() -> String:
+	return "%s the %s" % [hero_name, display_name]

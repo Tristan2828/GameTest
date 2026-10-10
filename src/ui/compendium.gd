@@ -47,7 +47,7 @@ func _entry(sprite: String, title: String, description: String, details: String,
 func _show_heroes() -> void:
 	clear_list()
 	for stats: CharacterStats in Characters.ALL:
-		var text := _entry(stats.sprite, stats.display_name, stats.blurb, hero_details(stats))
+		var text := _entry(stats.sprite, stats.full_name(), stats.blurb, hero_details(stats))
 		text.add_child(label("Main weapon - %s: %s" % [stats.main_weapon_name, main_weapon_text(stats)], 9, TITLE_COLOR, true))
 		text.add_child(label("Ability - %s: %s" % [stats.ability_name, stats.ability_description], 9, TITLE_COLOR, true))
 

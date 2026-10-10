@@ -4,7 +4,8 @@ extends CanvasLayer
 ##
 ## The main page is the party: one card per player (their name, hero walking on
 ## the spot, ability, hearts and ready state). Your own card (or Choose Hero)
-## opens the hero picker sub-screen with all four heroes.
+## opens the hero picker sub-screen with all four heroes; each hero's Watch
+## button opens a looping demo of their weapon and ability (HeroDemoPopup).
 ##
 ## The host owns the lobby state and broadcasts it whenever it changes. Clients
 ## send their choice and ready flag. Spawned by Main's LevelSpawner like the
@@ -28,6 +29,8 @@ const ABILITY_COLOR: Color = Color(0.95, 0.78, 0.4)
 const HEARTS_COLOR: Color = Color(0.95, 0.45, 0.5)
 const READY_COLOR: Color = Color(0.55, 0.95, 0.5)
 const CARD_BG: Color = Color(0.1, 0.08, 0.14)
+const HERO_NAME_COLOR: Color = Color(0.95, 0.78, 0.4)
+const WATCH_BUTTON_SIZE: Vector2 = Vector2(148, 20)
 
 var _state: LobbyState = LobbyState.new()
 ## Host: clients whose lobby has loaded (can receive state).
@@ -50,6 +53,11 @@ var _autopilot_readied: bool = false
 @onready var _center: Control = $Center
 var _difficulty: DifficultyScreen = null
 var _custom_game: CustomGameScreen = null
+var _demo_popup: HeroDemoPopup = null
+## One Watch button under each hero card in the picker.
+var _watch_buttons: Array[Button] = []
+## --screenshot-dir: the autopilot waits until the lobby's pictures are taken.
+var _taking_screenshots: bool = false
 ## What the party cards were last built from (rebuilt only when it changes).
 var _party_signature: String = ""
 ## Your own party card (opens the hero picker).
@@ -59,13 +67,19 @@ var _my_card: Button = null
 func _ready() -> void:
 	for i: int in _cards.size():
 		var stats := Characters.get_character(i)
-		(_cards[i].get_node("Lines/Name") as Label).text = stats.display_name
+		var name_label := _cards[i].get_node("Lines/Name") as Label
+		name_label.text = stats.hero_name
+		name_label.add_theme_font_size_override("font_size", 18)
+		name_label.add_theme_color_override("font_color", HERO_NAME_COLOR)
+		var class_label := _card_label("the %s" % stats.display_name, LABEL_COLOR)
+		name_label.add_sibling(class_label)
 		(_cards[i].get_node("Lines/Blurb") as Label).text = stats.blurb
 		(_cards[i].get_node("Lines/Ability") as Label).text = "%s: %s" % [stats.ability_name, stats.ability_description]
 		(_cards[i].get_node("Portrait") as CharacterPortrait).character_id = i
 		_cards[i].pressed.connect(func() -> void:
 			_choose_locally(i)
 			_close_picker())
+	_setup_demo()
 	_hero_button.pressed.connect(_open_picker)
 	_back_button.pressed.connect(_close_picker)
 	_ready_button.toggled.connect(_set_ready_locally)
@@ -96,6 +110,7 @@ func _ready() -> void:
 	if _my_card != null:
 		_my_card.grab_focus()
 	if not LaunchOptions.screenshot_dir.is_empty():
+		_taking_screenshots = true
 		await get_tree().create_timer(0.3).timeout
 		await Main.save_screenshot(get_tree(), "lobby.png")
 		if not is_inside_tree():
@@ -105,7 +120,9 @@ func _ready() -> void:
 		if not is_inside_tree():
 			return
 		await Main.save_screenshot(get_tree(), "lobby_heroes.png")
+		await _screenshot_demos()
 		_close_picker()
+		_taking_screenshots = false
 		for page: Array in [[_difficulty_button, _difficulty, "lobby_difficulty.png"], [_custom_button, _custom_game, "lobby_custom.png"]]:
 			if not is_inside_tree():
 				return  # Autopilot already started the run.
@@ -115,6 +132,53 @@ func _ready() -> void:
 				return
 			await Main.save_screenshot(get_tree(), page[2])
 			(page[1] as RunConfigScreen).close()
+
+
+## The picker's Watch buttons (one under each hero card) and the demo popup.
+func _setup_demo() -> void:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	var cards_row := _cards[0].get_parent()
+	cards_row.add_sibling(row)
+	for i: int in _cards.size():
+		var watch := Button.new()
+		watch.text = "Watch %s" % Characters.get_character(i).hero_name
+		watch.tooltip_text = "See what this hero does"
+		watch.custom_minimum_size = WATCH_BUTTON_SIZE
+		watch.add_theme_font_size_override("font_size", 9)
+		watch.pressed.connect(_open_demo.bind(i))
+		row.add_child(watch)
+		_watch_buttons.append(watch)
+	_demo_popup = HeroDemoPopup.new()
+	add_child(_demo_popup)
+	_demo_popup.picked.connect(func(character: int) -> void:
+		_choose_locally(character)
+		_close_picker())
+	_demo_popup.closed.connect(func() -> void:
+		_picker.show()
+		_watch_buttons[_demo_popup.demo.character_id].grab_focus())
+
+
+## The picker hides behind the popup, so a gamepad can't move focus onto it.
+func _open_demo(character: int) -> void:
+	_picker.hide()
+	_demo_popup.open(character, _color_for(multiplayer.get_unique_id()))
+
+
+## --screenshot-dir: each hero's demo during their weapon and their ability.
+func _screenshot_demos() -> void:
+	for i: int in _cards.size():
+		if not is_inside_tree():
+			return
+		_open_demo(i)
+		for shot: Array in [[2.0, "weapon"], [HeroDemo.ABILITY_USE + 0.2, "ability"]]:
+			_demo_popup.demo.seek(shot[0])
+			await get_tree().process_frame
+			if not is_inside_tree():
+				return
+			await Main.save_screenshot(get_tree(), "hero_demo_%d_%s.png" % [i, shot[1]])
+		_demo_popup.close()
 
 
 func _setup_config_screens(is_host: bool) -> void:
@@ -146,7 +210,7 @@ func _process(delta: float) -> void:
 	_copied_feedback_left = maxf(_copied_feedback_left - delta, 0.0)
 	_refresh()
 	if LaunchOptions.autopilot and multiplayer.is_server() and _open_seconds >= _autopilot_min_seconds() \
-			and _state.can_start(1):
+			and _state.can_start(1) and not _taking_screenshots:
 		_start_locally()
 
 
@@ -298,7 +362,9 @@ func _party_card(peer_id: int, me: int) -> Button:
 	portrait.walk_offset = _state.order.find(peer_id) * 0.7
 	portrait.animate = true
 	lines.add_child(portrait)
-	lines.add_child(_card_label(character.display_name, VALUE_COLOR))
+	var hero := _card_label(character.full_name(), VALUE_COLOR)
+	hero.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lines.add_child(hero)
 	var ability := _card_label("%s: %s" % [character.ability_name, character.ability_description], ABILITY_COLOR)
 	ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ability.size_flags_vertical = Control.SIZE_EXPAND_FILL

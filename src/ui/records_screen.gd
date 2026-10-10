@@ -11,7 +11,7 @@ func _ready() -> void:
 	set_title("Records")
 	add_tab("All heroes", _show.bind(-1))
 	for character: int in Characters.ALL.size():
-		add_tab(Characters.get_character(character).display_name, _show.bind(character))
+		add_tab(Characters.get_character(character).hero_name, _show.bind(character))
 
 
 func _show(character: int) -> void:
@@ -41,7 +41,7 @@ func _add_entry(rank: int, entry: RunRecords.Entry) -> void:
 	top.add_theme_constant_override("separation", 10)
 	top.add_child(label("%s pts" % RunSummaryPanel.compact(entry.score), 9, GOLD))
 	top.add_child(label(entry.result_text(), 9, VICTORY_COLOR if entry.victory else NAME_COLOR))
-	top.add_child(label(stats.display_name, 9, TEXT_COLOR))
+	top.add_child(label(stats.full_name(), 9, TEXT_COLOR))
 	text.add_child(top)
 	var team := "solo" if entry.players <= 1 else "%d players" % entry.players
 	text.add_child(label("%s   %d kills   %s damage   Lv %d   %s   %s   %s" % [

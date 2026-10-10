@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-10 (v0.18.0)
+> Last updated: 2026-10-10 (v0.20.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -322,6 +322,11 @@ The owner asked for a unique main weapon per hero instead of everyone's bolt gun
 
 Decisions made by Claude (**revisit in the next playtest**): which weapon goes to which hero, every number above, spears in a line instead of at the cursor, the 12 upgrades, and that the auto-weapon pool is down to 4 (more auto weapons could refill it later; see Ideas for Later).
 
+### Playtest 6 changes (v0.20.0, owner's sixth list)
+1. **Quieter floor decorations** (owner: tombstones and other props were distracting, the same size as monsters). Owner chose "smaller + flatter": every prop sprite is redrawn at about half size (grave 6x6 instead of 9x11; a Shambler is 13x12) without the black outline creatures have, and baked at 55% opacity and 80% brightness so the floor shows through. Candles and candelabras stay fully lit.
+2. **Hero names** (owner picked the dark-fantasy set): **Kael** the Wanderer, **Mortimer** the Gravekeeper, **Morwen** the Hexblade Witch, **Vesper** the Necromancer (`CharacterStats.hero_name`; `full_name()` = "Kael the Wanderer"). The name leads in the hero picker, party cards, Game Guide, Records tabs and run summary; hero-only upgrades say "Kael only". Logs and reports still use the class.
+3. **Watch demos** (owner asked for a video when picking a hero; chose a Watch button per hero and weapon + ability). The game has no video files, so `HeroDemo` is a tiny scripted scene drawn in code at the game's 1x scale with the hero's real numbers and sprites: ~4 s of their main weapon against Shamblers, then their ability (Dash through a fan of bullets / Grave Blast / Hex Snare / Bone Effigy), ~8 s loop, fixed 60 steps a second so it plays the same every time. `HeroDemoPopup` shows it with the hero's name, class, the weapon and ability text (the one playing lights up) and Pick / Back buttons. Local only, nothing networked.
+
 ### Where things stand (2026-10-10, v0.17.0 adds map events, quests, 4 weapons, 4 pickups; v0.18.0 implements the fifth list; v0.19.0 gives each hero their own main weapon)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
@@ -335,15 +340,21 @@ Decisions made by Claude (**revisit in the next playtest**): which weapon goes t
 - **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
 
 ### Next (proposed, in rough priority)
-1. Co-op playtest of v0.15.0: is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, metal music, the run summary pages, and the first one-click update. Then tune numbers.
-2. Working title (replace "GameTest" in the title, window, and build file names).
-3. Content depth: more relics/weapons with synergies (upgrades done in v0.16.0), more enemy variety per stage, boss attack variety.
-4. Meta/feel: hero portraits, records/stats screen, more animation.
-5. Release prep later: real audio direction, Steam or a relay for joining without port forwarding (see Ideas for Later).
+Owner added the top three (2026-10-10, v0.20.0) to the plan after asking Claude what would make the game better:
+1. **Weapon evolutions and synergies.** A max-level auto weapon plus a specific relic or upgrade evolves into a stronger weapon (e.g. Orbiting Skulls + a relic), and certain pairs of upgrades unlock a new effect. Builds are mostly stacked stats today, so runs feel alike; evolutions give each run a goal ("I'm going for X") and something to compare with friends. Shown in the Game Guide; evolutions need new `AutoWeapons` entries (append-only ids).
+2. **More boss and enemy variety.** Two possible bosses per stage (picked at random), more attacks per boss with clear warnings, and an elite enemy or two per stage that changes how you move (chargers, enemies that leave hazards on the ground). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and enemy behaviours.
+3. **Easier joining.** Port forwarding is the biggest hurdle before friends can play. A small relay server with short join codes, or Steam invites through Steamworks ($100 fee); see Ideas for Later, *Join codes*.
+
+Also on the list:
+4. Co-op playtest of v0.15–v0.20 (most of it hasn't been played by a human): is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, the hero weapons, Watch demos, metal music, the run summary pages. Then tune numbers.
+5. Working title (replace "GameTest" in the title, window, and build file names).
+6. Meta/feel: hero portraits, more animation.
+7. Release prep later: real audio direction.
 
 ## 8. Open questions
 
 - Working title?
+- Hero names (Kael, Mortimer, Morwen, Vesper): picked by the owner from Claude's suggestions; confirm with friends.
 - Do the four character abilities feel distinct and balanced (Dash / Grave Blast / Hex Snare / Bone Effigy)?
 - Enemy roster and boss designs beyond the first set (one boss per stage so far).
 - Weapon, auto-weapon, and relic lists; synergy rules (none yet).
