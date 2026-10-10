@@ -9,6 +9,8 @@ const ABILITY: int = 1
 const FIRST_WEAPON: int = 2
 ## Corpse Blast bursts (an upgrade, not a weapon). Far above the weapon ids.
 const KILL_BURST: int = 250
+## Holy Bomb pickups.
+const HOLY_BOMB: int = 251
 
 
 static func of_weapon(weapon_id: int) -> int:
@@ -29,6 +31,8 @@ static func title(source: int, stats: CharacterStats) -> String:
 			return stats.ability_name
 		KILL_BURST:
 			return "Corpse Blast"
+		HOLY_BOMB:
+			return "Holy Bomb"
 	var id := weapon_id(source)
 	return AutoWeapons.get_weapon(id).title if id >= 0 and id < AutoWeapons.ALL.size() else "?"
 
@@ -42,5 +46,7 @@ static func icon(source: int) -> String:
 			return "icon_ability"
 		KILL_BURST:
 			return "up_corpse_blast"
+		HOLY_BOMB:
+			return "pickup_bomb"
 	var id := weapon_id(source)
 	return AutoWeapons.get_weapon(id).icon if id >= 0 and id < AutoWeapons.ALL.size() else ""

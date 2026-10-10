@@ -75,6 +75,9 @@ var times_downed: int = 0
 var hearts_lost: int = 0
 ## Downed: how full the revive circle is, 0..1 (host-owned, synced in snapshots).
 var revive_progress: float = 0.0
+## This stage's quest (Quests id, -1 = none) and its progress (host-owned, synced in snapshots).
+var quest_id: int = -1
+var quest_progress: int = 0
 ## Local player only: while downed, the camera shows this teammate (null = yourself).
 var spectate_target: Player = null
 ## Host: sequence number of the last input it simulated for this player.

@@ -15,6 +15,8 @@ const WALK_STEPS_PER_SECOND: float = 5.0
 const ATTACK_POSE_SECONDS: float = 0.35
 ## Purple tint while hexed (Hex Snare).
 const HEXED_TINT: Color = Color(0.78, 0.55, 1.0)
+## Icy blue while frozen (Frost Hourglass).
+const FROZEN_TINT: Color = Color(0.6, 0.85, 1.0)
 
 var pool_index: int = -1
 var type_id: int = 0
@@ -39,6 +41,10 @@ var hexed_left: float = 0.0
 var hex_multiplier: float = 1.0
 ## Everyone: shown tinted while hexed (clients learn it from snapshots).
 var hexed: bool = false
+## Host: seconds of Frost Hourglass left (can't move or attack).
+var frozen_left: float = 0.0
+## Everyone: shown icy while frozen (clients learn it from snapshots).
+var frozen: bool = false
 
 var _flash_left: float = 0.0
 var facing_left: bool = false
@@ -74,6 +80,8 @@ func activate(enemy_type_id: int, at: Vector2, hit_points: int = 0) -> void:
 	hexed_left = 0.0
 	hex_multiplier = 1.0
 	hexed = false
+	frozen_left = 0.0
+	frozen = false
 	_flash_left = 0.0
 	_attack_left = 0.0
 	_last_position = at
@@ -94,6 +102,13 @@ func deactivate() -> void:
 func set_hexed(value: bool) -> void:
 	if hexed != value:
 		hexed = value
+		queue_redraw()
+
+
+## Everyone: show or hide the frozen tint.
+func set_frozen(value: bool) -> void:
+	if frozen != value:
+		frozen = value
 		queue_redraw()
 
 
@@ -130,7 +145,7 @@ func _process(delta: float) -> void:
 	if _flash_left > 0.0:
 		_flash_left -= delta
 		queue_redraw()
-	elif _current_sprite() != _shown_sprite or type.sprite_frames > 1:
+	elif _current_sprite() != _shown_sprite or type.sprite_frames > 1 or type.is_elite:
 		queue_redraw()
 
 
@@ -149,8 +164,11 @@ func _current_sprite() -> String:
 func _draw() -> void:
 	if not type.sprite.is_empty():
 		_shown_sprite = _current_sprite()
-		var tint := HEXED_TINT if hexed else Color.WHITE
+		var tint := FROZEN_TINT if frozen else (HEXED_TINT if hexed else type.tint)
 		PixelArt.draw(self, _shown_sprite, Vector2.ZERO, Color.WHITE, _flash_left > 0.0, facing_left, type.sprite_scale, tint)
+		if type.is_elite:
+			var top := PixelArt.size_of(type.sprite).y * type.sprite_scale / 2.0
+			PixelArt.draw(self, "crown", Vector2(0, -top - 4.0 + roundf(sin(Time.get_ticks_msec() / 250.0))))
 	else:
 		draw_circle(Vector2.ZERO, type.radius, Color.WHITE if _flash_left > 0.0 else type.color)
 	if type.show_hp_bar and hp_ratio < 1.0:

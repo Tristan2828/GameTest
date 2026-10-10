@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Bone Spears"
+description = "Spears burst from the ground under nearby enemies after a short warning"
+icon = "icon_bone_spears"
+kind = 6
+color = Color(0.9, 0.86, 0.72, 1)
+damage = 30
+damage_per_level = 12
+count = 2
+count_per_level = 1
+interval = 2.0
+interval_scale_per_level = 0.85
+radius = 14.0
+radius_per_level = 2.0
+speed = 0.0
+reach = 220.0
+duration = 0.45

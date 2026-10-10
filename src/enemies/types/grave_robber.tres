@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyType" format=3]
+
+[ext_resource type="Script" path="res://src/enemies/enemy_type.gd" id="1_type"]
+
+[resource]
+script = ExtResource("1_type")
+sprite = "grave_robber"
+sprite_frames = 1
+sprite_scale = 1.0
+display_name = "Grave Robber"
+max_hp = 220
+move_speed = 88.0
+radius = 5.0
+contact_damage = 0
+xp_value = 10
+coin_chance = 0.0
+coin_value = 0
+color = Color(0.55, 0.4, 0.25, 1)
+wobble = 0.5
+show_hp_bar = true
+flees = true

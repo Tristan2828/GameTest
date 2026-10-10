@@ -1,6 +1,6 @@
 class_name GemManager
 extends Node2D
-## Pickups (XP gems, and a second instance for coins), stored in flat arrays
+## Pickups (XP gems, plus instances for coins and power-ups), stored in flat arrays
 ## like bullets (a fixed pool, no node per pickup).
 ##
 ## Host: spawns gems when enemies die, decides who collects them, and tells
@@ -28,6 +28,8 @@ const MAX_PULL_SPEED: float = 420.0
 @export var glow_color: Color = Color(0.4, 0.75, 1.0, 0.16)
 ## Group used by the autopilot to find pickups.
 @export var group_name: StringName = &"gems"
+## If set, a pickup's value picks its sprite by index instead (power-ups: value = kind).
+@export var sprites_by_value: PackedStringArray = PackedStringArray()
 
 var _active: PackedByteArray = PackedByteArray()
 var _positions: PackedVector2Array = PackedVector2Array()
@@ -79,6 +81,13 @@ func nearest_gem(from: Vector2) -> Vector2:
 		if _active[id] != 0 and (best == Vector2.INF or from.distance_squared_to(_positions[id]) < from.distance_squared_to(best)):
 			best = _positions[id]
 	return best
+
+
+## Every peer (Soul Magnet): every pickup flies to this player, however far.
+func attract_all(peer_id: int) -> void:
+	for id: int in CAPACITY:
+		if _active[id] != 0:
+			_targets[id] = peer_id
 
 
 ## Host: returns false if the pool is full (the caller should add the XP directly).
@@ -179,6 +188,8 @@ func _draw() -> void:
 			continue
 		var value := _values[id]
 		var sprite := sprite_big if value >= big_value else (sprite_mid if value >= mid_value else sprite_small)
+		if not sprites_by_value.is_empty():
+			sprite = sprites_by_value[clampi(value, 0, sprites_by_value.size() - 1)]
 		# Coins spin (an edge-on frame now and then); everything bobs gently.
 		if PixelArt.has_sprite(sprite + "_1") and int(now * 6.0 + id) % 4 == 0:
 			sprite += "_1"

@@ -1,7 +1,7 @@
 class_name Compendium
 extends ListScreen
 ## The title menu's info pages: heroes, auto weapons, level-up upgrades, relics,
-## pickups, enemies and bosses. Everything is read from the game's own data
+## pickups, map events and quests, enemies and bosses. Everything is read from the game's own data
 ## (Characters, AutoWeapons, Upgrades, Relics, EnemyTypes, Stages), so it stays
 ## correct when numbers are tuned.
 
@@ -16,6 +16,7 @@ func _ready() -> void:
 	add_tab("Upgrades", _show_upgrades)
 	add_tab("Relics", _show_relics)
 	add_tab("Pickups", _show_pickups)
+	add_tab("Events", _show_events)
 	add_tab("Enemies", _show_enemies.bind(false))
 	add_tab("Bosses", _show_enemies.bind(true))
 
@@ -58,7 +59,7 @@ static func hero_details(stats: CharacterStats) -> String:
 
 func _show_weapons() -> void:
 	clear_list()
-	add_heading("Found on glowing altars twice per stage. Touch one to take it; taking it again levels it up (max %d)." % AutoWeapons.MAX_LEVEL)
+	add_heading("On glowing altars (twice per stage) and in champions' chests. Taking one again levels it up (max %d)." % AutoWeapons.MAX_LEVEL)
 	for weapon: AutoWeapon in AutoWeapons.ALL:
 		_entry(weapon.icon, weapon.title, weapon.description, weapon_details(weapon), weapon.color)
 
@@ -75,6 +76,14 @@ static func weapon_details(weapon: AutoWeapon) -> String:
 				text += ", %d bolts every %.1fs" % [weapon.count_at(level), weapon.interval_at(level)]
 			AutoWeapon.Kind.AURA:
 				text += " every %.1fs, radius %d" % [weapon.interval_at(level), roundi(weapon.radius_at(level))]
+			AutoWeapon.Kind.CHAIN:
+				text += ", %d jumps every %.1fs" % [weapon.count_at(level), weapon.interval_at(level)]
+			AutoWeapon.Kind.BOOMERANG:
+				text += ", %d scythe%s every %.1fs" % [weapon.count_at(level), "" if weapon.count_at(level) == 1 else "s", weapon.interval_at(level)]
+			AutoWeapon.Kind.TRAIL:
+				text += " every %.1fs, flames last %.0fs" % [weapon.interval_at(level), weapon.duration]
+			AutoWeapon.Kind.ERUPTION:
+				text += ", %d spears every %.1fs" % [weapon.count_at(level), weapon.interval_at(level)]
 		parts.append(text)
 	return "   ".join(parts)
 
@@ -110,8 +119,32 @@ func _show_pickups() -> void:
 		"Beating a boss also pays everyone a bounty.")
 	_entry("icon_orbiting_skulls", "Weapon altars", "Appear twice per stage and show the weapon they hold. First player to touch one takes it.",
 		"See the Weapons tab.")
+	for kind: int in PowerUps.TITLES.size():
+		_entry(PowerUps.SPRITES[kind], PowerUps.TITLES[kind], PowerUps.DESCRIPTIONS[kind],
+			"Rare drop from enemies (at most one every %ds); champions always drop one. Whoever grabs it uses it." % roundi(PowerUps.DROP_COOLDOWN))
 	_entry("wanderer", "Downed and revives", "At 0 hearts you're downed: you lie in a circle and can't move or shoot. A teammate standing in the circle revives you in %ds (faster with more helpers), with half your hearts back." % roundi(Revive.SECONDS),
 		"While down, your screen follows a teammate (Fire / Ability switches). Everyone gets up at the next stage. The run ends when everyone is down.")
+
+
+func _show_events() -> void:
+	clear_list()
+	add_heading("Events around the map. Edge arrows and blinking minimap squares point the way.")
+	_entry("crown", "Champion lair", "A crowned champion sleeps somewhere in every stage and wakes when you come close. It's tough and shoots back. Beat it for coins, a power-up and a chest.",
+		"Wakes within %d px. +%d%% HP per extra player." % [roundi(MapEvents.WAKE_RADIUS), roundi(EnemyTypes.get_type(EnemyTypes.Id.GHOUL_CHAMPION).hp_per_extra_player * 100.0)],
+		MapEvents.CHAMPION_COLOR)
+	_entry("chest", "Champion's chest", "First player to touch it gets an auto weapon they can still level up (or %d coins if they're all maxed)." % Arena.CHEST_COINS_WHEN_MAXED,
+		"", MapEvents.CHEST_COLOR)
+	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills; with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d." % [roundi(Arena.RITUAL_XP_SHARE * 100.0), Arena.RITUAL_HEAL],
+		"%ds to fill. One is placed at the start of each stage, another pops up later and fades if nobody starts it." % roundi(MapEvents.RITUAL_SECONDS),
+		MapEvents.RITUAL_COLOR)
+	_entry("grave_robber", "Grave Robber", "A thief who runs from you, dropping stolen coins. Catch it within %ds for a shower of coins." % roundi(MapEvents.RUNNER_SECONDS),
+		"Pops up twice per stage.", MapEvents.RUNNER_COLOR)
+	add_heading("Quests: in the shop, each player picks 1 of 3 for the next stage (free). Finish it during that stage for the reward.")
+	for quest_id: int in Quests.TITLES.size():
+		var details := Quests.reward_text(quest_id)
+		if Quests.CO_OP_ONLY[quest_id]:
+			details += "   (co-op only)"
+		_entry(Quests.ICONS[quest_id], Quests.TITLES[quest_id], Quests.description(quest_id), details, TITLE_COLOR)
 
 
 ## Regular enemies (or bosses), with where they appear.
@@ -125,8 +158,12 @@ func _show_enemies(bosses: bool) -> void:
 		var type := EnemyTypes.get_type(type_id)
 		if type.is_boss != bosses:
 			continue
-		_entry(type.sprite, type.display_name, enemy_details(type, boss_stage(type_id) if bosses else 1),
-			"Found in: %s" % ", ".join(stages_with(type_id)),
+		var found := "Found in: %s" % ", ".join(stages_with(type_id))
+		if type.is_elite:
+			found = "Champion of %s (map event)" % ", ".join(stages_with(type_id))
+		elif type.flees:
+			found = "Every stage (map event)"
+		_entry(type.sprite, type.display_name, enemy_details(type, boss_stage(type_id) if bosses else 1), found,
 			Color(0.95, 0.45, 0.4) if bosses else NAME_COLOR)
 
 
@@ -153,7 +190,7 @@ static func boss_stage(type_id: int) -> int:
 static func stages_with(type_id: int) -> PackedStringArray:
 	var titles := PackedStringArray()
 	for stage: StageDef in Stages.ALL:
-		var found := stage.boss_type == type_id or stage.pack_type == type_id
+		var found := stage.boss_type == type_id or stage.pack_type == type_id or stage.champion_type == type_id
 		for entry: SpawnEntry in stage.spawns:
 			found = found or entry.enemy_type == type_id
 		if found:

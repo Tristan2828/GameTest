@@ -1,7 +1,7 @@
 class_name Minimap
 extends Control
 ## A small map of the whole arena in the HUD corner: the walls, what your screen
-## currently shows, every player, the horde, the boss and weapon altars. The
+## currently shows, every player, the horde, the boss, weapon altars and map events. The
 ## side you're close to lights up red so you know you're backing into a wall.
 
 const BACK_COLOR: Color = Color(0.03, 0.02, 0.05, 0.75)
@@ -22,6 +22,8 @@ var enemies: PackedVector2Array = PackedVector2Array()
 var altars: PackedVector2Array = PackedVector2Array()
 var boss: Vector2 = Vector2.INF
 var local_position: Vector2 = Vector2.INF
+## [position, color, sprite] per map event (blinking squares in the event's color).
+var events: Array[Array] = []
 
 
 func show_state(view_rect: Rect2, player_markers: Array[Array], enemy_positions: PackedVector2Array,
@@ -42,6 +44,12 @@ func _draw() -> void:
 		draw_rect(Rect2((at * scale_factor).floor(), Vector2.ONE), ENEMY_COLOR)
 	for at: Vector2 in altars:
 		draw_rect(Rect2((at * scale_factor).floor() - Vector2.ONE, Vector2(3, 3)), ALTAR_COLOR)
+	var blink := int(Time.get_ticks_msec() / 400) % 2 == 0
+	for event: Array in events:
+		var spot: Vector2 = event[0]
+		var color: Color = event[1]
+		draw_rect(Rect2((spot * scale_factor).floor() - Vector2(2, 2), Vector2(5, 5)), Color(0.05, 0.03, 0.08))
+		draw_rect(Rect2((spot * scale_factor).floor() - Vector2.ONE, Vector2(3, 3)), color if blink else color.lightened(0.5))
 	if boss.is_finite():
 		draw_rect(Rect2((boss * scale_factor).floor() - Vector2(2, 2), Vector2(5, 5)), BOSS_COLOR)
 	if view.size != Vector2.ZERO:

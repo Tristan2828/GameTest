@@ -76,8 +76,12 @@ func _ready() -> void:
 		await get_tree().create_timer(0.3).timeout
 		await Main.save_screenshot(get_tree(), "lobby.png")
 		for page: Array in [[_difficulty_button, _difficulty, "lobby_difficulty.png"], [_custom_button, _custom_game, "lobby_custom.png"]]:
+			if not is_inside_tree():
+				return  # Autopilot already started the run.
 			(page[0] as Button).pressed.emit()
 			await get_tree().create_timer(0.2).timeout
+			if not is_inside_tree():
+				return
 			await Main.save_screenshot(get_tree(), page[2])
 			(page[1] as RunConfigScreen).close()
 

@@ -20,11 +20,14 @@ const GRID_CELL_SIZE: float = 24.0
 const MAX_ENEMY_RADIUS: float = 24.0
 ## How hard overlapping enemies push each other apart.
 const SEPARATION_STRENGTH: float = 40.0
+## Fleeing enemies this close to a wall turn back toward the middle.
+const FLEE_WALL_DISTANCE: float = 110.0
 ## Each enemy in a snapshot: u16 index, u8 type, u8 flags, s16 x, s16 y, u8 hp.
 const SNAPSHOT_STRIDE: int = 9
 const FLAG_HIT: int = 1
 const FLAG_HEXED: int = 2
 const FLAG_CRIT: int = 4
+const FLAG_FROZEN: int = 8
 
 ## Host: total damage dealt by each peer id. Handy for tests and debugging.
 var damage_by_peer: Dictionary[int, int] = {}
@@ -142,6 +145,10 @@ func tick_host(delta: float, targets: Array[Vector2], lures: Array[Vector2] = []
 				enemy.hex_multiplier = 1.0
 			# Bound in place: no moving or attacking (bosses only take extra damage).
 			rooted = enemy.hexed and not enemy.type.is_boss
+		if enemy.frozen_left > 0.0:
+			enemy.frozen_left = maxf(enemy.frozen_left - delta, 0.0)
+			enemy.set_frozen(enemy.frozen_left > 0.0)
+			rooted = rooted or enemy.frozen
 		var target_list := targets
 		if not enemy.type.is_boss and not lures.is_empty():
 			var lure := _nearest(lures, enemy.position)
@@ -195,9 +202,27 @@ func hex_in_radius(center: Vector2, radius: float, seconds: float, multiplier: f
 	return count
 
 
-## Host: damage every active enemy within `radius` (Grave Blast).
-func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int,
-		source: int = DamageSource.ABILITY) -> void:
+## Host (Frost Hourglass): every regular enemy stops for `seconds`. Bosses keep going.
+func freeze_all(seconds: float) -> void:
+	for enemy: Enemy in _pool:
+		if enemy.active and not enemy.type.is_boss:
+			enemy.frozen_left = maxf(enemy.frozen_left, seconds)
+			enemy.set_frozen(true)
+
+
+## Host (Holy Bomb): damage every regular enemy within `radius`; bosses are spared.
+func smite(center: Vector2, radius: float, amount: int, from_peer_id: int, source: int) -> void:
+	var targets: Array[Enemy] = []
+	for enemy: Enemy in _pool:
+		if enemy.active and not enemy.type.is_boss and enemy.position.distance_to(center) <= radius + enemy.type.radius:
+			targets.append(enemy)
+	for enemy: Enemy in targets:
+		if enemy.active:
+			damage(enemy, amount, from_peer_id, source)
+
+
+## Every active enemy touching the circle.
+func enemies_in_radius(center: Vector2, radius: float) -> Array[Enemy]:
 	var targets: Array[Enemy] = []
 	_nearby.clear()
 	_grid.query(center, radius + MAX_ENEMY_RADIUS, _nearby)
@@ -206,7 +231,31 @@ func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id:
 		var reach := radius + enemy.type.radius
 		if enemy.active and enemy.position.distance_squared_to(center) <= reach * reach:
 			targets.append(enemy)
-	for enemy: Enemy in targets:
+	return targets
+
+
+## The closest active enemy within `max_distance` whose pool index isn't in
+## `skip` (Chain Lightning's next jump), or null.
+func find_nearest_except(point: Vector2, max_distance: float, skip: Dictionary[int, bool]) -> Enemy:
+	_nearby.clear()
+	_grid.query(point, max_distance, _nearby)
+	var best: Enemy = null
+	var best_distance := max_distance * max_distance
+	for index: int in _nearby:
+		var enemy := _pool[index]
+		if skip.has(index) or not enemy.active:
+			continue
+		var distance := enemy.position.distance_squared_to(point)
+		if distance <= best_distance:
+			best = enemy
+			best_distance = distance
+	return best
+
+
+## Host: damage every active enemy within `radius` (Grave Blast).
+func damage_in_radius(center: Vector2, radius: float, amount: int, from_peer_id: int,
+		source: int = DamageSource.ABILITY) -> void:
+	for enemy: Enemy in enemies_in_radius(center, radius):
 		if enemy.active:
 			damage(enemy, amount, from_peer_id, source)
 
@@ -265,6 +314,8 @@ func send_snapshot(peer_ids: Array[int]) -> void:
 			flags |= FLAG_HEXED
 		if enemy.crit_since_snapshot:
 			flags |= FLAG_CRIT
+		if enemy.frozen:
+			flags |= FLAG_FROZEN
 		data.encode_u8(offset + 3, flags)
 		data.encode_s16(offset + 4, clampi(roundi(enemy.position.x), -32768, 32767))
 		data.encode_s16(offset + 6, clampi(roundi(enemy.position.y), -32768, 32767))
@@ -305,6 +356,7 @@ func _apply_snapshot(count: int, data: PackedByteArray) -> void:
 		if flags & FLAG_CRIT:
 			enemy_crit.emit(at)
 		enemy.set_hexed((flags & FLAG_HEXED) != 0)
+		enemy.set_frozen((flags & FLAG_FROZEN) != 0)
 		enemy.target_position = at
 		var ratio := data.decode_u8(offset + 8) / 255.0
 		if not is_equal_approx(ratio, enemy.hp_ratio):
@@ -319,6 +371,8 @@ func _apply_snapshot(count: int, data: PackedByteArray) -> void:
 
 func _desired_velocity(enemy: Enemy, to_target: Vector2, delta: float) -> Vector2:
 	var direction := to_target.normalized()
+	if enemy.type.flees:
+		direction = _flee_direction(enemy.position, to_target)
 	var preferred := enemy.type.preferred_distance
 	if preferred > 0.0:
 		var distance := to_target.length()
@@ -331,6 +385,23 @@ func _desired_velocity(enemy: Enemy, to_target: Vector2, delta: float) -> Vector
 		enemy.wobble_phase += delta * 5.0
 		direction = direction.rotated(sin(enemy.wobble_phase) * enemy.type.wobble)
 	return direction * enemy.type.move_speed
+
+
+## Away from the closest player, but bending back toward the middle near a wall
+## so a fleeing enemy slides along it instead of getting stuck in a corner.
+func _flee_direction(at: Vector2, to_target: Vector2) -> Vector2:
+	var away := -to_target.normalized()
+	var inner := bounds.grow(-FLEE_WALL_DISTANCE)
+	if not inner.has_point(at):
+		var to_middle := (bounds.get_center() - at).normalized()
+		away = (away + to_middle * 1.2).normalized()
+	return away
+
+
+## Host: remove an enemy without a kill (a thief that got away).
+func remove(enemy: Enemy) -> void:
+	if enemy.active:
+		_release(enemy)
 
 
 func _try_fire(enemy: Enemy, to_target: Vector2, delta: float) -> void:

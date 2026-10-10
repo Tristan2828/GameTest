@@ -57,6 +57,19 @@ const CRIT_COLOR: Color = Color(1.0, 0.85, 0.25)
 ## Corpse Blast (upgrade): how far a burst reaches, and its color.
 const KILL_BURST_RADIUS: float = 32.0
 const KILL_BURST_COLOR: Color = Color(0.5, 0.95, 0.55)
+## Map events: coins from a champion and a caught thief, the chest's coins when
+## every weapon is maxed, and what a finished ritual gives.
+const CHAMPION_COINS: int = 10
+const RUNNER_COINS: int = 14
+const CHEST_COINS_WHEN_MAXED: int = 30
+const RITUAL_HEAL: int = 1
+## A finished ritual's XP: this share of the current level's cost.
+const RITUAL_XP_SHARE: float = 0.6
+## Enemies called per ritual wave (+1 per extra player), and from how far.
+const RITUAL_WAVE_SIZE: int = 2
+const RITUAL_WAVE_DISTANCE: float = 200.0
+## A relic quest pays this instead when the player already owns every relic.
+const QUEST_COINS_WHEN_NO_RELIC: int = 40
 ## In --autopilot test mode, the host restarts by itself this long after a stage ends.
 const AUTOPILOT_RESTART_DELAY: float = 2.0
 
@@ -83,6 +96,8 @@ var _boss_seen: bool = false
 var _boss_banner_left: float = 0.0
 ## Seconds until play resumes (Phase.COUNTDOWN; clients get it from snapshots).
 var _resume_left: float = 0.0
+## The host's pause menu is open: nothing moves for anyone (synced in snapshots).
+var _paused: bool = false
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
 var _tick: int = 0
@@ -96,6 +111,14 @@ var _effigies: Array[Effigy] = []
 var _burst_positions: PackedVector2Array = PackedVector2Array()
 var _burst_damages: PackedInt32Array = PackedInt32Array()
 var _burst_owners: PackedInt32Array = PackedInt32Array()
+## Host: seconds until another random power-up may drop.
+var _power_up_cooldown: float = 0.0
+## Host: everyone's quest for this stage (picked in the shop) and its progress.
+var _quests: QuestTracker = QuestTracker.new()
+## Host: Arsenal counts auto weapon damage from the stage start (peer -> damage then).
+var _quest_damage_base: Dictionary[int, int] = {}
+## Host: Untouchable restarts when hearts_lost changes (peer -> hearts_lost last tick).
+var _quest_hearts_seen: Dictionary[int, int] = {}
 ## Host: when (in run seconds) each player first got each auto weapon: peer -> {weapon id: seconds}.
 var _weapon_owned_since: Dictionary[int, Dictionary] = {}
 ## Local: seconds our player has been downed (the camera moves to a teammate after a moment).
@@ -130,6 +153,8 @@ var _pattern_times: PackedFloat32Array = PackedFloat32Array()
 @onready var _enemies: EnemyManager = $Enemies
 @onready var _gems: GemManager = $Gems
 @onready var _coins: GemManager = $Coins
+@onready var _power_ups: GemManager = $PowerUps
+@onready var _events: MapEvents = $Events
 @onready var _shop: ShopController = $Shop
 @onready var _weapons: WeaponSystem = $Weapons
 @onready var _projectiles: ProjectileManager = $Projectiles
@@ -147,6 +172,7 @@ func _ready() -> void:
 	_projectiles.bounds = BOUNDS
 	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
+	_events.bounds = BOUNDS
 	_rng.randomize()
 	# The lobby's Difficulty / Custom Game choices (clients got a copy from the host).
 	_config = RunSetup.config
@@ -157,6 +183,8 @@ func _ready() -> void:
 	_team.xp_rate = _config.xp_rate
 	_bonus_levels_left = _config.bonus_levels
 	_setup_stage()
+	if multiplayer.is_server():
+		_events.host_start_stage()
 	_level_up.bind_panel(_hud.level_up_panel, _local_player)
 	_shop.bind(_hud.shop_panel, _player_by_id, _ready_peer_list)
 	_shop.relic_bought.connect(_on_relic_bought)
@@ -173,7 +201,11 @@ func _ready() -> void:
 	_coins.picked_up_at.connect(func(at: Vector2) -> void:
 		if _near_local_player(at, 60.0):
 			Sfx.play(&"coin", -6.0))
+	_power_ups.picked_up_at.connect(func(at: Vector2) -> void:
+		if _near_local_player(at, 80.0):
+			Sfx.play(&"pickup", -4.0))
 	_weapons.weapon_gained.connect(_on_weapon_gained)
+	_events.announced.connect(_on_event_announced)
 	_level_up.upgrade_announced.connect(_on_upgrade_announced)
 	_hud.run_summary.return_requested.connect(_request_restart)
 	if LaunchOptions.stage_seconds > 0.0:
@@ -187,6 +219,14 @@ func _ready() -> void:
 		_enemies.pattern_fired.connect(_fire_enemy_pattern)
 		_gems.collected.connect(_on_gem_collected)
 		_coins.collected.connect(_on_coin_collected)
+		_power_ups.collected.connect(_on_power_up_collected)
+		_events.spawn_enemy = _spawn_event_enemy
+		_events.champion_slain.connect(_on_champion_slain)
+		_events.chest_opened.connect(_on_chest_opened)
+		_events.ritual_completed.connect(_on_ritual_completed)
+		_events.runner_caught.connect(_on_runner_caught)
+		_events.wave_requested.connect(_on_ritual_wave)
+		_events.coin_dropped.connect(func(at: Vector2) -> void: _coins.spawn_host(at, 1))
 		_weapons.seeker_fired.connect(_fire_seeker)
 		multiplayer.peer_connected.connect(_add_player)
 		multiplayer.peer_disconnected.connect(_remove_player)
@@ -209,6 +249,12 @@ func _exit_tree() -> void:
 func _physics_process(delta: float) -> void:
 	var is_host := multiplayer.is_server()
 	_team.player_count = maxi(_player_nodes().size(), 1)
+	if _paused:
+		# Host pause: everything stands still; clients still get snapshots (and the flag).
+		if is_host:
+			_tick += 1
+			_send_snapshots()
+		return
 	if _phase == Phase.PLAYING:
 		_elapsed += delta
 		_run_stats.run_seconds += delta
@@ -220,6 +266,7 @@ func _physics_process(delta: float) -> void:
 			t = PerfLog.start()
 			_spawn_enemies(delta)
 			_tick_effigies(delta)
+			_power_up_cooldown = maxf(_power_up_cooldown - delta, 0.0)
 			PerfLog.stop(&"spawn", t)
 			t = PerfLog.start()
 			_enemies.tick_host(delta, _alive_player_positions(), _effigy_positions(), _effigy_lure_radius())
@@ -229,16 +276,21 @@ func _physics_process(delta: float) -> void:
 			PerfLog.stop(&"boss", t)
 			t = PerfLog.start()
 			_weapons.tick_host(delta, _elapsed, _player_nodes(), _enemies, _ready_peer_list())
+			_events.host_tick(delta, _elapsed, _player_nodes(), _enemies, _boss_spawned, _ready_peer_list())
 			PerfLog.stop(&"weapons", t)
 			t = PerfLog.start()
 			_apply_contact_damage()
 			_test_knock_out()
 			_tick_revives(delta)
+			_tick_quests(delta)
 			PerfLog.stop(&"contact", t)
 		else:
 			t = PerfLog.start()
 			_enemies.rebuild_grid()
 			PerfLog.stop(&"grid", t)
+		t = PerfLog.start()
+		_weapons.tick_effects(delta, _player_nodes(), _enemies, is_host)
+		PerfLog.stop(&"weapon_fx", t)
 		t = PerfLog.start()
 		_projectiles.steer(_enemies, delta)
 		_projectiles.step(delta)
@@ -356,6 +408,8 @@ func _process(delta: float) -> void:
 	_update_spectate(delta)
 	GameCursor.set_in_game(not _is_between_stages())
 	_revive_screenshots()
+	_event_screenshots()
+	_test_pause(delta)
 	var t := PerfLog.start()
 	_update_hud()
 	PerfLog.stop(&"hud", t)
@@ -438,6 +492,13 @@ func debug_report() -> String:
 		lines.append("[report]   kills by peer: %s" % [_run_stats_kills()])
 		lines.append("[report]   invite: '%s'  %s" % [Net.invite.address, Net.invite.status])
 	lines.append("[report]   enemy bullets alive: %d   altars: %d   music: %s" % [_enemy_bullets.count(), _weapons.altar_count(), Music.now_playing()])
+	var event_kinds := PackedStringArray()
+	for event: MapEvents.MapEvent in _events.events():
+		event_kinds.append("%s/%s" % [MapEvents.Kind.keys()[event.kind], MapEvents.State.keys()[event.state]])
+	lines.append("[report]   events: %s   power-ups on ground: %d   weapon effects: %s   paused: %s" % [
+		event_kinds, _power_ups.count(), _weapons.effect_counts(), _paused])
+	if multiplayer.is_server():
+		lines.append("[report]   quests: %s   progress: %s" % [_quests.quest_of, _quests.progress])
 	var boss := _enemies.find_boss()
 	if boss != null:
 		lines.append("[report]   boss: %s hp %.0f%% phase %d" % [boss.type.display_name, boss.hp_ratio * 100.0, _boss_brain.phase])
@@ -503,6 +564,7 @@ func _remove_player(peer_id: int) -> void:
 	_ready_peers.erase(peer_id)
 	_level_up.host_remove_player(peer_id)
 	_shop.host_remove_player(peer_id)
+	_quests.remove(peer_id)
 	var player := _player_by_id(peer_id)
 	if player != null:
 		player.queue_free()
@@ -598,7 +660,7 @@ func _apply_contact_damage() -> void:
 		if not player.can_be_hit():
 			continue
 		var enemy := _enemies.find_hit(player.state.position, player.stats.hitbox_radius)
-		if enemy != null:
+		if enemy != null and enemy.type.contact_damage > 0:
 			player.take_hit(enemy.type.contact_damage)
 
 
@@ -632,6 +694,7 @@ func _tick_revives(delta: float) -> void:
 			downed.revive()
 			for peer_id: int in helpers:
 				_run_stats.add(peer_id, RunStats.Stat.REVIVES, 1)
+				_quest_count(peer_id, Quests.Id.GUARDIAN)
 
 
 ## Everyone: alive players other than `local`, in a stable order.
@@ -682,6 +745,48 @@ func _revive_screenshots() -> void:
 				Main.save_screenshot(get_tree(), "reviving.png")
 
 
+var _event_screenshots_taken: Dictionary[String, bool] = {}
+
+
+## --screenshot-dir: one picture of each kind of map event once it's near us.
+func _event_screenshots() -> void:
+	var local := _local_player()
+	if LaunchOptions.screenshot_dir.is_empty() or local == null or _phase != Phase.PLAYING:
+		return
+	for event: MapEvents.MapEvent in _events.events():
+		var name := "event_%s_%s.png" % [MapEvents.Kind.keys()[event.kind].to_lower(), MapEvents.State.keys()[event.state].to_lower()]
+		if not _event_screenshots_taken.has(name) and event.position.distance_to(local.world_position()) < 200.0:
+			_event_screenshots_taken[name] = true
+			Main.save_screenshot(get_tree(), name)
+	if not _event_screenshots_taken.has("power_up") and _power_ups.count() > 0:
+		_event_screenshots_taken["power_up"] = true
+		Main.save_screenshot(get_tree(), "power_up.png")
+
+
+var _test_pause_left: float = -1.0
+var _paused_screenshot_taken: bool = false
+
+
+## --test-pause=<s>: the host pauses at that stage time for 3 s, then resumes
+## (with --screenshot-dir, a client saves paused_client.png).
+func _test_pause(delta: float) -> void:
+	if not multiplayer.is_server():
+		if _paused and not _paused_screenshot_taken and not LaunchOptions.screenshot_dir.is_empty():
+			_paused_screenshot_taken = true
+			Main.save_screenshot(get_tree(), "paused_client.png")
+		return
+	if LaunchOptions.test_pause_at >= 0.0 and _elapsed >= LaunchOptions.test_pause_at and _phase == Phase.PLAYING:
+		LaunchOptions.test_pause_at = -1.0
+		_test_pause_left = 3.0
+		set_host_paused(true)
+		print("Host paused (--test-pause) at %.1fs" % _elapsed)
+	elif _test_pause_left > 0.0:
+		_test_pause_left -= delta
+		if _test_pause_left <= 0.0:
+			set_host_paused(false)
+			print("Host resumed (--test-pause) at %.1fs" % _elapsed)
+
+
 func _is_spectating() -> bool:
 	var local := _local_player()
 	return local != null and local.is_downed() and _downed_seconds >= Revive.SPECTATE_DELAY \
@@ -716,6 +821,11 @@ func _end_stage(phase: Phase) -> void:
 	_enemy_bullets.clear()
 	_gems.clear()
 	_coins.clear()
+	_power_ups.clear()
+	_events.clear()
+	_quests.clear()
+	for player: Player in _player_nodes():
+		player.quest_id = -1
 	_weapons.clear_altars()
 	_effigies.clear()
 	_clear_ability_markers()
@@ -814,9 +924,11 @@ func _begin_next_stage() -> void:
 	_boss_spawned = false
 	_boss_defeated = false
 	_setup_stage()
+	_events.host_start_stage()
 	_weapons.reset_stage()
 	for player: Player in _player_nodes():
 		player.respawn(BOUNDS.get_center() + SPAWN_OFFSETS[player.slot])
+	_start_quests(_shop.host_take_quests())
 	# Level-ups banked at the end of the last stage come first, then "3, 2, 1".
 	if _level_up.host_should_start():
 		_start_level_up()
@@ -831,6 +943,7 @@ func _setup_stage() -> void:
 	_director = SpawnDirector.new(randi(), stage.spawns)
 	_boss_brain = BossBrain.new(stage.boss_phase_one, stage.boss_phase_two)
 	_boss_spin = 0.0
+	_events.champion_type = stage.champion_type
 	_floor.apply_stage(stage)
 
 
@@ -881,12 +994,14 @@ func _tick_boss(delta: float) -> void:
 
 func _on_enemy_killed(enemy: Enemy, killer_peer_id: int, source: int) -> void:
 	_run_stats.add(killer_peer_id, RunStats.Stat.KILLS, 1)
+	_quest_count(killer_peer_id, Quests.Id.SLAYER)
 	var killer_stats := _stats_of_peer(killer_peer_id)
 	# Corpse Blast: bursts don't set off more bursts (no chain reactions).
 	if killer_stats != null and killer_stats.kill_burst_damage > 0 and source != DamageSource.KILL_BURST:
 		_burst_positions.append(enemy.position)
 		_burst_damages.append(killer_stats.kill_burst_damage)
 		_burst_owners.append(killer_peer_id)
+	_events.host_enemy_killed(enemy)
 	if enemy.type.is_boss:
 		# Don't end the stage mid-hit-check; the phase check does it this tick.
 		_boss_defeated = true
@@ -899,9 +1014,303 @@ func _on_enemy_killed(enemy: Enemy, killer_peer_id: int, source: int) -> void:
 		var offset := Vector2.from_angle(_rng.randf() * TAU) * 5.0
 		if not _coins.spawn_host(enemy.position + offset, enemy.type.coin_value):
 			_on_coin_collected(enemy.type.coin_value, killer_peer_id)
+	if _power_up_cooldown <= 0.0 and _rng.randf() < PowerUps.DROP_CHANCE:
+		_power_up_cooldown = PowerUps.DROP_COOLDOWN
+		_drop_power_up(enemy.position, PowerUps.pick_kind(_rng.randf()))
 	var killer := _player_by_id(killer_peer_id)
 	if killer != null:
 		killer.register_kill()
+
+
+# --- Quests (picked in the shop for this stage) ----------------------------------
+
+## Host: a new stage's quests, picked in the shop.
+func _start_quests(chosen: Dictionary[int, int]) -> void:
+	_quests.clear()
+	_quest_damage_base.clear()
+	_quest_hearts_seen.clear()
+	for player: Player in _player_nodes():
+		var quest_id: int = chosen.get(player.peer_id, -1)
+		player.quest_id = quest_id
+		player.quest_progress = 0
+		if quest_id < 0:
+			continue
+		_quests.assign(player.peer_id, quest_id)
+		_quest_damage_base[player.peer_id] = _auto_weapon_damage(player.peer_id)
+		_quest_hearts_seen[player.peer_id] = player.hearts_lost
+		print("Player %d quest: %s" % [player.peer_id, Quests.TITLES[quest_id]])
+
+
+## Host: progress on a quest; pays out the moment it's done.
+func _quest_count(peer_id: int, quest_id: int, amount: float = 1.0) -> void:
+	if _quests.count(peer_id, quest_id, amount):
+		_pay_quest(peer_id)
+
+
+## Host, every tick: quests that are about time or totals (Untouchable, Arsenal),
+## and the progress every player sees.
+func _tick_quests(delta: float) -> void:
+	for player: Player in _player_nodes():
+		var peer_id := player.peer_id
+		if _quests.is_on(peer_id, Quests.Id.UNTOUCHABLE):
+			var hit: bool = player.hearts_lost != _quest_hearts_seen.get(peer_id, player.hearts_lost)
+			_quest_hearts_seen[peer_id] = player.hearts_lost
+			if hit or player.is_downed():
+				_quests.set_progress(peer_id, Quests.Id.UNTOUCHABLE, 0.0)
+			else:
+				_quest_count(peer_id, Quests.Id.UNTOUCHABLE, delta)
+		if _quests.is_on(peer_id, Quests.Id.ARSENAL):
+			var dealt: int = _auto_weapon_damage(peer_id) - _quest_damage_base.get(peer_id, 0)
+			if _quests.set_progress(peer_id, Quests.Id.ARSENAL, dealt):
+				_pay_quest(peer_id)
+		player.quest_progress = _quests.shown_progress(peer_id)
+
+
+## Host: all damage this player has dealt with auto weapons this run.
+func _auto_weapon_damage(peer_id: int) -> int:
+	var total := 0
+	var by_source: Dictionary = _enemies.damage_by_source.get(peer_id, {})
+	for source: int in by_source:
+		if DamageSource.weapon_id(source) >= 0:
+			total += int(by_source[source])
+	return total
+
+
+## Host: a quest is done. Coins, or a relic the player doesn't own yet (coins
+## if they own them all).
+func _pay_quest(peer_id: int) -> void:
+	var player := _player_by_id(peer_id)
+	var quest_id: int = _quests.quest_of.get(peer_id, -1)
+	if player == null or quest_id < 0:
+		return
+	player.quest_progress = Quests.TARGETS[quest_id]
+	var reward := "%d coins" % Quests.REWARDS[quest_id]
+	var coins := Quests.REWARDS[quest_id]
+	if coins == Quests.RELIC_REWARD:
+		var relics := Relics.roll_offers(_rng, player.relic_ids, _player_nodes().size() > 1)
+		if relics.is_empty():
+			coins = QUEST_COINS_WHEN_NO_RELIC
+			reward = "%d coins" % coins
+		else:
+			_shop.host_grant_relic(peer_id, relics[0], _ready_peer_list())
+			reward = Relics.get_relic(relics[0]).title
+	if coins > 0:
+		player.coins += coins
+		_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, coins)
+	var text := "%s completed a quest: %s! (%s)" % [player.display_name(), Quests.TITLES[quest_id], reward]
+	print(text)
+	_show_quest_done(peer_id, text)
+	for target: int in _ready_peers:
+		_receive_quest_done.rpc_id(target, peer_id, text)
+
+
+## Everyone: a quest was finished (a fanfare for the player who did it).
+func _show_quest_done(peer_id: int, text: String) -> void:
+	_hud.toast(text, Hud.QUEST_DONE_COLOR)
+	var player := _player_by_id(peer_id)
+	if player != null and player.is_local():
+		Sfx.play(&"quest", -3.0)
+		_effects.burst(player.world_position(), Hud.QUEST_DONE_COLOR, 20, 90.0, 0.6, 1.5)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_quest_done(peer_id: int, text: String) -> void:
+	_show_quest_done(peer_id, text)
+
+
+## "Quest: Slayer 120/250" for the HUD ("" without a quest).
+func _quest_text(player: Player) -> String:
+	if player.quest_id < 0 or _is_between_stages():
+		return ""
+	var target := Quests.TARGETS[player.quest_id]
+	if player.quest_progress >= target:
+		return "Quest done: %s" % Quests.TITLES[player.quest_id]
+	if target <= 1:
+		return "Quest: %s (%s)" % [Quests.TITLES[player.quest_id], Quests.description(player.quest_id)]
+	return "Quest: %s %d/%d" % [Quests.TITLES[player.quest_id], player.quest_progress, target]
+
+
+## Host: put a power-up on the ground (Kind as its value).
+func _drop_power_up(at: Vector2, kind: int) -> void:
+	_power_ups.spawn_host(at.clamp(BOUNDS.grow(-12.0).position, BOUNDS.grow(-12.0).end), kind)
+
+
+## Host: someone grabbed a power-up. Apply it, then show it on every screen.
+func _on_power_up_collected(kind: int, collector_peer_id: int) -> void:
+	var player := _player_by_id(collector_peer_id)
+	if player == null or not PowerUps.is_valid_kind(kind):
+		return
+	_quest_count(collector_peer_id, Quests.Id.SCAVENGER)
+	var at := player.state.position
+	match kind:
+		PowerUps.Kind.HEART:
+			player.health.heal(PowerUps.HEART_HEAL)
+		PowerUps.Kind.HOLY_BOMB:
+			var damage := roundi(PowerUps.BOMB_DAMAGE * (1.0 + STAGE_HP_GROWTH * (_run_depth() - 1)) * _config.enemy_health)
+			_enemies.smite(at, PowerUps.BOMB_RADIUS, damage, collector_peer_id, DamageSource.HOLY_BOMB)
+		PowerUps.Kind.FROST_HOURGLASS:
+			_enemies.freeze_all(PowerUps.FROST_SECONDS)
+	_show_power_up(kind, collector_peer_id, at)
+	for peer_id: int in _ready_peers:
+		_receive_power_up.rpc_id(peer_id, kind, collector_peer_id, at)
+
+
+## Everyone: a power-up went off (effects; Soul Magnet and frozen bullets run on every peer).
+func _show_power_up(kind: int, collector_peer_id: int, at: Vector2) -> void:
+	var player := _player_by_id(collector_peer_id)
+	var who := player.display_name() if player != null else "Someone"
+	if player != null and player.is_local():
+		who = "You"
+	match kind:
+		PowerUps.Kind.HEART:
+			_effects.burst(at, HURT_COLOR, 12, 60.0, 0.5, 1.5)
+		PowerUps.Kind.SOUL_MAGNET:
+			_gems.attract_all(collector_peer_id)
+			_effects.burst(at, Color(0.5, 0.75, 1.0), 16, 90.0, 0.5, 1.5)
+		PowerUps.Kind.HOLY_BOMB:
+			_detonate_blast(at, PowerUps.BOMB_RADIUS)
+			_effects.burst(at, Color(1.0, 0.9, 0.5), 30, 200.0, 0.6, 2.0)
+		PowerUps.Kind.FROST_HOURGLASS:
+			_enemy_bullets.freeze_all(PowerUps.FROST_SECONDS)
+			_effects.burst(at, PowerUps.FROST_COLOR, 24, 140.0, 0.6, 1.5)
+			Sfx.play(&"hex", -4.0, 1.5)
+	_hud.toast("%s grabbed %s!" % [who, PowerUps.TITLES[kind]], Color(1.0, 0.9, 0.6))
+
+
+# --- Map events (MapEvents decides; the arena hands out the rewards) ------------
+
+## Host: a champion or thief for an event. Champions get tougher with more players, like bosses.
+func _spawn_event_enemy(type_id: int, at: Vector2) -> Enemy:
+	var type := EnemyTypes.get_type(type_id)
+	var players := maxi(_player_nodes().size(), 1)
+	var hit_points := roundi(_scaled_hp(type_id) * (1.0 + type.hp_per_extra_player * (players - 1)))
+	return _enemies.spawn(type_id, at, hit_points)
+
+
+## Host: a champion died: a pile of coins and a power-up next to its chest.
+func _on_champion_slain(at: Vector2, _champion_type: int) -> void:
+	for player: Player in _player_nodes():
+		_quest_count(player.peer_id, Quests.Id.CHAMPION_HUNTER)
+	_scatter_coins(at, CHAMPION_COINS, 3, 26.0)
+	_drop_power_up(at + Vector2(0, 18), PowerUps.pick_kind(_rng.randf()))
+
+
+## Host: the first player to touch a champion's chest gets an auto weapon (or a
+## level of one); with every weapon maxed, coins instead.
+func _on_chest_opened(peer_id: int, at: Vector2) -> void:
+	var player := _player_by_id(peer_id)
+	if player == null:
+		return
+	_show_chest_opened(at)
+	for target: int in _ready_peers:
+		_receive_chest_opened.rpc_id(target, at)
+	var weapon_id := _weapons.random_upgradable_weapon(player)
+	if weapon_id < 0:
+		player.coins += CHEST_COINS_WHEN_MAXED
+		_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, CHEST_COINS_WHEN_MAXED)
+		_events.announce("%s opened the chest: %d coins!" % [player.display_name(), CHEST_COINS_WHEN_MAXED])
+		return
+	var level: int = player.weapon_levels.get(weapon_id, 0) + 1
+	_weapons.grant(peer_id, weapon_id, _ready_peer_list())
+	_events.announce("%s opened the chest: %s%s!" % [player.display_name(), AutoWeapons.get_weapon(weapon_id).title,
+		"" if level <= 1 else " Lv %d" % level])
+
+
+## Host: everyone in the circle heals, and a ring of XP gems worth most of a level appears.
+func _on_ritual_completed(at: Vector2, inside: Array[int]) -> void:
+	for peer_id: int in inside:
+		_quest_count(peer_id, Quests.Id.RITUALIST)
+	for peer_id: int in inside:
+		var player := _player_by_id(peer_id)
+		if player != null:
+			player.health.heal(RITUAL_HEAL)
+	var total := roundi(TeamProgress.xp_to_next(_team.level, _team.player_count, _team.xp_rate) * RITUAL_XP_SHARE)
+	var gems := clampi(total / 5, 6, 24)
+	for i: int in gems:
+		var value := maxi(total / gems + (1 if i < total % gems else 0), 1)
+		var spot := at + Vector2.from_angle(TAU * i / gems) * _rng.randf_range(14.0, 34.0)
+		if not _gems.spawn_host(spot, value):
+			_on_gem_collected(value, inside[0] if not inside.is_empty() else 1)
+	_show_ritual_done(at)
+	for target: int in _ready_peers:
+		_receive_ritual_done.rpc_id(target, at)
+
+
+## Host: the thief bursts into a shower of coins.
+func _on_runner_caught(at: Vector2) -> void:
+	for player: Player in _player_nodes():
+		_quest_count(player.peer_id, Quests.Id.THIEF_CATCHER)
+	_scatter_coins(at, RUNNER_COINS, 2, 30.0)
+
+
+## Host: a ritual calls a few of this stage's enemies from around the circle.
+func _on_ritual_wave(at: Vector2) -> void:
+	var count := RITUAL_WAVE_SIZE + _player_nodes().size() - 1
+	var inner := BOUNDS.grow(-16.0)
+	for i: int in count:
+		var type_id := _random_stage_enemy()
+		var spot := (at + Vector2.from_angle(_rng.randf() * TAU) * RITUAL_WAVE_DISTANCE).clamp(inner.position, inner.end)
+		_enemies.spawn(type_id, spot, _scaled_hp(type_id))
+
+
+## A regular enemy type this stage is already sending (by its spawn weights).
+func _random_stage_enemy() -> int:
+	var entries: Array[SpawnEntry] = []
+	var total := 0.0
+	for entry: SpawnEntry in Stages.get_stage(_stage).spawns:
+		if entry.unlock_time <= _elapsed:
+			entries.append(entry)
+			total += entry.weight
+	if entries.is_empty():
+		return Stages.get_stage(_stage).pack_type
+	var roll := _rng.randf() * total
+	for entry: SpawnEntry in entries:
+		roll -= entry.weight
+		if roll <= 0.0:
+			return entry.enemy_type
+	return entries[-1].enemy_type
+
+
+func _scatter_coins(at: Vector2, count: int, value: int, spread: float) -> void:
+	var inner := BOUNDS.grow(-8.0)
+	for i: int in count:
+		var spot := (at + Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(4.0, spread)).clamp(inner.position, inner.end)
+		_coins.spawn_host(spot, value)
+
+
+## Everyone: a line about an event (toast + chime).
+func _on_event_announced(text: String) -> void:
+	_hud.toast(text, Color(1.0, 0.85, 0.5))
+	Sfx.play(&"event", -8.0)
+
+
+## Everyone: a chest bursts open.
+func _show_chest_opened(at: Vector2) -> void:
+	_effects.burst(at, Color(1.0, 0.85, 0.4), 24, 110.0, 0.6, 1.5)
+	if _near_local_player(at):
+		Sfx.play(&"chest", -2.0)
+
+
+## Everyone: a ritual finished.
+func _show_ritual_done(at: Vector2) -> void:
+	_effects.burst(at, MapEvents.RITUAL_COLOR, 30, 120.0, 0.7, 2.0)
+	var ring := BombBlast.new()
+	ring.radius = MapEvents.RITUAL_RADIUS * 1.5
+	ring.color = MapEvents.RITUAL_FILL_COLOR
+	ring.position = at
+	add_child(ring)
+	if _near_local_player(at):
+		Sfx.play(&"revive", -3.0)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_chest_opened(at: Vector2) -> void:
+	_show_chest_opened(at)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_ritual_done(at: Vector2) -> void:
+	_show_ritual_done(at)
 
 
 ## Coins are first come, first served: they go to whoever picked them up.
@@ -910,6 +1319,7 @@ func _on_coin_collected(value: int, collector_peer_id: int) -> void:
 	if player != null:
 		player.coins += value
 		_run_stats.add(collector_peer_id, RunStats.Stat.COINS_EARNED, value)
+		_quest_count(collector_peer_id, Quests.Id.GOLD_DIGGER, value)
 
 
 func _on_weapon_gained(peer_id: int, weapon_id: int) -> void:
@@ -961,6 +1371,16 @@ func _start_level_up() -> void:
 	_level_up.host_start(_player_nodes(), level, _ready_peer_list())
 
 
+## Solo / host: the pause menu opened or closed. Pausing freezes the game for
+## everyone; unpausing during play gives everyone a "3, 2, 1" first.
+func set_host_paused(value: bool) -> void:
+	if not multiplayer.is_server() or value == _paused:
+		return
+	_paused = value
+	if not value and (_phase == Phase.PLAYING or _phase == Phase.COUNTDOWN):
+		_start_resume_countdown()
+
+
 ## Host: everyone has chosen; play resumes after a short "3, 2, 1".
 func _start_resume_countdown() -> void:
 	_phase = Phase.COUNTDOWN
@@ -1006,6 +1426,7 @@ func _tick_gems(delta: float, is_host: bool) -> void:
 		radii[player.peer_id] = player.stats.pickup_radius
 	_gems.tick(delta, positions, radii, is_host)
 	_coins.tick(delta, positions, radii, is_host)
+	_power_ups.tick(delta, positions, radii, is_host)
 
 
 # --- Shots -------------------------------------------------------------------
@@ -1321,6 +1742,7 @@ func _update_hud() -> void:
 		_hud.set_ability(local.stats.ability_name, local.ability_ready_ratio(), local.state.ability_cooldown_left)
 		_hud.set_coins(local.coins)
 		_hud.set_weapons(local.weapon_levels)
+		_hud.set_quest(_quest_text(local), local.quest_id >= 0 and local.quest_progress >= Quests.TARGETS[local.quest_id])
 	var boss := _enemies.find_boss()
 	if boss == null and _elapsed < _wave_duration:
 		# New stage: the next boss gets its own intro banner.
@@ -1354,6 +1776,10 @@ func _update_hud() -> void:
 		return player.display_name() if player != null else "someone"
 	_level_up.refresh_panel_status(name_of)
 	_shop.refresh_panel(local, name_of)
+	if _paused and not multiplayer.is_server() and (_phase == Phase.PLAYING or _phase == Phase.COUNTDOWN):
+		_hud.show_banner("Paused", "The host paused the game. It resumes after a 3, 2, 1.")
+		_hud.set_notice(_revive_notice(local))
+		return
 	match _phase:
 		Phase.SHOP:
 			if _shop.is_open_locally():
@@ -1420,7 +1846,9 @@ func _update_minimap(local: Player, boss: Enemy) -> void:
 	if local != null:
 		var screen := get_viewport_rect().size
 		view = Rect2(local.view_center() - screen / 2.0, screen)
-	_hud.teammate_arrows.show_state(view, teammates)
+	var events := _events.markers()
+	_hud.teammate_arrows.show_state(view, teammates, events)
+	_hud.minimap.events = events
 	_hud.minimap.show_state(view, markers, _enemies.active_positions(), _weapons.altar_positions(),
 		boss.position if boss != null else Vector2.INF, local.world_position() if local != null else Vector2.INF)
 
@@ -1449,6 +1877,7 @@ func _send_snapshots() -> void:
 	var peers := _ready_peer_list()
 	_gems.flush_events(peers)
 	_coins.flush_events(peers)
+	_power_ups.flush_events(peers)
 	_flush_enemy_patterns(peers)
 	if _tick % PLAYER_SNAPSHOT_INTERVAL_TICKS == 0:
 		var ids := PackedInt32Array()
@@ -1460,7 +1889,11 @@ func _send_snapshots() -> void:
 		var flags := PackedByteArray()
 		var coins := PackedInt32Array()
 		var revive := PackedByteArray()
+		var quest_ids := PackedInt32Array()
+		var quest_progress := PackedInt32Array()
 		for player: Player in _player_nodes():
+			quest_ids.append(player.quest_id)
+			quest_progress.append(player.quest_progress)
 			ids.append(player.peer_id)
 			positions.append(player.state.position)
 			aims.append(player.state.aim)
@@ -1478,7 +1911,7 @@ func _send_snapshots() -> void:
 			countdown = _resume_left
 		for peer_id: int in peers:
 			_receive_player_snapshot.rpc_id(peer_id, ids, positions, aims, acks, hearts, max_hearts, flags, coins, revive,
-				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown)
+				_elapsed, _phase, _stage, _team.level, _team.xp, waiting, countdown, _paused, quest_ids, quest_progress)
 	if _tick % ENEMY_SNAPSHOT_INTERVAL_TICKS == 0:
 		_enemies.send_snapshot(peers)
 
@@ -1492,6 +1925,7 @@ func _notify_ready() -> void:
 		_receive_config.rpc_id(peer_id, _config.to_dict())
 		_gems.send_full_state(peer_id)
 		_coins.send_full_state(peer_id)
+		_power_ups.send_full_state(peer_id)
 		_weapons.send_full_state(peer_id)
 		_weapons.send_history(peer_id, _player_nodes())
 		_level_up.host_send_history(peer_id, _player_nodes())
@@ -1502,7 +1936,9 @@ func _notify_ready() -> void:
 func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Array, aims: PackedFloat32Array,
 		acks: PackedInt32Array, hearts: PackedByteArray, max_hearts: PackedByteArray, flags: PackedByteArray,
 		coins: PackedInt32Array, revive: PackedByteArray, elapsed: float, phase: int, stage: int, team_level: int, team_xp: int,
-		pause_waiting: PackedInt32Array, pause_countdown: float) -> void:
+		pause_waiting: PackedInt32Array, pause_countdown: float, paused: bool, quest_ids: PackedInt32Array,
+		quest_progress: PackedInt32Array) -> void:
+	_paused = paused
 	for i: int in ids.size():
 		var player := _player_by_id(ids[i])
 		if player != null:
@@ -1510,6 +1946,9 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			player.coins = coins[i]
 			if i < revive.size():
 				player.revive_progress = revive[i] / 255.0
+			if i < quest_ids.size() and i < quest_progress.size():
+				player.quest_id = quest_ids[i] if Quests.is_valid_id(quest_ids[i]) else -1
+				player.quest_progress = quest_progress[i]
 	_sync_clock(elapsed)
 	if stage != _stage:
 		_stage = stage
@@ -1533,6 +1972,8 @@ func _receive_player_snapshot(ids: PackedInt32Array, positions: PackedVector2Arr
 			_enemy_bullets.clear()
 			_gems.clear()
 			_coins.clear()
+			_power_ups.clear()
+			_events.clear()
 			_weapons.clear_altars()
 			_clear_ability_markers()
 
@@ -1579,6 +2020,12 @@ func _apply_enemy_patterns(patterns: PackedInt32Array, origins: PackedVector2Arr
 @rpc("authority", "call_remote", "reliable")
 func _receive_seeker(shooter_id: int, origin: Vector2, aim: float, level: int) -> void:
 	_spawn_seeker(shooter_id, origin, aim, level)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_power_up(kind: int, collector_peer_id: int, at: Vector2) -> void:
+	if PowerUps.is_valid_kind(kind):
+		_show_power_up(kind, collector_peer_id, at)
 
 
 @rpc("authority", "call_remote", "reliable")

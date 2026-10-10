@@ -6,6 +6,7 @@ extends RefCounted
 enum Id {
 	SHAMBLER, BAT, GHOUL, CULTIST, BONE_WARDEN,
 	MIRE_CRAWLER, PLAGUE_SPITTER, FLAME_IMP, FALLEN_PALADIN, MIRE_HAG, ASHEN_BISHOP,
+	GHOUL_CHAMPION, PLAGUE_CHAMPION, PALADIN_CHAMPION, GRAVE_ROBBER,
 }
 
 const ALL: Array[EnemyType] = [
@@ -20,6 +21,10 @@ const ALL: Array[EnemyType] = [
 	preload("res://src/enemies/types/fallen_paladin.tres"),
 	preload("res://src/enemies/types/mire_hag.tres"),
 	preload("res://src/enemies/types/ashen_bishop.tres"),
+	preload("res://src/enemies/types/ghoul_champion.tres"),
+	preload("res://src/enemies/types/plague_champion.tres"),
+	preload("res://src/enemies/types/paladin_champion.tres"),
+	preload("res://src/enemies/types/grave_robber.tres"),
 ]
 
 

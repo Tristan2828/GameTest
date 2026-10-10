@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://src/progression/shop_controller.gd" id="8_shop"]
 [ext_resource type="Script" path="res://src/combat/weapon_system.gd" id="9_weapons"]
 [ext_resource type="Script" path="res://src/combat/effects_layer.gd" id="10_effects"]
+[ext_resource type="Script" path="res://src/arena/map_events.gd" id="11_events"]
 
 [node name="Arena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -29,6 +30,17 @@ mid_value = 2
 big_value = 2
 glow_color = Color(1, 0.8, 0.3, 0.12)
 group_name = &"coins"
+
+[node name="PowerUps" type="Node2D" parent="."]
+script = ExtResource("5_gems")
+mid_value = 0
+big_value = 100
+glow_color = Color(1, 0.95, 0.75, 0.3)
+group_name = &"power_ups"
+sprites_by_value = PackedStringArray("pickup_heart", "pickup_magnet", "pickup_bomb", "pickup_frost")
+
+[node name="Events" type="Node2D" parent="."]
+script = ExtResource("11_events")
 
 [node name="Weapons" type="Node2D" parent="."]
 script = ExtResource("9_weapons")

@@ -31,6 +31,12 @@ extends Resource
 @export var is_boss: bool = false
 ## Extra max HP per player beyond the first (0.75 = +75%). Regular enemies use 0.
 @export var hp_per_extra_player: float = 0.0
+## Champions (map event mini-bosses): wear a crown and don't end the stage.
+@export var is_elite: bool = false
+## Runs away from players instead of chasing them (the Grave Robber).
+@export var flees: bool = false
+## Multiplied over the sprite (champions are recolored versions of regular enemies).
+@export var tint: Color = Color.WHITE
 
 @export_group("Ranged")
 ## Bullet pattern this enemy fires (ShotPatterns.Id), or -1 for melee only.

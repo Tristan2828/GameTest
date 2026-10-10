@@ -89,6 +89,14 @@ func _sample_autopilot(player: Player, delta: float) -> PlayerInput:
 			if altar.is_finite() and altar.distance_to(player.global_position) < 400.0:
 				input.move = (altar - player.global_position).normalized()
 				return input
+		# So are map events (stand in rituals, wake champions, open chests).
+		var events := player.get_tree().get_first_node_in_group("map_events") as MapEvents
+		if events != null and to_enemy.length() > 40.0:
+			var spot := events.nearest(player.global_position)
+			var distance := spot.distance_to(player.global_position) if spot.is_finite() else INF
+			if distance < 500.0:
+				input.move = (spot - player.global_position).normalized() if distance > 16.0 else Vector2.ZERO
+				return input
 		if to_enemy.length() < 120.0:
 			input.move = (input.move - to_enemy.normalized()).limit_length(1.0)
 			return input

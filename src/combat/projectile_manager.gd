@@ -51,6 +51,12 @@ var _bounces: PackedInt32Array = PackedInt32Array()
 var _homing: PackedFloat32Array = PackedFloat32Array()
 ## True once any homing bullet was spawned, so steer() costs nothing without them.
 var _any_homing: bool = false
+## Seconds each bullet stays frozen in the air (Frost Hourglass); it still hurts.
+var _frozen: PackedFloat32Array = PackedFloat32Array()
+## True while any bullet is frozen (they're drawn icy).
+var _any_frozen: bool = false
+## Color of frozen bullets.
+@export var frozen_glow_color: Color = Color(0.45, 0.8, 1.0, 0.55)
 
 
 func _init() -> void:
@@ -65,6 +71,7 @@ func _init() -> void:
 	_last_hit.resize(CAPACITY)
 	_bounces.resize(CAPACITY)
 	_homing.resize(CAPACITY)
+	_frozen.resize(CAPACITY)
 
 
 ## Returns false if the pool is full.
@@ -85,6 +92,7 @@ func spawn(origin: Vector2, velocity: Vector2, damage: int, lifetime: float, own
 	_last_hit[_count] = -1
 	_bounces[_count] = bounces
 	_homing[_count] = homing
+	_frozen[_count] = 0.0
 	_any_homing = _any_homing or homing > 0.0
 	_count += 1
 	return true
@@ -103,10 +111,24 @@ func clear() -> void:
 	queue_redraw()
 
 
+## Every bullet flying right now stops for `seconds` (new ones aren't affected).
+func freeze_all(seconds: float) -> void:
+	for i: int in _count:
+		_frozen[i] = maxf(_frozen[i], seconds)
+	_any_frozen = _count > 0
+	queue_redraw()
+
+
 ## Ages every bullet and removes expired or out-of-bounds ones.
 func step(delta: float) -> void:
+	var still_frozen := false
 	var i := 0
 	while i < _count:
+		if _any_frozen and _frozen[i] > 0.0:
+			_frozen[i] -= delta
+			still_frozen = true
+			i += 1
+			continue
 		_ages[i] += delta
 		if _ages[i] < 0.0:
 			i += 1
@@ -114,6 +136,7 @@ func step(delta: float) -> void:
 			_remove(i)
 		else:
 			i += 1
+	_any_frozen = still_frozen
 	queue_redraw()
 
 
@@ -226,6 +249,7 @@ func clear_near(center: Vector2, radius: float) -> int:
 ## than the screen, so most of them usually are.
 func _draw() -> void:
 	var texture := PixelArt.disc_texture(glow_radius, glow_color, core_radius, core_color)
+	var icy := PixelArt.disc_texture(glow_radius, frozen_glow_color, core_radius, core_color)
 	var half := Vector2(texture.get_size()) / 2.0
 	var view := PixelArt.visible_rect(self)
 	for i: int in _count:
@@ -233,7 +257,7 @@ func _draw() -> void:
 			continue
 		var point := position_of(i)
 		if view.has_point(point):
-			draw_texture(texture, point - half)
+			draw_texture(icy if _any_frozen and _frozen[i] > 0.0 else texture, point - half)
 
 
 ## Order doesn't matter, so fill the gap with the last bullet.
@@ -250,4 +274,5 @@ func _remove(index: int) -> void:
 	_last_hit[index] = _last_hit[last]
 	_bounces[index] = _bounces[last]
 	_homing[index] = _homing[last]
+	_frozen[index] = _frozen[last]
 	_count = last

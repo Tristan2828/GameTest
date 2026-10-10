@@ -21,6 +21,10 @@ enum PropStyle { CRYPT, MARSH, CATHEDRAL }
 ## Used below 50% HP.
 @export var boss_phase_two: Array[BossStep] = []
 
+@export_group("Events")
+## The champion (EnemyTypes id) guarding this stage's lair, or -1 for none.
+@export var champion_type: int = -1
+
 @export_group("Floor")
 @export var stone_colors: Array[Color] = []
 @export var grout_color: Color = Color(0.065, 0.06, 0.08)

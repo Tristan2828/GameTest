@@ -26,6 +26,10 @@ func _ready() -> void:
 	add_child(_feedback)
 	_menu.feedback_requested.connect(func() -> void: _feedback.open(null, _feedback_context()))
 	_pause_menu.feedback_requested.connect(_open_feedback_from_pause)
+	_pause_menu.pause_changed.connect(func(paused: bool) -> void:
+		var arena := _level.get_node_or_null("Arena") as Arena
+		if arena != null:
+			arena.set_host_paused(paused))
 	_feedback.closed.connect(func() -> void:
 		if _menu.visible:
 			_menu.show_panel_after_feedback()

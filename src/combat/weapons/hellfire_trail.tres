@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Hellfire Trail"
+description = "You leave burning ground behind you; enemies in the flames keep burning"
+icon = "icon_hellfire_trail"
+kind = 5
+color = Color(1, 0.5, 0.2, 1)
+damage = 5
+damage_per_level = 3
+count = 1
+count_per_level = 0
+interval = 0.5
+interval_scale_per_level = 1.0
+radius = 9.0
+radius_per_level = 2.0
+speed = 0.0
+reach = 0.0
+duration = 2.0

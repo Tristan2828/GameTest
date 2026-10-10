@@ -52,6 +52,8 @@ static var run_config: Dictionary = {}
 static var invincible: bool = false
 static var update_now: bool = false
 static var test_down_at: float = -1.0
+## Test aid: the host pauses at this stage time for a few seconds (-1 = off).
+static var test_pause_at: float = -1.0
 
 
 static func parse(args: PackedStringArray) -> void:
@@ -96,6 +98,8 @@ static func parse(args: PackedStringArray) -> void:
 			invincible = true
 		elif arg.begins_with("--test-down="):
 			test_down_at = arg.trim_prefix("--test-down=").to_float()
+		elif arg.begins_with("--test-pause="):
+			test_pause_at = arg.trim_prefix("--test-pause=").to_float()
 		elif arg.begins_with("--run-config="):
 			for pair: String in arg.trim_prefix("--run-config=").split(",", false):
 				var parts := pair.split("=")

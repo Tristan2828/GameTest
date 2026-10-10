@@ -116,6 +116,7 @@ title = "The Bone Marsh"
 spawns = Array[ExtResource("2_spawn")]([SubResource("spawn_0"), SubResource("spawn_1"), SubResource("spawn_2"), SubResource("spawn_3")])
 pack_type = 5
 boss_type = 9
+champion_type = 12
 boss_phase_one = Array[ExtResource("3_step")]([SubResource("p1_0"), SubResource("p1_1"), SubResource("p1_2"), SubResource("p1_3"), SubResource("p1_4"), SubResource("p1_5")])
 boss_phase_two = Array[ExtResource("3_step")]([SubResource("p2_0"), SubResource("p2_1"), SubResource("p2_2"), SubResource("p2_3"), SubResource("p2_4")])
 stone_colors = Array[Color]([Color(0.08, 0.1, 0.07, 1), Color(0.09, 0.11, 0.075, 1), Color(0.075, 0.09, 0.065, 1), Color(0.1, 0.115, 0.08, 1)])

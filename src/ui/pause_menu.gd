@@ -1,9 +1,12 @@
 class_name PauseMenu
 extends CanvasLayer
-## Esc / Start during a session. Solo: the whole game pauses. Online: the game
-## keeps running for everyone else, so only your own controls are blocked.
+## Esc / Start during a session. Solo and the online host: the game pauses (the
+## host's pause freezes it for everyone, and closing the menu starts a "3, 2, 1").
+## A client's menu doesn't pause: only their own controls are blocked.
 
 signal leave_requested
+## Solo / host: the menu opened (true) or closed (false). Main tells the arena.
+signal pause_changed(paused: bool)
 ## "Send feedback" was pressed (Main hides this menu, takes a screenshot, opens the screen).
 signal feedback_requested
 
@@ -14,6 +17,8 @@ signal feedback_requested
 @onready var _box: Control = $Center/Box
 @onready var _settings: SettingsPanel = %Settings
 @onready var _feedback_button: Button = %FeedbackButton
+## This menu paused the game (solo / host) and has to unpause it when closed.
+var _pausing: bool = false
 
 
 func _ready() -> void:
@@ -38,11 +43,14 @@ func open() -> void:
 	_box.show()
 	_settings.hide()
 	LocalInput.blocked = true
-	if Net.is_online():
+	if Net.is_online() and not multiplayer.is_server():
 		_hint_label.text = "The game keeps going for everyone else while this is open."
 	else:
-		_hint_label.text = "Paused."
-		get_tree().paused = true
+		_hint_label.text = "Paused for everyone. Play resumes after a 3, 2, 1." if Net.is_online() else "Paused."
+		if not Net.is_online():
+			get_tree().paused = true
+		_pausing = true
+		pause_changed.emit(true)
 	_resume_button.grab_focus()
 
 
@@ -56,6 +64,9 @@ func close() -> void:
 	hide()
 	LocalInput.blocked = false
 	get_tree().paused = false
+	if _pausing:
+		_pausing = false
+		pause_changed.emit(false)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Chain Lightning"
+description = "Lightning strikes the nearest enemy and leaps to the next ones"
+icon = "icon_chain_lightning"
+kind = 3
+color = Color(0.6, 0.85, 1, 1)
+damage = 12
+damage_per_level = 5
+count = 3
+count_per_level = 1
+interval = 1.5
+interval_scale_per_level = 0.85
+radius = 100.0
+radius_per_level = 0.0
+speed = 0.0
+reach = 200.0
+duration = 0.0

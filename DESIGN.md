@@ -1,7 +1,7 @@
 # Game Design Document
 
 > Working title: TBD
-> Last updated: 2026-10-09 (v0.15.0)
+> Last updated: 2026-10-09 (v0.16.0)
 
 A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with friends. It blends Vampire Survivors-style hordes and build power fantasy with readable, dodgeable bullet patterns.
 
@@ -86,7 +86,8 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
     - *Hero-only* (only offered to that hero; the Compendium says whose): Afterimage (Wanderer: untouchable 0.3 s longer after a Dash), Hallowed Blast (Gravekeeper: +40% blast damage, heals 1 more), Deep Hex (Witch: hex +1 s, hexed enemies +25% damage), Ossuary (Necromancer: Effigy +1.5 s, burst +50%).
     - An upgrade can carry extra effects (`Upgrade.extra_effects`, used by trade-offs and hero upgrades); cards show one before -> after line per effect.
     - Networking: damage bonuses and crits are rolled by the host (`HitBonus`, in `EnemyManager.damage`); crits reach clients as a snapshot flag. Corpse Blast bursts go to clients as one batched message per tick. Ricochet and homing run on every peer for their own (visual) bolts; the host decides the real hits, as before.
-- **Weapon pickups:** new auto weapons found during stages.
+- **Weapon pickups:** new auto weapons found during stages (altars and champions' chests). v0.16.0: 7 weapons (see Playtest 4 changes).
+- **Power-up pickups (v0.16.0):** Heart, Soul Magnet, Holy Bomb, Frost Hourglass (see Playtest 4 changes).
 - **Passive items / relics:** stat boosts and synergies.
 - **Shop between stages:** spend coins on items.
 
@@ -105,6 +106,8 @@ A 2D top-down, twin-stick roguelite bullet-hell shooter for online co-op with fr
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
 | Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 hearts you lie in a circle (30 px) and can't move, shoot or use your ability. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max hearts (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Fire / Ability cycles, ending on your own body). Teammates see a pulsing arrow with a "+" and a "Red is down!" line. Run ends if everyone is down at once |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
+| Pause | **The host's pause menu freezes the game for everyone** (v0.16.0, owner request); friends see a "Paused" banner, and closing it plays the "3, 2, 1" countdown. A friend's Esc menu doesn't pause (only blocks their own controls). Solo pauses too, also with the countdown |
+| Map events and quests | Events are shared (anyone can wake a champion, hold a ritual, catch a thief); a chest goes to whoever touches it first. Quests are personal (each player picks their own) |
 
 ## 6. Art & audio
 
@@ -255,7 +258,28 @@ Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s
 ### More upgrades (v0.16.0, owner request)
 16 new level-up upgrades (25 in total), see Progression, In-run. The owner chose the mix (stats, new mechanics, a couple of trade-offs, one per hero). Decisions made by Claude (**revisit in the next playtest**): every number (crit 10% / x2, burst 12 damage in 32 px, +25% vs bosses, +30% vs wounded below 50%, ricochet range 110 px, homing turn 2.5 rad/s per pick within 130 px), the stack limits, which upgrades are trade-offs, and the four hero upgrades. With 22 upgrades offered to each hero instead of 9, a favourite shows up less often; **watch** whether runs feel too random. Test aid: `--give-upgrades=<id,id,...>` (`Upgrades.ALL` ids) gives every player those upgrades at the start.
 
-### Where things stand (2026-10-09, v0.15.0 released; v0.16.0 adds in-game feedback and 16 upgrades)
+### Playtest 4 changes (v0.16.0, owner's fourth list)
+The owner asked for map events (a reason to explore), arrows to them, quests picked in the shop, more weapons and pickups, and a real host pause. The owner chose in a Q&A: champion lairs, ritual circles and treasure thieves (not cursed shrines); a few events placed at stage start plus pop-ups; edge arrows + minimap; free personal quests (1 of 3, no penalty); all four proposed weapons and pickups; host-only pause; rewards that vary by event.
+1. **Map events** (`MapEvents`, host-run, synced as a small snapshot 10 times a second):
+   - **Champion lair** (one per stage, placed at the start away from the middle): a dark statue of the stage's champion on a red ring. It wakes when a player comes within 150 px. Champions are crowned, recolored, bigger versions of a stage enemy that shoot back (Ghoul Champion: 8-bullet rings; Plague Champion: 12-bullet bursts; Paladin Champion: 7-bullet aimed fans), 1200–1600 HP in stage 1, +60% per extra player. Killing one drops 10 coins (3 each), a power-up and a **chest**: the first player to touch it gets a random auto weapon they can still level (30 coins if all are maxed).
+   - **Ritual circle** (one at the start, one pop-up at 2:20 that fades after 50 s if nobody starts it): stand inside to start it; 15 s of standing fills it, with nobody inside it drains over 30 s. While held, waves of 2 (+1 per extra player) stage enemies come from 200 px away every 1.2 s. When full: XP gems worth 60% of the current level, and everyone inside heals 1.
+   - **Grave Robber** (pop-ups at 1:10 and 3:20): a fast thief (88 speed, 220 HP, no contact damage) that runs from the nearest player and turns away from walls, dropping a coin every 1.5 s. Caught within 20 s: 14 coins (2 each). Otherwise it escapes.
+   - Pop-ups stop once the boss arrives; everything left is cleared when the stage ends.
+   - **Finding them:** edge arrows in the event's color with its icon (crown, ritual sigil, coin, chest), blinking minimap squares, and toasts under the timer with a bell sound.
+2. **Quests** (`Quests`, `QuestTracker`): in the shop each player picks 1 of 3 for the next stage (free; a random offer if they don't pick; can change until Ready). Done during that stage = paid at once (coins or a free relic); unfinished ones expire. Nine quests: Champion Hunter (45 coins), Ritualist (relic), Thief Catcher (35), Slayer: 250 kills (40), Untouchable: 60 s without losing a heart (relic), Gold Digger: 40 coins (relic), Arsenal: 4000 auto weapon damage (45), Scavenger: 2 power-ups (35), Guardian: revive a teammate (relic, co-op only). The HUD shows "Quest: Slayer 120/250" under the weapon icons. Quests only exist for stages 2 and 3 (the first shop comes after stage 1).
+3. **Four new auto weapons** (7 in total; altars and chests pick from all of them):
+   - **Chain Lightning:** every 1.5 s strikes the nearest enemy within 200 px and jumps to 3 more (+1 per level) within 100 px; 12 damage (+5/level).
+   - **Reaper's Scythe:** every 1.8 s a scythe flies 110 px out in your aim direction and back to you (1.2 s), cutting each enemy once each way; 18 damage (+7/level); 1 / 2 / 3 scythes spread around you.
+   - **Hellfire Trail:** walking leaves a flame every 10 px that burns 2 s; enemies in your flames take 5 damage (+3/level) every 0.5 s (once per tick however many flames).
+   - **Bone Spears:** every 2 s (faster per level) 2 (+1/level) random enemies within 220 px get a closing warning ring, then a spear strikes 0.45 s later for 30 damage (+12/level) in 14 px.
+   - Networking: only the host deals damage. Scythe throws, lightning paths and spear spots are small events; every peer draws Hellfire from where it sees each player walk.
+4. **Power-ups** (a third pickup pool): 1.2% of regular kills drop one (at most one per 10 s), plus one from every champion. Heart (heal 1; 35% of drops), Soul Magnet (every XP gem on the map flies to you; 25%), Holy Bomb (400 damage × stage HP growth to every regular enemy within 260 px, clears enemy bullets there; bosses spared; 20%), Frost Hourglass (regular enemies and every enemy bullet already flying freeze for 4 s; frozen bullets still hurt; 20%). The Holy Bomb is its own line on the run summary's Weapons page.
+5. **Host pause** (see Co-op rules). Test aid: `--test-pause=<s>` (the host pauses for 3 s at that stage time).
+6. Compendium: an **Events** tab (events and every quest), the new pickups and weapons; champions and the Grave Robber on the Enemies tab.
+
+Decisions made by Claude (**revisit in the next playtest**): every number above, the champion designs (recolored stage enemies with a crown instead of new sprites), pop-up times, the quest list and rewards, the weapon and pickup numbers, freezing bullets in place rather than clearing them, and that the Grave Robber does no contact damage.
+
+### Where things stand (2026-10-09, v0.15.0 released; v0.16.0 adds in-game feedback, 16 upgrades, map events, quests, 4 weapons, 4 pickups and host pause)
 - **v0.15.0** implements the third playtest list (above). Not played by a human yet; checklist section 3.0b in `docs/PLAYTEST.md`.
 
 ### Before that (v0.14.1, released on GitHub)
@@ -284,6 +308,9 @@ Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s
 
 ## 9. Ideas for Later
 
+- **Cursed shrines** (offered with the v0.16.0 events, not picked): walk up to one for a gamble, e.g. more damage but faster enemies until the stage ends, or a free heal.
+- **Risky bounties / team quests** (the quest options not picked in v0.16.0): quests with a cost or curse for a bigger reward, or one shared team quest chosen by vote.
+- **Clients asking for a pause** ("Request pause" shown to the host), if friends miss being able to pause.
 - **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
 - **Support hero:** a character whose ability or passive heals teammates or revives them faster (`CharacterStats.revive_speed` is already in place; owner idea, v0.15.0).
 - **Join codes / no port forwarding at all:** a small relay or matchmaking server (short codes like `KQ7F`), or Steam invites via Steamworks ($100 app fee). Revisit if port forwarding becomes a hurdle or near release.

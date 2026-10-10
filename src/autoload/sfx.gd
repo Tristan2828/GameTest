@@ -113,6 +113,17 @@ func _build_sounds() -> void:
 	_add(&"countdown_go", Synth.echo(Synth.mix([
 		Synth.voice(W.SQUARE, 1047.0, 1047.0, 0.3, 0.2, 0.002, 1.5, 0.45),
 		Synth.voice(W.TRIANGLE, 523.0, 523.0, 0.3, 0.25, 0.002, 1.5)]), 0.09, 0.3, 2))
+	# A map event appeared or woke up: a low toll with a shimmer on top.
+	_add(&"event", Synth.echo(Synth.mix([
+		Synth.voice(W.SINE, 294.0, 294.0, 1.0, 0.25, 0.003, 1.6),
+		Synth.voice(W.SINE, 588.0, 588.0, 0.7, 0.1, 0.003, 1.8),
+		Synth.voice(W.TRIANGLE, 1175.0, 1400.0, 0.35, 0.08, 0.02, 1.5, 1.0, 7.0, 0.02)]), 0.14, 0.3, 2))
+	# A champion's chest opens: a wooden creak, then a sparkle.
+	_add(&"chest", Synth.sequence([
+		Synth.voice(W.SAW, 140.0, 190.0, 0.14, 0.18, 0.01, 1.2, 0.3),
+		Synth.echo(_arpeggio([79, 84, 88, 91, 96], 0.045, 0.22, W.TRIANGLE, 1.0), 0.06, 0.4, 3)]))
+	# Quest complete: a short, bright fanfare.
+	_add(&"quest", Synth.echo(_arpeggio([72, 76, 79, 84, 79, 84], 0.08, 0.26, W.SQUARE, 0.5), 0.1, 0.35, 2))
 	_add(&"victory", Synth.echo(_arpeggio([67, 72, 76, 79, 84], 0.12, 0.25, W.SQUARE, 0.5), 0.12, 0.35, 3))
 	_add(&"defeat", Synth.echo(Synth.sequence([
 		Synth.voice(W.SAW, 330.0, 310.0, 0.28, 0.26, 0.005, 1.0, 0.35),

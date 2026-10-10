@@ -89,6 +89,26 @@ func set_info(text: String) -> void:
 	_info_label.text = text
 
 
+var _quest_label: Label = null
+const QUEST_COLOR: Color = Color(0.85, 0.8, 0.95)
+const QUEST_DONE_COLOR: Color = Color(0.55, 0.95, 0.5)
+
+
+## Left side, under the weapon icons: "Quest: Slayer 120/250" ("" hides it).
+func set_quest(text: String, done: bool) -> void:
+	if _quest_label == null:
+		_quest_label = Label.new()
+		_quest_label.position = Vector2(8, 78)
+		_quest_label.size = Vector2(240, 12)
+		_quest_label.add_theme_font_size_override("font_size", 9)
+		_quest_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_quest_label)
+		move_child(_quest_label, _banner.get_index())
+	_quest_label.text = text
+	_quest_label.visible = not text.is_empty()
+	_quest_label.add_theme_color_override("font_color", QUEST_DONE_COLOR if done else QUEST_COLOR)
+
+
 var _notice: Label = null
 
 
@@ -111,6 +131,43 @@ func set_notice(text: String) -> void:
 		move_child(_notice, _banner.get_index())
 	_notice.text = text
 	_notice.visible = not text.is_empty()
+
+
+const TOAST_SECONDS: float = 3.5
+const MAX_TOASTS: int = 3
+var _toasts: VBoxContainer = null
+
+
+## A short message under the timer that fades out ("Red grabbed a Holy Bomb!").
+## The newest is at the bottom; only a few are kept.
+func toast(text: String, color: Color = Color(0.95, 0.9, 1.0)) -> void:
+	if _toasts == null:
+		_toasts = VBoxContainer.new()
+		_toasts.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_toasts.offset_left = -200.0
+		_toasts.offset_right = 200.0
+		_toasts.offset_top = 62.0
+		_toasts.offset_bottom = 110.0
+		_toasts.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		_toasts.add_theme_constant_override("separation", 1)
+		_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_toasts)
+		move_child(_toasts, _banner.get_index())
+	while _toasts.get_child_count() >= MAX_TOASTS:
+		var oldest := _toasts.get_child(0)
+		_toasts.remove_child(oldest)
+		oldest.queue_free()
+	var line := Label.new()
+	line.text = text
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	line.add_theme_font_size_override("font_size", 9)
+	line.add_theme_color_override("font_color", color)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toasts.add_child(line)
+	var tween := line.create_tween()
+	tween.tween_interval(TOAST_SECONDS)
+	tween.tween_property(line, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(line.queue_free)
 
 
 func show_banner(title: String, subtitle: String) -> void:

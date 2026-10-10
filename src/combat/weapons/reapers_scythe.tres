@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AutoWeapon" format=3]
+
+[ext_resource type="Script" path="res://src/combat/auto_weapon.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+title = "Reaper's Scythe"
+description = "A spinning scythe flies out where you aim and comes back, cutting everything twice"
+icon = "icon_reapers_scythe"
+kind = 4
+color = Color(0.8, 0.85, 0.95, 1)
+damage = 18
+damage_per_level = 7
+count = 1
+count_per_level = 1
+interval = 1.8
+interval_scale_per_level = 0.95
+radius = 9.0
+radius_per_level = 1.0
+speed = 0.0
+reach = 110.0
+duration = 1.2

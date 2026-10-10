@@ -1,7 +1,7 @@
-# Playtest Review (v0.15.0)
+# Playtest Review (v0.16.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
-Automated tests prove it *works* (258 unit tests, plus online host+client runs).
+Automated tests prove it *works* (312 unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -22,10 +22,12 @@ $g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
 & $g -- --solo --start-stage=3 --start-at=230      # Cathedral boss (Ashen Bishop)
 & $g -- --solo --start-stage=2                     # A full stage 2 from the start
 & $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (tests the flow, not balance)
-& $g -- --solo --give-weapons                      # Start with all 3 auto weapons at level 2
+& $g -- --solo --give-weapons                      # Start with all 7 auto weapons at level 2
 & $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
 & $g -- --solo --run-config=single_stage=true,stage=3,bonus_levels=5   # Custom game without the lobby pages
 & $g -- --solo --run-config=soundtrack=1           # Metal soundtrack (2 = metal boss fights only, 3 = shuffle)
+& $g -- --solo --start-at=65                        # Map events: the first Grave Robber pops up at 1:10
+& $g -- --solo --stage-seconds=30 --weak-bosses    # Reach the shop fast to pick a quest
 ```
 
 Flags combine. `--start-at` and `--start-stage` skip upgrades, so jumped-to fights are **harder** than in a real run.
@@ -49,6 +51,20 @@ Session D is the most valuable if you only have time for one.
 ## 3. Checklists
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
+
+### 3.0e Map events, quests, weapons, pickups, host pause (v0.16.0, your fourth list)
+- [ ] Champion lair: a dark crowned statue on a red ring somewhere on the map. It wakes when you get close. Fun to hunt down? Too tough or too easy?
+- [ ] Champion's chest: the first player to touch it gets an auto weapon (or a level). Worth the detour?
+- [ ] Ritual circle: standing in it calls waves; when the gold ring is full everyone inside heals and XP gems drop. Is 15 s the right length? Too dangerous or too safe?
+- [ ] Grave Robber: runs away dropping coins; catch it within 20 s. Catchable with every hero? Fun to chase?
+- [ ] Edge arrows (with an icon) and blinking minimap squares point to events. Easy to follow without cluttering the screen?
+- [ ] Toasts under the timer ("The Ghoul Champion awakens!") readable, not spammy?
+- [ ] Quests: in the shop, pick 1 of 3 for the next stage. Clear what to do (HUD line under your weapons)? Rewards worth it? Any quest that's too hard or too easy?
+- [ ] New weapons: Chain Lightning, Reaper's Scythe, Hellfire Trail, Bone Spears. Each one useful and visible? Any too strong?
+- [ ] Pickups: Heart, Soul Magnet, Holy Bomb, Frost Hourglass. Rare enough to be exciting, common enough to matter?
+- [ ] Frost Hourglass freezes enemy bullets in the air (they still hurt). Readable, or confusing?
+- [ ] Host pause: the host's Esc menu pauses everyone ("Paused" banner on friends' screens); closing it plays "3, 2, 1". Works for everyone?
+  - *Tune: event numbers at the top of `src/arena/map_events.gd` (wake radius, ritual length, thief time, pop-up times) and `src/arena/arena.gd` (champion / thief coins, ritual XP share, wave size); champions in `src/enemies/types/*_champion.tres`; quests in `src/progression/quests.gd` (targets, rewards); weapons in `src/combat/weapons/*.tres`; pickups in `src/progression/power_ups.gd` (drop chance, cooldown, bomb damage, freeze time).*
 
 ### 3.0c In-game feedback (v0.16.0)
 - [ ] "Send feedback" from the title menu and from the pause menu (Esc / Start). The message (with your name and the game info) arrives in Discord #feedback?
@@ -233,6 +249,9 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Shop:** 4 personal offers, 5-coin reroll, 45 s after first Ready.
 - **Relics** are one-of-a-kind per player; some have drawbacks.
 - **Upgrades (v0.16.0):** the numbers of the 16 new ones, which are trade-offs, and the four hero-only upgrades.
+- **Map events (v0.16.0):** one champion lair and one ritual per stage at the start, then pop-ups (thief 1:10, ritual 2:20, thief 3:20); champions are recolored, crowned regular enemies (Ghoul / Plague / Paladin Champion); every reward number.
+- **Quests (v0.16.0):** the nine quests, their targets and rewards; a random offer if you don't pick.
+- **Weapons and pickups (v0.16.0):** the four new weapons' numbers; pickup drop chance (1.2% per kill, at most one per 10 s) and odds.
 - **Altars:** two per stage, first touch takes it; maxed weapon = 15 coins.
 - **Abilities:** one per character on a cooldown (Dash / Grave Blast / Hex Snare / Bone Effigy), replacing dash and bombs.
 - **Characters / abilities**, as listed in 3.5.
