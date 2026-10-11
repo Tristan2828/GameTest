@@ -5,7 +5,7 @@
 ## Context
 - The owner is new to Godot and game dev; AI writes most of the code. Explain engine concepts briefly when introducing them, and prefer simple, readable solutions.
 - Target: Windows PC only. Input: mouse + keyboard and gamepad, both first-class.
-- Current state: v0.25.0 is the latest release (`DESIGN.md` §7 *Playtest 8*): hero unlocks (`HeroUnlocks`), a sturdier updater that works after the repo rename, muted Hellfire, a chest drawing fix, and the first real art/audio files (`assets/`; the music tracks are files). `arena.gd` is split into parts (after v0.25.0). Next: a playtest of v0.25.0; everything else is on the *After 1.0* list (`DESIGN.md` §9; easier joining is parked: `docs/EASIER_JOINING.md`). `DESIGN.md` §7 has the history and what humans have and haven't played; `docs/releases/` has per-release notes.
+- Current state: v0.25.1 is the latest release and the playtest build: v0.25.0 (`DESIGN.md` §7 *Playtest 8*: hero unlocks (`HeroUnlocks`), a sturdier updater that works after the repo rename, muted Hellfire, a chest drawing fix, the first real art/audio files in `assets/`) plus `arena.gd` and `run_summary_panel.gd` split into parts. Next: a playtest of v0.25.0; everything else is on the *After 1.0* list (`DESIGN.md` §9; easier joining is parked: `docs/EASIER_JOINING.md`). `DESIGN.md` §7 has the history and what humans have and haven't played; `docs/releases/` has per-release notes.
 
 ## Engine & language rules
 - **Godot 4.x only.** Never use Godot 3 syntax or APIs (e.g. use `@export`, `@onready`, `super()`, `CharacterBody2D`, `velocity` property + `move_and_slide()` with no args, `signal.connect(callable)`, `@rpc`, `FileAccess`, `Tween` via `create_tween()`).

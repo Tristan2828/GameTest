@@ -149,7 +149,8 @@ Each has its own floor, enemy mix, champion, boss and music (data-driven `StageD
 ### Where things stand (2026-10-11)
 - **Released:** v0.25.0 (the Playtest 8 changes below and the first art/audio files). It is the first with `MedievalSurvival` file names and the first after the repo rename: **v0.24.0 and older can't update to it** (their updater only trusts links under the old repo name), so friends download it once by hand; later versions update in place.
 - **Played by humans:** M1 and M2 online with a friend; a solo v0.11 run; two-player co-op runs of v0.13 and v0.14; a full 4-player run of v0.23.0 ("It was a fun time!").
-- **Not yet played:** v0.24.0 and v0.25.0 (checklist 3.0n / 3.0o in `docs/PLAYTEST.md`), and whatever the 4-player run didn't get to from v0.22–v0.23. Balance numbers since v0.18.0 come from the solo invincible autopilot (it picks cards at random and dodges badly), so they compare stages and heroes, not real difficulty.
+- **Playtest build:** v0.25.1 (v0.25.0 plus the code cleanup below and the Arcane Focus / Holy Water card text).
+- **Not yet played:** v0.24.0, v0.25.0 and v0.25.1 (checklist 3.0n / 3.0o / 3.0p in `docs/PLAYTEST.md`), and whatever the 4-player run didn't get to from v0.22–v0.23. Balance numbers since v0.18.0 come from the solo invincible autopilot (it picks cards at random and dodges badly), so they compare stages and heroes, not real difficulty.
 - Logs: `%APPDATA%\Godot\app_userdata\GameTest\logs\godot.log` (newest run; older runs are timestamped). The host logs downs and boss kills.
 
 ### Releases

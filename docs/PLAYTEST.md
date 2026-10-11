@@ -51,6 +51,11 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0p v0.25.1 (behind-the-scenes cleanup, then 3.0o and 3.0n)
+- [ ] Everything should play exactly like v0.25.0 (a lot of code moved). Do these still work and show for everyone: chests, rituals, champions and the Grave Robber, quests, power-ups, Grave Blast / Hex Snare / Bone Effigy, Corpse Blast?
+- [ ] The end-of-run screen: do all four pages (Overview, Weapons, Stages, Highlights) look right, with the boss trophies, MVP crown and confetti?
+- [ ] Arcane Focus and Holy Water cards now say they also make Hex Snare and Bone Effigy last longer. Clear?
+
 ### 3.0o Your eighth list (v0.25.0, check these first)
 - [ ] Heroes unlock now: a fresh PC has only Kael. Win a full run as Kael to unlock Mortimer, then Morwen, then Vesper. Locked heroes are dark in the picker and say what unlocks them. Does it feel rewarding, or too slow?
   - *Tune: `HeroUnlocks.run_counts` in `src/progression/hero_unlocks.gd` (what counts as a win).*
@@ -90,7 +95,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Touching enemies drains a little every half second (Shambler 5, Ghoul 8, bosses 15), with no safe time: getting surrounded is deadly. Bullets hit harder (15, bosses 20, champions 18) and then you're safe from bullets for 0.5 s. Later stages hit 30% / 60% harder. Fair? Too harsh / too soft?
   - *Tune: `contact_damage` / `bullet_damage` in `src/enemies/types/*.tres`, `DAMAGE_BY_DEPTH` in `src/arena/arena.gd`, `max_hp` / `hit_invulnerability` in `src/player/characters/*.tres`, `CONTACT_INTERVAL` in `src/player/player_health.gd`.*
 - [ ] Healing: Heart pickup 30% of max HP, every level-up 5%, a finished ritual 25%, full HP each stage, Ghoul Blood (upgrade, +0.4 HP/s) and Bloodstone (relic, +1 HP/s). Too much healing, too little?
-  - *Tune: `HEART_HEAL_SHARE` in `src/progression/power_ups.gd`, `LEVEL_UP_HEAL_SHARE` / `RITUAL_HEAL_SHARE` in `src/arena/arena.gd`.*
+  - *Tune: `HEART_HEAL_SHARE` in `src/progression/power_ups.gd`, `LEVEL_UP_HEAL_SHARE` in `src/arena/arena.gd`, `RITUAL_HEAL_SHARE` in `src/arena/arena_rewards.gd`.*
 - [ ] No more ability button. Grave Blast, Hex Snare and Bone Effigy are auto weapons anyone can find on altars and in chests; they go off by themselves (Grave Blast when enemies get close, the other two at the biggest crowd near you). Do they feel useful? Dash is gone.
   - *Tune: `src/combat/weapons/grave_blast.tres`, `hex_snare.tres`, `bone_effigy.tres`; crowd rules and `BLAST_WAKE_FACTOR` / `BLAST_HEAL_SHARE` in `src/combat/auto_weapons.gd`.*
 - [ ] Hero perks instead of abilities: Kael moves 10% faster, Mortimer regenerates 0.5 HP/s, Morwen +10% crit chance, Vesper's kills burst for 8 damage. Do heroes still feel different enough?
@@ -208,7 +213,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Ricochet and Hunting Bolts (Kael's Bolt Gun levels): bolts bounce / curve toward enemies. Fun, and does it look right on a client?
 - [ ] 30-second countdown after the first pick: right length?
 - [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop (co-op only since v0.18.0). Long enough? Too long?
-  - *Tune: XP curve `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; passives in `src/progression/upgrades/*.tres`; crit / boss / wounded math in `src/combat/hit_bonus.gd`; `KILL_BURST_RADIUS` and `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`; `RICOCHET_RANGE` / `HOMING_RANGE` in `src/combat/projectile_manager.gd`.*
+  - *Tune: XP curve `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; passives in `src/progression/upgrades/*.tres`; crit / boss / wounded math in `src/combat/hit_bonus.gd`; `KILL_BURST_RADIUS` in `src/arena/arena_abilities.gd`, `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`; `RICOCHET_RANGE` / `HOMING_RANGE` in `src/combat/projectile_manager.gd`.*
 
 ### 3.7 Coins, shop and relics
 - [ ] Coin income: could you afford 2–3 relics per shop? (Boss bounty 25 / 40 / 55 coins + drops and events.)
@@ -233,7 +238,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Toasts under the timer ("The Ghoul Champion awakens!") readable, not spammy?
 - [ ] Quests: in the shop, pick 1 of 3 for the next stage. Clear what to do (HUD line under your weapons)? Rewards worth it? Any quest that's too hard or too easy?
 - [ ] Pickups: Heart, Soul Magnet, Holy Bomb, Frost Hourglass. Rare enough to be exciting, common enough to matter?
-  - *Tune: event numbers at the top of `src/arena/map_events.gd` (wake radius, ritual length, thief time, pop-up times) and `src/arena/arena.gd` (champion / thief coins, ritual XP share, wave size); champions in `src/enemies/types/*_champion.tres`; quests in `src/progression/quests.gd` (targets, rewards); pickups in `src/progression/power_ups.gd` (drop chance, cooldown, bomb damage, freeze time).*
+  - *Tune: event numbers at the top of `src/arena/map_events.gd` (wake radius, ritual length, thief time, pop-up times) and `src/arena/arena_rewards.gd` (champion / thief coins, ritual XP share, wave size); champions in `src/enemies/types/*_champion.tres`; quests in `src/progression/quests.gd` (targets, rewards); pickups in `src/progression/power_ups.gd` (drop chance, cooldown, bomb damage, freeze time).*
 
 ### 3.10 Co-op (session D)
 - [ ] Co-op revives: at 0 HP you're downed in a circle; a teammate standing in it brings you back in 4 s with half your HP. Is 4 s right? Is the circle easy to find and stand in?
