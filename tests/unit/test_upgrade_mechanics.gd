@@ -37,12 +37,6 @@ func test_old_upgrades_are_retired_and_never_passives() -> void:
 		assert_does_not_have(Upgrades.passive_ids(), id, title)
 
 
-func test_hero_text_names_the_hero() -> void:
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Ricochet"))), "Kael only", "a bolt upgrade")
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Twin Scythes"))), "Mortimer only")
-	assert_eq(Upgrades.hero_text(Upgrades.get_upgrade(_id_of("Sharpened Edge"))), "")
-
-
 # --- Applying ---
 
 func test_trade_off_applies_both_effects_and_previews_both() -> void:

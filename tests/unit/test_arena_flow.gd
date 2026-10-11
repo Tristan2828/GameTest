@@ -102,7 +102,7 @@ func test_run_progress_carries_over_between_stages() -> void:
 
 
 func test_beating_the_last_boss_is_victory() -> void:
-	_arena._stage = Arena.STAGE_COUNT
+	_arena._stage = _arena._config.stage_count()
 	_clear_current_stage()
 	assert_eq(_arena._phase, Arena.Phase.VICTORY)
 

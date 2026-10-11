@@ -242,4 +242,14 @@ func _report_and_quit() -> void:
 	else:
 		print("[report] peer %d: no arena loaded" % multiplayer.get_unique_id())
 	Net.leave_game()
+	quit_game()
+
+
+## Quits after stopping all sound. The audio thread frees a stopped stream a
+## moment later; quitting before that reports it as leaked ("resources still in
+## use at exit"), which also fails the online smoke test.
+func quit_game() -> void:
+	Music.stop_all()
+	Sfx.stop_all()
+	await get_tree().create_timer(0.2, true, false, true).timeout
 	get_tree().quit()

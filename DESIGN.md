@@ -190,10 +190,9 @@ Claude's calls: a single-stage custom game doesn't unlock, easier difficulties d
 
 ### Open code items (from the 2026-10-10 code review)
 1. **Split `src/arena/arena.gd`** (~2300 lines) before the boss / enemy work: move out event / quest / power-up rewards, the `[balance]` logging and stage rows, the Grave Blast / Hex Snare / Bone Effigy resolution, and the HUD / minimap feed. Lower priority: `src/ui/run_summary_panel.gd` (~1100 lines).
-2. **Dead code:** `RunConfig.duplicate_config`, `ShopSession.is_participant`, `Sfx.samples_of`, `Arena.STAGE_COUNT`. Only tests use `Upgrades.hero_text` / `level_text` / `stacks_owned` and `WeaponIcons.set_weapons`. The sounds `dash` and `ability_ready` are built but never played; the sprites `ghost` and `icon_quest` are never drawn.
-3. **Names from before cards:** `LevelUpController._receive_upgrade_applied` / `_receive_upgrade_history` / `_submit_pick(upgrade_id)` and `LevelUpSession.pick(upgrade_id)` carry card numbers; `Arena.Effigy.source` defaults to the old `DamageSource.ABILITY`.
-4. **Arcane Focus lengthens Hex Snare and Bone Effigy** (`Arena._on_ability_cast` multiplies durations by the auto *damage* multiplier). Keep it (and say so on the card and in the Game Guide) or drop it.
-5. The lobby rebuilds its party signature and relabels every hero card every frame; only needed when something changes.
+2. **Arcane Focus lengthens Hex Snare and Bone Effigy** (`Arena._on_ability_cast` multiplies durations by the auto *damage* multiplier). Keep it (and say so on the card and in the Game Guide) or drop it.
+
+Done after v0.25.0: the dead code, unused sounds and sprites and pre-card names are gone, and the game stops its audio before quitting (`Main.quit_game`), so the online smoke test no longer fails on "resources still in use at exit". Left as is: the lobby's per-frame label refresh (cheap) and `Arena.Effigy.source`'s default (always overwritten).
 
 ### Next (proposed, in rough priority)
 1. **Playtest** of v0.25.0 with friends, then tune numbers.

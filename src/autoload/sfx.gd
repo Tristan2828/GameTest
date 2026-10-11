@@ -22,6 +22,8 @@ var _last_played: Dictionary[StringName, float] = {}
 var _voices: Array[AudioStreamPlayer] = []
 var _next_voice: int = 0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Set by stop_all(): nothing plays any more.
+var _stopped: bool = false
 
 
 func _ready() -> void:
@@ -35,10 +37,17 @@ func _ready() -> void:
 	_load_files()
 
 
+## Silences every voice for good (the game is quitting).
+func stop_all() -> void:
+	_stopped = true
+	for voice: AudioStreamPlayer in _voices:
+		voice.stop()
+
+
 ## Plays a sound. `volume_db` adjusts loudness; pitch gets a little random variety.
 func play(sound: StringName, volume_db: float = 0.0, pitch: float = 1.0) -> void:
 	var stream: AudioStream = _streams.get(sound)
-	if stream == null:
+	if stream == null or _stopped:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - _last_played.get(sound, -1.0) < _min_gap.get(sound, 0.0):
@@ -59,12 +68,6 @@ func has_sound(sound: StringName) -> bool:
 ## True when the sound plays from a file instead of the synth.
 func is_from_file(sound: StringName) -> bool:
 	return _from_file.has(sound)
-
-
-## The raw samples of a synth sound (for tests and tools; 0 for a file).
-func samples_of(sound: StringName) -> int:
-	var stream := _streams.get(sound) as AudioStreamWAV
-	return stream.data.size() / 2 if stream != null and not is_from_file(sound) else 0
 
 
 ## Swaps in finished sound files for the synth sounds that have one.
@@ -122,9 +125,6 @@ func _build_sounds() -> void:
 		Synth.voice(W.SINE, 1058.0, 1058.0, 0.9, 0.05, 0.003, 2.0),
 		Synth.voice(W.SAW, 98.0, 92.0, 2.2, 0.12, 0.25, 1.0, 0.25, 5.0, 0.015),
 		Synth.voice(W.SAW, 104.0, 97.0, 2.2, 0.12, 0.25, 1.0, 0.25, 5.0, 0.015)]), 0.28, 0.35, 3))
-	_add(&"dash", Synth.voice(W.NOISE, 4000.0, 700.0, 0.12, 0.16, 0.003, 1.5, 0.7))
-	# Your ability is ready again: a quiet two-note chime.
-	_add(&"ability_ready", Synth.echo(_arpeggio([79, 86], 0.05, 0.16, W.TRIANGLE, 0.8), 0.07, 0.3, 2))
 	# Hex Snare: an eerie falling whistle with a wobble, ringing out.
 	_add(&"hex", Synth.echo(Synth.mix([
 		Synth.voice(W.SINE, 1400.0, 420.0, 0.45, 0.3, 0.01, 1.3, 1.0, 9.0, 0.05),

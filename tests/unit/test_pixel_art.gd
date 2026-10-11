@@ -19,7 +19,7 @@ func test_every_enemy_and_character_has_its_sprites() -> void:
 			assert_true(PixelArt.has_sprite("%s_%d" % [type.sprite, frame]), "%s frame %d" % [type.display_name, frame])
 	for stats: CharacterStats in Characters.ALL:
 		assert_true(PixelArt.has_sprite(stats.sprite), stats.display_name)
-	for sprite: String in ["ghost", "skull", "gem", "gem_big", "coin", "coin_big"]:
+	for sprite: String in ["skull", "gem", "gem_big", "coin", "coin_big"]:
 		assert_true(PixelArt.has_sprite(sprite), sprite)
 
 

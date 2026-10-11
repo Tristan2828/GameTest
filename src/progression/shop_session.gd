@@ -53,10 +53,6 @@ func final_quests(rng: RandomNumberGenerator) -> Dictionary[int, int]:
 	return result
 
 
-func is_participant(peer_id: int) -> bool:
-	return offers.has(peer_id)
-
-
 func can_buy(peer_id: int, relic_id: int, coins: int, owned: Array[int]) -> bool:
 	if not offers.has(peer_id) or ready.has(peer_id):
 		return false

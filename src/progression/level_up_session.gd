@@ -27,12 +27,12 @@ func start(offered: Dictionary[int, Array]) -> void:
 
 
 ## Returns true if the pick was accepted (a new pick, or a changed one).
-func pick(peer_id: int, upgrade_id: int) -> bool:
+func pick(peer_id: int, card: int) -> bool:
 	if not choices.has(peer_id) or is_finished():
 		return false
-	if not choices[peer_id].has(upgrade_id) or picks.get(peer_id, -1) == upgrade_id:
+	if not choices[peer_id].has(card) or picks.get(peer_id, -1) == card:
 		return false
-	picks[peer_id] = upgrade_id
+	picks[peer_id] = card
 	if countdown_left < 0.0:
 		countdown_left = COUNTDOWN_SECONDS
 	return true

@@ -205,10 +205,6 @@ static func from_dict(data: Dictionary) -> RunConfig:
 	return config
 
 
-func duplicate_config() -> RunConfig:
-	return RunConfig.from_dict(to_dict())
-
-
 func save() -> void:
 	var file := ConfigFile.new()
 	var data := to_dict()

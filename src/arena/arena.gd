@@ -18,8 +18,6 @@ enum Phase { PLAYING, STAGE_CLEAR, RUN_OVER, LEVEL_UP, SHOP, VICTORY, COUNTDOWN 
 
 const PLAYER_SCENE: PackedScene = preload("res://src/player/player.tscn")
 const BOUNDS: Rect2 = Rect2(0, 0, 1600, 1000)
-## A run is this many stages; beating the last boss is Victory.
-const STAGE_COUNT: int = 3
 ## Your own attack sound, by CharacterStats.MainWeapon.
 const MAIN_WEAPON_SOUNDS: Array[StringName] = [&"shoot", &"scythe", &"zap", &"spear"]
 ## How much tougher each stage of a run is (index = run depth - 1; a single-stage

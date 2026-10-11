@@ -28,6 +28,8 @@ var _active: int = 0
 var _wanted: StringName = &""
 var _playing: StringName = &""
 var _mutex: Mutex = Mutex.new()
+## Set by stop_all(): nothing plays any more.
+var _stopped: bool = false
 
 
 func _ready() -> void:
@@ -53,6 +55,13 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	for task: int in _tasks:
 		WorkerThreadPool.wait_for_task_completion(task)
+
+
+## Stops all music for good (the game is quitting).
+func stop_all() -> void:
+	_stopped = true
+	for player: AudioStreamPlayer in _players:
+		player.stop()
 
 
 ## Switch to a track (no-op if it's already playing or wanted).
@@ -101,7 +110,7 @@ func _render(track: StringName) -> void:
 
 
 func _start_if_ready() -> void:
-	if _wanted == _playing or not is_ready(_wanted):
+	if _stopped or _wanted == _playing or not is_ready(_wanted):
 		return
 	_mutex.lock()
 	var stream: AudioStream = _streams[_wanted]

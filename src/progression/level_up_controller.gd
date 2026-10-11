@@ -113,7 +113,7 @@ func host_tick(delta: float, ready_peers: Array[int]) -> bool:
 	for peer_id: int in results:
 		card_announced.emit(peer_id, results[peer_id])
 		for target: int in ready_peers:
-			_receive_upgrade_applied.rpc_id(target, peer_id, results[peer_id])
+			_receive_card_applied.rpc_id(target, peer_id, results[peer_id])
 	pending_levels = maxi(pending_levels - 1, 0)
 	_round_active = false
 	close_local()
@@ -131,7 +131,7 @@ func host_grant(peer_id: int, card: int, ready_peers: Array[int]) -> void:
 		return
 	card_announced.emit(peer_id, card)
 	for target: int in ready_peers:
-		_receive_upgrade_applied.rpc_id(target, peer_id, card)
+		_receive_card_applied.rpc_id(target, peer_id, card)
 
 
 ## Host: tell a late joiner about every card each player already has (their
@@ -139,7 +139,7 @@ func host_grant(peer_id: int, card: int, ready_peers: Array[int]) -> void:
 func host_send_history(to_peer: int, players: Array[Player]) -> void:
 	for player: Player in players:
 		if not player.card_history.is_empty():
-			_receive_upgrade_history.rpc_id(to_peer, player.peer_id, PackedInt32Array(player.card_history))
+			_receive_card_history.rpc_id(to_peer, player.peer_id, PackedInt32Array(player.card_history))
 		_receive_rerolls.rpc_id(to_peer, player.peer_id, player.card_rerolls)
 
 
@@ -298,20 +298,20 @@ func _receive_rerolls(peer_id: int, count: int) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _submit_pick(upgrade_id: int) -> void:
+func _submit_pick(card: int) -> void:
 	if multiplayer.is_server():
-		_session.pick(multiplayer.get_remote_sender_id(), upgrade_id)
+		_session.pick(multiplayer.get_remote_sender_id(), card)
 		_refresh_host_status()
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_upgrade_applied(peer_id: int, card: int) -> void:
+func _receive_card_applied(peer_id: int, card: int) -> void:
 	if Cards.is_valid(card):
 		card_announced.emit(peer_id, card)
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_upgrade_history(peer_id: int, cards: PackedInt32Array) -> void:
+func _receive_card_history(peer_id: int, cards: PackedInt32Array) -> void:
 	for card: int in cards:
 		if Cards.is_valid(card):
 			card_announced.emit(peer_id, card)

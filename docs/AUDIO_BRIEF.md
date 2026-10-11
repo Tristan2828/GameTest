@@ -81,6 +81,3 @@ General rule: **the game is very busy.** Hundreds of enemies, constant hits and 
 
 ### Optional: currently silent
 Eight of the 11 auto weapons have no sound of their own (e.g. Storm Lantern, Bone Cleaver, Grave Spikes, Spirit Daggers), and there's nothing for crits, picking a card or rerolling. New sounds here are welcome, but each one needs a little code to hook up.
-
-### Not needed
-`dash` and `ability_ready` are still defined in code but nothing plays them since v0.22.0 (Dash and the ability button were removed). Don't make them.

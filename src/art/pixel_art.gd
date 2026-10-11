@@ -143,19 +143,6 @@ const SPRITES: Dictionary[String, Array] = {
 		"..kbbbbk..",
 		".kkkkkkkk.",
 	],
-	"ghost": [
-		"...kkkkkk...",
-		"..kwwwwwwk..",
-		".kwwwwwwwwk.",
-		".kwkkwwkkwk.",
-		".kwkkwwkkwk.",
-		".kwwwwwwwwk.",
-		".kwwwwwwwwk.",
-		".kwwwwwwwwk.",
-		".kwkwwwwkwk.",
-		".kk.kwwk.kk.",
-		".....kk.....",
-	],
 	"shambler": [
 		"...kkkkkk...",
 		"..kssssssk..",
@@ -1992,17 +1979,6 @@ const SPRITES: Dictionary[String, Array] = {
 		".kcCkCck.",
 		".kk.kck..",
 		".....kk..",
-	],
-	"icon_quest": [
-		".kkkkkkk.",
-		"kbbbbbbBk",
-		".kbkkkbk.",
-		".kbbbbbk.",
-		".kbkkbbk.",
-		".kbbbbbk.",
-		".kbkkkbk.",
-		"kbbbbbbBk",
-		".kkkkkkk.",
 	],
 	# Big (16x16) versions of the icons on level-up cards, the shop and the
 	# Game Guide (PixelArt.big_icon); the small ones stay for the HUD and lists.

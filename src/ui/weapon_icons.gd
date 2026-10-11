@@ -73,15 +73,6 @@ func set_entries(entries: Array[Entry]) -> void:
 	queue_redraw()
 
 
-## Auto weapons only (weapon id -> level), e.g. for tests and simple rows.
-func set_weapons(levels: Dictionary[int, int]) -> void:
-	var entries: Array[Entry] = []
-	for weapon_id: int in levels:
-		var weapon := AutoWeapons.get_weapon(weapon_id)
-		entries.append(Entry.new(weapon.icon, levels[weapon_id], weapon.max_level(), weapon.is_evolution()))
-	set_entries(entries)
-
-
 func _icon_size() -> Vector2:
 	return Vector2(9, 9) * icon_scale
 

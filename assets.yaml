@@ -2,8 +2,7 @@
 # What each asset should look or sound like: docs/ART_BRIEF.md and docs/AUDIO_BRIEF.md (the briefs
 # decide; keep this file in step with them). Built from the code: src/art/pixel_art.gd (158 art
 # assets), Sfx (26 sounds) and Tracks.ALL (9 tracks). Sizes and frames are what the game uses now.
-# Not listed (the briefs say not needed): ghost, icon_quest, the 6 retired upgrade icons, dash and
-# ability_ready. Floors, bullets, rings, UI panels, particles and the font are drawn by code.
+# Not listed (the art brief says not needed): the 6 retired upgrade icons. Floors, bullets, rings, UI panels, particles and the font are drawn by code.
 # Field reference: gamekit's templates/assets.yaml.
 game: Medieval Survival
 output: assets

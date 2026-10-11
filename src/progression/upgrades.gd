@@ -80,16 +80,6 @@ static func effects_of(upgrade: Upgrade) -> Array[Upgrade]:
 	return effects
 
 
-## "Kael only" for weapon upgrades (empty for everyone's).
-static func hero_text(upgrade: Upgrade) -> String:
-	if upgrade.for_weapon < 0:
-		return ""
-	for character: CharacterStats in Characters.ALL:
-		if character.main_weapon == upgrade.for_weapon:
-			return "%s only" % character.hero_name
-	return ""
-
-
 ## Applies a level-up upgrade to one player's stats (and health). Every peer runs
 ## this for every upgrade, so all copies of a player's stats stay identical.
 static func apply(id: int, stats: CharacterStats, health: PlayerHealth) -> void:
@@ -173,23 +163,6 @@ static func _apply_stat(upgrade: Upgrade, stats: CharacterStats, health: PlayerH
 			stats.scythe_cuts += int(upgrade.amount)
 		Upgrade.Stat.SPEAR_SHARDS:
 			stats.spear_shards += int(upgrade.amount)
-
-
-## How many times this player already took this upgrade.
-static func stacks_owned(id: int, owned: Array[int]) -> int:
-	return owned.count(id)
-
-
-## Card line like "Lv 2 -> 3 of 5" (empty for one-off effects like healing).
-static func level_text(id: int, owned: Array[int]) -> String:
-	var upgrade := get_upgrade(id)
-	if upgrade.stat == Upgrade.Stat.HEAL:
-		return ""
-	var have := stacks_owned(id, owned)
-	var text := "Lv %d -> %d" % [have, have + 1]
-	if upgrade.max_stacks > 0:
-		text += " of %d" % upgrade.max_stacks
-	return text
 
 
 ## Card line with the player's real stat now and after taking it, e.g.

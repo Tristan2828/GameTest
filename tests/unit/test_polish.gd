@@ -64,8 +64,7 @@ func test_settings_round_trip() -> void:
 
 func test_every_sound_is_synthesized() -> void:
 	for sound: StringName in [&"shoot", &"hit", &"death", &"hurt", &"gem", &"coin", &"level_up", &"pickup",
-			&"bomb", &"boss", &"dash", &"enemy_shot", &"victory", &"defeat", &"countdown", &"countdown_go",
-			&"ability_ready"]:
+			&"bomb", &"boss", &"enemy_shot", &"victory", &"defeat", &"countdown", &"countdown_go"]:
 		assert_true(Sfx.has_sound(sound), str(sound))
 
 
@@ -131,8 +130,11 @@ func test_weapon_icons_exist_and_size_the_row() -> void:
 		assert_true(PixelArt.has_sprite(weapon.icon), weapon.title)
 	var icons := WeaponIcons.new()
 	add_child_autofree(icons)
-	var levels: Dictionary[int, int] = {0: 1, 2: 3}
-	icons.set_weapons(levels)
+	var entries: Array[WeaponIcons.Entry] = []
+	for weapon_id: int in [0, 2]:
+		var weapon := AutoWeapons.get_weapon(weapon_id)
+		entries.append(WeaponIcons.Entry.new(weapon.icon, 1, weapon.max_level(), false))
+	icons.set_entries(entries)
 	assert_gt(icons.custom_minimum_size.x, 18.0, "two icons wide")
 
 

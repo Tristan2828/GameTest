@@ -155,13 +155,6 @@ func test_piercing_bullet_passes_through_one_enemy() -> void:
 
 # --- Card level / stat preview ---
 
-func test_level_text_counts_owned_stacks() -> void:
-	var owned: Array[int] = [4, 0, 4]  # two Extra Bolts (max 3)
-	assert_eq(Upgrades.level_text(4, owned), "Lv 2 -> 3 of 3")
-	assert_eq(Upgrades.level_text(0, owned), "Lv 1 -> 2 of 5")  # Sharpened Edge, a passive
-	assert_eq(Upgrades.level_text(Cards.COIN_FILLER, owned), "Lv 0 -> 1")  # no limit
-
-
 func test_preview_shows_stat_before_and_after_without_changing_it() -> void:
 	var stats := CharacterStats.new()
 	stats.bullet_damage = 10

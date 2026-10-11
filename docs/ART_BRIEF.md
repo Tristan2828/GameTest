@@ -122,7 +122,6 @@ Draw these in **pure magenta `#FF00FF` only**; the game tints them and adds the 
 | `pew`, `pillar_stump`, `candelabra`, `rubble` | 14x5, 7x6, 7x6, 5x3 | The Burning Cathedral |
 
 ## Not needed
-- `ghost` and `icon_quest`: still in the file, but nothing shows them.
 - Icons of retired upgrades: `up_afterimage`, `up_shadow_step`, `up_glass_cannon`, `up_long_shot`, `up_reckless_haste`, `up_swift_bolts`.
 
 ## Not sprites (out of scope unless asked)
