@@ -82,19 +82,19 @@ func test_finishing_a_quest_pays_right_away() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
 	var coins_before := player.coins
-	arena._start_quests({1: Quests.Id.SCAVENGER})
+	arena._quests.start({1: Quests.Id.SCAVENGER})
 	assert_eq(player.quest_id, Quests.Id.SCAVENGER)
-	arena._on_power_up_collected(PowerUps.Kind.HEART, 1)
+	arena._rewards.on_power_up_collected(PowerUps.Kind.HEART, 1)
 	assert_eq(player.coins, coins_before)
-	arena._on_power_up_collected(PowerUps.Kind.HEART, 1)
+	arena._rewards.on_power_up_collected(PowerUps.Kind.HEART, 1)
 	assert_eq(player.coins, coins_before + Quests.REWARDS[Quests.Id.SCAVENGER])
-	assert_string_contains(arena._quest_text(player), "Quest done")
+	assert_string_contains(arena._quests.text_for(player), "Quest done")
 
 
 func test_relic_quests_give_a_relic() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
-	arena._start_quests({1: Quests.Id.GOLD_DIGGER})
+	arena._quests.start({1: Quests.Id.GOLD_DIGGER})
 	arena._on_coin_collected(Quests.TARGETS[Quests.Id.GOLD_DIGGER], 1)
 	assert_eq(player.relic_ids.size(), 1)
 
@@ -102,7 +102,7 @@ func test_relic_quests_give_a_relic() -> void:
 func test_champion_chest_gives_a_weapon() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
-	arena._on_chest_opened(1, Vector2(100, 100))
+	arena._rewards.on_chest_opened(1, Vector2(100, 100))
 	# A random weapon or weapon level: the main weapon's next level counts too.
 	assert_eq(player.weapon_levels.size() + (player.main_level - 1), 1)
 
@@ -113,20 +113,20 @@ func test_ritual_reward_heals_and_drops_xp() -> void:
 	player.health.hp = 1
 	var gems_before := arena._gems.count()
 	var inside: Array[int] = [1]
-	arena._on_ritual_completed(Vector2(400, 400), inside)
-	assert_eq(player.health.hp, 1 + roundi(player.health.max_hp * Arena.RITUAL_HEAL_SHARE))
+	arena._rewards.on_ritual_completed(Vector2(400, 400), inside)
+	assert_eq(player.health.hp, 1 + roundi(player.health.max_hp * ArenaRewards.RITUAL_HEAL_SHARE))
 	assert_gt(arena._gems.count(), gems_before)
-	assert_gte(arena._gems.total_value(), roundi(TeamProgress.xp_to_next(1) * Arena.RITUAL_XP_SHARE) - 1)
+	assert_gte(arena._gems.total_value(), roundi(TeamProgress.xp_to_next(1) * ArenaRewards.RITUAL_XP_SHARE) - 1)
 
 
 func test_heart_power_up_heals_and_bomb_clears_around() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
 	player.health.hp = 1
-	arena._on_power_up_collected(PowerUps.Kind.HEART, 1)
+	arena._rewards.on_power_up_collected(PowerUps.Kind.HEART, 1)
 	assert_eq(player.health.hp, 1 + roundi(player.health.max_hp * PowerUps.HEART_HEAL_SHARE))
 	var shambler := arena._enemies.spawn(EnemyTypes.Id.SHAMBLER, player.state.position + Vector2(100, 0))
-	arena._on_power_up_collected(PowerUps.Kind.HOLY_BOMB, 1)
+	arena._rewards.on_power_up_collected(PowerUps.Kind.HOLY_BOMB, 1)
 	assert_false(shambler.active)
 
 

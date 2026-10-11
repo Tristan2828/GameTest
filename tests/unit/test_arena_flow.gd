@@ -247,7 +247,7 @@ func test_hex_snare_roots_enemies_and_they_take_extra_damage() -> void:
 	var enemy := _arena._enemies.spawn(0, at)
 	var far := _arena._enemies.spawn(0, at + Vector2(400.0, 0.0))
 	_arena._enemies.rebuild_grid()
-	_arena._on_ability_cast(player, AutoWeapons.Id.HEX_SNARE, 1, at)
+	_arena._abilities.on_ability_cast(player, AutoWeapons.Id.HEX_SNARE, 1, at)
 	assert_true(enemy.hexed, "enemy in the sigil is hexed")
 	assert_false(far.hexed, "enemy outside is not")
 	var targets: Array[Vector2] = [player.state.position]
@@ -263,20 +263,20 @@ func test_hex_snare_roots_enemies_and_they_take_extra_damage() -> void:
 func test_bone_effigy_lures_enemies_then_bursts() -> void:
 	var player := _local_player()
 	var effigy := AutoWeapons.get_weapon(AutoWeapons.Id.BONE_EFFIGY)
-	_arena._on_ability_cast(player, AutoWeapons.Id.BONE_EFFIGY, 1, player.state.position + Vector2(40.0, 0.0))
-	assert_eq(_arena._effigies.size(), 1)
-	var effigy_at: Vector2 = _arena._effigies[0].position
+	_arena._abilities.on_ability_cast(player, AutoWeapons.Id.BONE_EFFIGY, 1, player.state.position + Vector2(40.0, 0.0))
+	assert_eq(_arena._abilities.effigies.size(), 1)
+	var effigy_at: Vector2 = _arena._abilities.effigies[0].position
 	# An enemy on the far side of the effigy walks toward it, away from the player.
 	var enemy := _arena._enemies.spawn(0, effigy_at + Vector2(60.0, 0.0))
 	_arena._enemies.rebuild_grid()
 	var start := enemy.position
-	_arena._enemies.tick_host(0.2, [player.state.position] as Array[Vector2], _arena._effigy_positions(), _arena._effigy_lure_radius())
+	_arena._enemies.tick_host(0.2, [player.state.position] as Array[Vector2], _arena._abilities.effigy_positions(), _arena._abilities.effigy_lure_radius())
 	assert_lt(enemy.position.distance_to(effigy_at), start.distance_to(effigy_at), "lured toward the effigy")
 	var hp_before := enemy.hp
 	enemy.position = effigy_at + Vector2(10.0, 0.0)
 	_arena._enemies.rebuild_grid()
-	_arena._tick_effigies(effigy.duration + 0.1)
-	assert_eq(_arena._effigies.size(), 0, "effigy is gone after bursting")
+	_arena._abilities.tick_effigies(effigy.duration + 0.1)
+	assert_eq(_arena._abilities.effigies.size(), 0, "effigy is gone after bursting")
 	assert_true(not enemy.active or enemy.hp < hp_before, "the burst hurt the enemy")
 
 
@@ -288,7 +288,7 @@ func test_grave_blast_heals_protects_and_clears_bullets() -> void:
 	_arena._enemy_bullets.spawn(at + Vector2(30, 0), Vector2.ZERO, 15, 5.0, 0, 0, 0.0)
 	var enemy := _arena._enemies.spawn(0, at + Vector2(20, 0))
 	_arena._enemies.rebuild_grid()
-	_arena._on_ability_cast(player, AutoWeapons.Id.GRAVE_BLAST, 1, at)
+	_arena._abilities.on_ability_cast(player, AutoWeapons.Id.GRAVE_BLAST, 1, at)
 	assert_gt(player.health.hp, 10, "heals a share of max HP")
 	assert_true(player.health.is_invulnerable())
 	assert_eq(_arena._enemy_bullets.count(), 0, "nearby enemy bullets are wiped out")

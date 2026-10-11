@@ -101,10 +101,10 @@ func test_your_hero_is_marked_only_during_the_countdown() -> void:
 	await wait_process_frames(1)
 	var me := arena._player_by_id(1)
 	arena._phase = Arena.Phase.COUNTDOWN
-	arena._update_hud()
+	arena._hud_feed.refresh(0.0)
 	assert_true(me.show_here_marker)
 	arena._phase = Arena.Phase.PLAYING
-	arena._update_hud()
+	arena._hud_feed.refresh(0.0)
 	assert_false(me.show_here_marker, "gone as soon as play resumes")
 
 

@@ -200,10 +200,10 @@ func _show_events() -> void:
 	_entry("crown", "Champion lair", "A crowned champion sleeps somewhere in every stage and wakes when you come close. It's tough and shoots back. Beat it for coins, a power-up and a chest.",
 		"Wakes within %d px. +%d%% HP per extra player." % [roundi(MapEvents.WAKE_RADIUS), roundi(EnemyTypes.get_type(EnemyTypes.Id.GHOUL_CHAMPION).hp_per_extra_player * 100.0)],
 		MapEvents.CHAMPION_COLOR)
-	_entry("chest", "Champion's chest", "The first player to touch it evolves a weapon if one is ready (see Evolutions), or else gets a weapon or a weapon level (%d coins if there's nothing left to give)." % Arena.CHEST_COINS_WHEN_MAXED,
+	_entry("chest", "Champion's chest", "The first player to touch it evolves a weapon if one is ready (see Evolutions), or else gets a weapon or a weapon level (%d coins if there's nothing left to give)." % ArenaRewards.CHEST_COINS_WHEN_MAXED,
 		"", MapEvents.CHEST_COLOR)
 	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills (faster with more of you inside: +%d%% per extra player); with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d%% of their HP." % [roundi(MapEvents.RITUAL_EXTRA_PLAYER_SPEED * 100.0),
-		roundi(Arena.RITUAL_XP_SHARE * 100.0), roundi(Arena.RITUAL_HEAL_SHARE * 100.0)],
+		roundi(ArenaRewards.RITUAL_XP_SHARE * 100.0), roundi(ArenaRewards.RITUAL_HEAL_SHARE * 100.0)],
 		"%ds to fill alone. One is placed at the start of each stage, another pops up later and fades if nobody starts it." % roundi(MapEvents.RITUAL_SECONDS),
 		MapEvents.RITUAL_COLOR)
 	_entry("grave_robber", "Grave Robber", "A thief who runs from you, dropping stolen coins. Catch it within %ds for a shower of coins." % roundi(MapEvents.RUNNER_SECONDS),

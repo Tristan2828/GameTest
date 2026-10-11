@@ -189,14 +189,14 @@ Details: `docs/releases/v<version>.md` and the git history. "Claude's call" item
 Claude's calls: a single-stage custom game doesn't unlock, easier difficulties do; a downed player still gets the unlock when the team wins; how much Hellfire is muted.
 
 ### Open code items (from the 2026-10-10 code review)
-1. **Split `src/arena/arena.gd`** (~2300 lines) before the boss / enemy work: move out event / quest / power-up rewards, the `[balance]` logging and stage rows, the Grave Blast / Hex Snare / Bone Effigy resolution, and the HUD / minimap feed. Lower priority: `src/ui/run_summary_panel.gd` (~1100 lines).
-2. **Arcane Focus lengthens Hex Snare and Bone Effigy** (`Arena._on_ability_cast` multiplies durations by the auto *damage* multiplier). Keep it (and say so on the card and in the Game Guide) or drop it.
+1. **Split `src/ui/run_summary_panel.gd`** (~1100 lines), lower priority. (`arena.gd` is done, see below.)
+2. **Arcane Focus lengthens Hex Snare and Bone Effigy** (`ArenaAbilities.on_ability_cast` multiplies durations by the auto *damage* multiplier). Keep it (and say so on the card and in the Game Guide) or drop it.
 
-Done after v0.25.0: the dead code, unused sounds and sprites and pre-card names are gone, and the game stops its audio before quitting (`Main.quit_game`), so the online smoke test no longer fails on "resources still in use at exit". Left as is: the lobby's per-frame label refresh (cheap) and `Arena.Effigy.source`'s default (always overwritten).
+Done after v0.25.0: the dead code, unused sounds and sprites and pre-card names are gone, and the game stops its audio before quitting (`Main.quit_game`), so the online smoke test no longer fails on "resources still in use at exit". Left as is: the lobby's per-frame label refresh (cheap) and `ArenaAbilities.Effigy.source`'s default (always overwritten). `src/arena/arena.gd` was split from ~2300 to ~1500 lines: map event and power-up rewards (`ArenaRewards`), quests (`ArenaQuests`), Grave Blast / Hex Snare / Bone Effigy and Corpse Blast (`ArenaAbilities`), the `[balance]` lines and stage rows (`BalanceLog`) and the HUD / minimap feed (`ArenaHudFeed`) are child nodes of the arena with their own RPCs; nothing in the game changed.
 
 ### Next (proposed, in rough priority)
 1. **Playtest** of v0.25.0 with friends, then tune numbers.
-2. **More boss and enemy variety** (after open code item 1). Two possible bosses per stage, more attacks with clear warnings, an elite enemy or two per stage that changes how you move (chargers, ground hazards). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and behaviours.
+2. **More boss and enemy variety** (`arena.gd` is split, so it can start). Two possible bosses per stage, more attacks with clear warnings, an elite enemy or two per stage that changes how you move (chargers, ground hazards). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and behaviours.
 3. **Easier joining.** Port forwarding is the biggest hurdle: a small relay server with short join codes, or Steam invites through Steamworks ($100 fee).
 4. **Real art and audio files** (§6): more sprites (common enemies next); new, longer music (60–120 s loops, `docs/AUDIO_BRIEF.md`).
 5. Meta/feel: hero portraits, more animation.
