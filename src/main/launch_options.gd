@@ -6,12 +6,12 @@ extends RefCounted
 ##
 ##   --solo | --host | --join=<ip[:port]>   start immediately in that mode
 ##   --port=<n>                      port to host on / connect to (default 7777)
-##   --autopilot                     the local player moves, aims and fires by itself
+##   --autopilot                     the local player moves by itself (weapons always fire on their own)
 ##   --run-for=<seconds>             print a report and quit (for headless smoke tests)
 ##   --local-only                    host without touching the router or looking up the public IP
-##   --stage-seconds=<n>             shorter/longer stage (default 300) for testing
+##   --stage-seconds=<n>             shorter/longer stage (default 240) for testing
 ##   --start-at=<seconds>            host starts the stage clock here (test late-stage content)
-##   --character=<n>                 play this character (0 Wanderer, 1 Gravekeeper, 2 Witch); with
+##   --character=<n>                 play this character (0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer); with
 ##                                   --autopilot a joining client picks it in the lobby
 ##   --start-stage=<n>               host starts the run at stage n (1-3)
 ##   --give-weapons                  every player starts with 5 random auto weapons at level 3

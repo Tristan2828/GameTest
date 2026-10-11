@@ -15,9 +15,9 @@ const TITLES: Array[String] = ["Champion Hunter", "Ritualist", "Thief Catcher", 
 	"Gold Digger", "Arsenal", "Scavenger", "Guardian"]
 ## "%d" is replaced with the target.
 const DESCRIPTIONS: Array[String] = [
-	"Help defeat the stage's champion.",
+	"Your team defeats the stage's champion.",
 	"Be in the circle when a ritual is completed.",
-	"Help catch a Grave Robber.",
+	"Your team catches a Grave Robber.",
 	"Kill %d enemies yourself.",
 	"Go %d seconds without getting hurt.",
 	"Pick up %d coins.",

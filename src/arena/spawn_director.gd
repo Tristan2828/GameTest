@@ -54,7 +54,7 @@ func tick(delta: float, elapsed: float, player_count: int, alive: int, rate_mult
 	return result
 
 
-## True once per pack interval; the arena then spawns PACK_SIZE shamblers together.
+## True once per pack interval; the arena then spawns PACK_SIZE of the stage's pack type together.
 func pack_due(elapsed: float, alive: int) -> bool:
 	if elapsed < _next_pack_time:
 		return false

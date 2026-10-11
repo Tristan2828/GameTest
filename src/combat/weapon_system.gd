@@ -24,6 +24,9 @@ signal shards_requested(owner_id: int, at: Vector2, angles: PackedFloat32Array, 
 ## Host: Grave Blast, Hex Snare or Bone Effigy goes off at `at` (the arena
 ## resolves it and shows it everywhere).
 signal ability_cast(caster: Player, weapon_id: int, level: int, at: Vector2)
+## Host: an altar had nothing left for this player, so they got coins instead
+## (already in their pocket; the arena counts them and tells the team).
+signal altar_coins_given(peer_id: int, amount: int)
 
 ## Stage times (seconds) when an altar appears.
 const ALTAR_TIMES: Array[float] = [80.0, 160.0]
@@ -602,12 +605,16 @@ func _tick_weapon(player: Player, weapon_id: int, level: int, delta: float, cloc
 						_receive_bolt.rpc_id(peer_id, path, seed_value)
 		AutoWeapon.Kind.BOOMERANG:
 			if _cooldown_done(player, weapon_id, delta, interval):
-				if enemies.find_nearest(player.state.position, weapon.reach * 1.5) == null:
+				var nearest := enemies.find_nearest(player.state.position, weapon.reach * 1.5)
+				if nearest == null:
 					_timers[retry_key] = 0.2
 				else:
-					_throw_scythes(player.peer_id, player.state.aim, level, weapon_id)
+					# At the nearest enemy (not the main weapon's aim, which for some
+					# heroes is a random enemy or just the way they face).
+					var aim := (nearest.position - player.state.position).angle()
+					_throw_scythes(player.peer_id, aim, level, weapon_id)
 					for peer_id: int in _ready_peers:
-						_receive_scythes.rpc_id(peer_id, player.peer_id, player.state.aim, level, weapon_id)
+						_receive_scythes.rpc_id(peer_id, player.peer_id, aim, level, weapon_id)
 		AutoWeapon.Kind.TRAIL:
 			if _cooldown_done(player, weapon_id, delta, interval):
 				_burn(player.peer_id, weapon_id, damage, enemies)
@@ -758,6 +765,7 @@ func _check_altar_pickups(players: Array[Player], ready_peers: Array[int]) -> vo
 			var card := Cards.altar_card(_rng, player, weapon_id)
 			if card < 0:
 				player.coins += MAXED_WEAPON_COINS
+				altar_coins_given.emit(player.peer_id, MAXED_WEAPON_COINS)
 			else:
 				card_earned.emit(player.peer_id, card)
 			break

@@ -53,7 +53,7 @@ var wave_seconds: float = 240.0
 var boss_enabled: bool = true
 ## Level-ups everyone picks right at the start.
 var bonus_levels: int = 0
-## Everyone starts with every auto weapon at level 1.
+## Full arsenal: everyone starts with every weapon slot filled (5 random auto weapons at level 1).
 var start_with_weapons: bool = false
 ## Music during the run (Tracks.SOUNDTRACKS index): classic, metal, ...
 var soundtrack: int = 0

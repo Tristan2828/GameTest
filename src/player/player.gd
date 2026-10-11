@@ -106,6 +106,7 @@ var _predictor: ClientPredictor = ClientPredictor.new()
 var _visual_offset: Vector2 = Vector2.ZERO
 var _remote_target: Vector2 = Vector2.ZERO
 var _last_seen_hp: int = -1
+var _last_seen_max_hp: int = 0
 ## Walk bob height in pixels, and the last movement direction (the hero faces it).
 var _bob: float = 0.0
 var _walk_time: float = 0.0
@@ -344,7 +345,10 @@ func add_shake(strength: float) -> void:
 
 
 func _process(delta: float) -> void:
-	if _last_seen_hp >= 0 and health.hp < _last_seen_hp:
+	# Losing max HP (Cursed Skull) at full health trims HP without a hit: no hurt effect.
+	var trimmed := health.max_hp < _last_seen_max_hp and health.hp == health.max_hp
+	_last_seen_max_hp = health.max_hp
+	if _last_seen_hp >= 0 and health.hp < _last_seen_hp and not trimmed:
 		var lost := _last_seen_hp - health.hp
 		hurt.emit(self, lost)
 		add_shake(clampf(1.5 + lost / 4.0, 2.0, 6.0))
@@ -477,7 +481,7 @@ func _draw_hp_bar() -> void:
 	draw_rect(Rect2(left, top, ceilf(HP_BAR_WIDTH * health.ratio()), 2.0), HP_COLOR)
 
 
-## Character silhouette details, drawn over the body in a darker shade.
+## Weapons drawn around the hero: the Holy Aura ring and Orbiting Skulls (from the shared stage clock).
 func _draw_weapons() -> void:
 	for weapon_id: int in weapon_levels:
 		var weapon := AutoWeapons.get_weapon(weapon_id)
