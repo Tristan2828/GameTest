@@ -1,4 +1,4 @@
-# Playtest Review (v0.22.0)
+# Playtest Review (v0.24.0)
 
 Milestones 3–5 and the polish pass were built while you were away, so **none of it has been played by a human yet.**
 Automated tests prove it *works* (356 unit tests, plus online host+client runs).
@@ -52,6 +52,25 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
+### 3.0n Your seventh list, after the 4-player run (v0.24.0, check these first)
+- [ ] Boss fights: when the boss arrives the old horde crumbles away and the boss brings its own (12 enemies, +6 per extra player). After that the horde trickles in at 25% (was 40%) and stops growing, with at most 65 / 90 / 115 / 140 regular enemies alive (1-4 players). Can you get to the boss now? Still enough horde?
+  - *Tune: `BOSS_FIGHT_SPAWN_RATE`, `BOSS_FIGHT_MAX_ALIVE`, `BOSS_FIGHT_MAX_ALIVE_PER_PLAYER`, `BOSS_ESCORT`, `BOSS_ESCORT_PER_EXTRA_PLAYER` in `src/arena/arena.gd`.*
+- [ ] Ritual circle: fills 50% faster for each extra player inside (two players 10 s, four 6 s), with "x1.5" / "x2" over the circle. Right speed?
+  - *Tune: `RITUAL_EXTRA_PLAYER_SPEED` in `src/arena/map_events.gd`.*
+- [ ] Spirit Daggers fly as little knives now. Readable?
+- [ ] During the "3, 2, 1" after a level-up or the shop, your hero gets a ring and a bouncing "YOU" arrow (below you when you're at the top of the screen). Easy to find yourself? Gone as soon as play resumes?
+- [ ] New level-up card icons (bigger, in a frame: gold = weapon, blue = passive, green = evolution). Better? Any that don't read as what they are?
+  - *Edit: the `*_lg` sprites at the end of `SPRITES` in `src/art/pixel_art.gd`.*
+- [ ] Cards grow to fit their text (all three the same height). Any text still spilling past a border?
+- [ ] After picking, click (or A / left trigger) another card to change your mind while others are still choosing. Works for you and your friends?
+- [ ] Gamepad: the left trigger picks the focused card, like A (left stick to choose, left trigger to pick, one hand).
+- [ ] Run summary: four cards side by side with nothing cut off (the Embers line wraps). Does it look better? The new parts: the difficulty and every setting under the headline, each stage's time under its boss trophy, a big score per player, Weapons / Passives / Relics rows, and a new **Stages** page (time, boss fight, kills, damage taken, downs, level, events and the most enemies at once, per stage). Anything else you'd like on it?
+- [ ] Party page: each card shows the hero's weapon (icon + name) and their perk's name, but not the perk's description. Right amount of info?
+- [ ] No controls line at the bottom of the screen during play (the host still sees the invite line online). Miss it?
+- [ ] Title menu: **Join Game** opens a small window to paste the invite (Paste button, or it's filled in for you if the clipboard has one). Clearer?
+- [ ] The game is called **Medieval Survival** now (title screen, window, the exe's details). The exe and zip keep the name GameTest for now so the in-game updater keeps working for friends on older versions.
+- [ ] Difficulty page: the preset you're on is lit, a **Custom** chip lights when the sliders match no preset, a line lists what differs from Normal, and those sliders turn gold with Normal's value beside them. Reopening the page no longer jumps to Easy. Clear?
+
 ### 3.0k Auto-fire redesign, step 1 (v0.22.0, check these first)
 - [ ] You only move now: every main weapon fires by itself. Does it feel good, or do you miss aiming? Is the game more about dodging, like you wanted?
 - [ ] Targeting: Kael's bolts hit the closest enemy, Morwen's lightning and Vesper's spears pick a random enemy near you, Mortimer's scythes fly the way you last moved **and** behind you. Does each rule feel fair and readable?
@@ -69,7 +88,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Watch demos: the weapon part, then the hero steps out of a fan of bullets ("dodge!"). Clear?
 - [ ] Ability upgrades/relics now boost auto weapons: Shadow Step / Cracked Hourglass (recharge faster), Arcane Focus / Holy Water (more damage); Ember Shrine's Focus too. Arcane Focus and Shadow Step only show up once you own an auto weapon.
 
-### 3.0m Build rework: weapons and passives on level-up cards (v0.23.0, check these first)
+### 3.0m Build rework: weapons and passives on level-up cards (v0.23.0)
 - [ ] Level-up cards now offer new weapons, weapon levels (your hero's main weapon too) and passives. Is picking a build fun? Do you know what each card does from its text and numbers?
   - *Tune: card weights `NEW_WEIGHT` / `LEVEL_WEIGHT` / `MAIN_LEVEL_WEIGHT` in `src/progression/cards.gd`.*
 - [ ] 6 weapon slots (your main weapon is one) and 6 passive slots. Did you fill them? Too few, too many?
@@ -326,7 +345,7 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 
 All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In one place:
 
-- **Stage flow:** 4:00 horde then boss; horde at 40% during the boss; stage clear = boss dead.
+- **Stage flow:** 4:00 horde then boss; when it arrives the horde is swept away and the boss brings an escort; then the horde comes back at 25% (capped); stage clear = boss dead.
 - **Run:** 3 stages, each harder; Victory after stage 3; the host returns everyone to character select (button, or R / Select).
 - **Boss HP** scales with players (+75% each); regular enemies don't (more of them instead).
 - **Downed players** can be revived by a teammate (4 s in the circle, half HP back); otherwise they get up at the next stage.
@@ -341,6 +360,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 - **Auto-fire redesign (v0.22.0):** the targeting rules' details (reach, random picks), Mortimer's back throw, every HP and damage number, the healing amounts, the four perks, the three ability weapons' numbers and when they go off, Dash removed, the hidden cursor, the Watch demo's dodge part, and the Recovery upgrade and relic (Ghoul Blood, Bloodstone).
 - **Characters**, as listed in 3.5.
 - **Mid-run joiners** play the Wanderer.
+- **Seventh list (v0.24.0):** the boss fight numbers (escort size, 25% trickle, the caps), +50% ritual speed per extra player, the "YOU" marker's look, the icon art, which numbers the run summary shows and its Stages page, the Custom chip and gold changed values on the Difficulty page.
 - **Watch demos (sixth list):** a scripted mini-scene drawn in code (no video files): ~8 s loop, weapon for 4 s then a dodge through a bullet fan; Shamblers walk a bit faster than real ones, so the loop stays short.
 - **Sound** is synthesized placeholder; no music yet.
 

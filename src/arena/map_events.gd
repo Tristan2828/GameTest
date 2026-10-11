@@ -35,8 +35,11 @@ enum State { WAITING, ACTIVE }
 ## A sleeping champion wakes when a player comes this close.
 const WAKE_RADIUS: float = 150.0
 const RITUAL_RADIUS: float = 42.0
-## Seconds of standing in the circle to finish a ritual.
+## Seconds of standing in the circle to finish a ritual (one player).
 const RITUAL_SECONDS: float = 15.0
+## Each extra player inside fills it this much faster (+50%: 2 players 10 s,
+## 3 players 7.5 s, 4 players 6 s). Owner request after a 4-player run.
+const RITUAL_EXTRA_PLAYER_SPEED: float = 0.5
 ## With nobody inside, a started ritual drains completely in this long.
 const RITUAL_DRAIN_SECONDS: float = 30.0
 ## While a ritual is held, a wave is called this often.
@@ -71,6 +74,10 @@ var bounds: Rect2 = Rect2(0, 0, 1600, 1000)
 var champion_type: int = -1
 ## Host: spawns an enemy for an event: func(type_id: int, at: Vector2) -> Enemy.
 var spawn_enemy: Callable = Callable()
+
+## Everyone: where the standing players are (set by the arena every frame),
+## to show how fast a ritual is filling.
+var player_positions: PackedVector2Array = PackedVector2Array()
 
 var _events: Array[MapEvent] = []
 var _next_id: int = 0
@@ -206,6 +213,14 @@ func host_tick(delta: float, elapsed: float, players: Array[Player], enemies: En
 		_send_snapshot(peers)
 
 
+## Host: true if this enemy belongs to an event (a champion or the thief).
+func owns_enemy(enemy: Enemy) -> bool:
+	for event: MapEvent in _events:
+		if event.enemy == enemy:
+			return true
+	return false
+
+
 ## Host: an enemy died. If it was an event's (champion, thief), that event is
 ## done; returns its Kind, or -1.
 func host_enemy_killed(enemy: Enemy) -> int:
@@ -289,7 +304,7 @@ func _tick_ritual(event: MapEvent, delta: float, alive: Array[Player]) -> void:
 	if inside.is_empty():
 		event.progress = maxf(event.progress - delta / RITUAL_DRAIN_SECONDS, 0.0)
 	else:
-		event.progress = minf(event.progress + delta / RITUAL_SECONDS, 1.0)
+		event.progress = minf(event.progress + delta / RITUAL_SECONDS * ritual_fill_speed(inside.size()), 1.0)
 	event.timer -= delta
 	if event.timer <= 0.0:
 		event.timer = RITUAL_WAVE_INTERVAL
@@ -298,6 +313,11 @@ func _tick_ritual(event: MapEvent, delta: float, alive: Array[Player]) -> void:
 		event.time_left = 0.0  # Removed at the end of this tick.
 		ritual_completed.emit(event.position, inside)
 		announce("Ritual complete! The team gains XP and heals.")
+
+
+## How much faster a ritual fills with this many players inside (1 = alone).
+static func ritual_fill_speed(players_inside: int) -> float:
+	return 1.0 + RITUAL_EXTRA_PLAYER_SPEED * maxi(players_inside - 1, 0)
 
 
 func _tick_runner(event: MapEvent, delta: float) -> void:
@@ -439,6 +459,18 @@ func _draw_ritual(event: MapEvent, now: float) -> void:
 	PixelArt.draw(self, "icon_ritual", event.position, Color.WHITE, false, false, 1.0, Color(1, 1, 1, alpha))
 	if event.progress > 0.0:
 		draw_arc(event.position, RITUAL_RADIUS + 3.0, -PI / 2.0, -PI / 2.0 + TAU * event.progress, 48, RITUAL_FILL_COLOR, 2.0)
+	# Several players inside fill it faster: show the speed over the circle.
+	var inside := 0
+	for at: Vector2 in player_positions:
+		if at.distance_to(event.position) <= RITUAL_RADIUS:
+			inside += 1
+	if active and inside > 1:
+		var text := "x%s" % String.num(ritual_fill_speed(inside), 1).trim_suffix(".0")
+		var font := ThemeDB.fallback_font
+		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+		var at := (event.position + Vector2(-width / 2.0, -RITUAL_RADIUS - 6.0)).round()
+		draw_string(font, at + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0, 0, 0, 0.8))
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, RITUAL_FILL_COLOR)
 
 
 # --- Network messages ------------------------------------------------------------

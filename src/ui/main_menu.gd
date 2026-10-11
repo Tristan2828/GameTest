@@ -1,7 +1,7 @@
 class_name MainMenu
 extends CanvasLayer
-## Title menu: your display name, play solo, host a game, or join a host by IP
-## address, and Exit Game. Also opens
+## Title menu: your display name, play solo, host a game, or join a host (the
+## Join Game dialog takes the invite they sent), and Exit Game. Also opens
 ## Settings, the Game Guide (`Compendium`: info on heroes, weapons, items, enemies), Records
 ## (your best runs on this PC), the Ember Shrine (permanent boosts) and the
 ## Playtest Checklist (what still needs testing, from docs/PLAYTEST.md).
@@ -16,7 +16,6 @@ signal feedback_requested
 @onready var _solo_button: Button = %SoloButton
 @onready var _host_button: Button = %HostButton
 @onready var _join_button: Button = %JoinButton
-@onready var _address_edit: LineEdit = %AddressEdit
 @onready var _port_edit: LineEdit = %PortEdit
 @onready var _status_label: Label = %StatusLabel
 @onready var _version_label: Label = %VersionLabel
@@ -40,6 +39,7 @@ var updater: Updater = null
 var checklist: PlaytestChecklist = null
 var records: RecordsScreen = null
 var shrine: EmberShrine = null
+var join_dialog: JoinDialog = null
 
 
 func _ready() -> void:
@@ -50,7 +50,7 @@ func _ready() -> void:
 	_version_label.text = BuildInfo.describe()
 	_solo_button.pressed.connect(func() -> void: solo_requested.emit())
 	_host_button.pressed.connect(func() -> void: host_requested.emit(_port()))
-	_join_button.pressed.connect(_on_join_pressed)
+	_join_button.pressed.connect(_open_join_dialog)
 	_settings_button.pressed.connect(open_settings)
 	_exit_button.pressed.connect(func() -> void: get_tree().quit())
 	_name_edit.max_length = PlayerNames.MAX_LENGTH
@@ -80,7 +80,14 @@ func _ready() -> void:
 			_panel.show()
 			_version_label.show()
 			button.grab_focus())
-	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
+	join_dialog = JoinDialog.new()
+	$Center.add_child(join_dialog)
+	join_dialog.join_requested.connect(func(address: String, port: int) -> void:
+		_panel.show()
+		join_requested.emit(address, port))
+	join_dialog.closed.connect(func() -> void:
+		_panel.show()
+		_join_button.grab_focus())
 	updater = Updater.new()
 	add_child(updater)
 	updater.changed.connect(_refresh_update)
@@ -142,6 +149,7 @@ func show_menu(message: String = "") -> void:
 	checklist.hide()
 	records.hide()
 	shrine.hide()
+	join_dialog.hide()
 	_status_label.text = message
 	_set_buttons_enabled(true)
 	_solo_button.grab_focus()
@@ -165,13 +173,10 @@ func show_busy(message: String) -> void:
 	_set_buttons_enabled(false)
 
 
-func _on_join_pressed() -> void:
-	var invite: Dictionary = Net.parse_invite(_address_edit.text, Net.DEFAULT_PORT)
-	var address: String = invite["address"]
-	if address.is_empty():
-		_status_label.text = "Paste the invite your host sent you (looks like 203.0.113.5:7777)."
-		return
-	join_requested.emit(address, invite["port"])
+func _open_join_dialog() -> void:
+	_panel.hide()
+	_status_label.text = ""
+	join_dialog.open()
 
 
 func _port() -> int:

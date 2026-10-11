@@ -1,7 +1,7 @@
 # Game Design Document
 
-> Working title: TBD
-> Last updated: 2026-10-10 (v0.22.0)
+> Name: **Medieval Survival** (owner's choice, v0.24.0). The exe, the release zip and the GitHub repo keep the name GameTest for now, because older versions' in-game updater looks for those names.
+> Last updated: 2026-10-10 (v0.24.0)
 
 A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vampire Survivors-style hordes, auto-firing weapons and build power fantasy, with readable, dodgeable bullet patterns.
 
@@ -109,7 +109,7 @@ A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vamp
 | Players | 1–4 |
 | Friendly fire | Off |
 | XP | **Shared** team XP bar; each player picks their **own** upgrade |
-| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted. Online, play resumes after a **3-second "3, 2, 1" countdown** (also after the shop); solo resumes right away (v0.18.0) |
+| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted and you can **pick another card instead** (v0.24.0; the countdown keeps running). Cards are picked with a click, A, Enter or the **left trigger** (one-handed gamepad play, v0.24.0). Online, play resumes after a **3-second "3, 2, 1" countdown** (also after the shop) during which your hero is marked with a ring and a "YOU" arrow (v0.24.0); solo resumes right away (v0.18.0) |
 | Loot (weapons, relics, coins) | **Shared world drops, first come first served** |
 | Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 HP you lie in a circle (30 px) and can't move or attack. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max HP (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Space / Enter / click / A / RB cycles, ending on your own body). Teammates see a pulsing edge arrow with a "+" and the name, a blinking "+" on the minimap and a "Red is down!" line. (Since v0.18.0 only downed teammates get edge arrows; healthy ones are on the minimap.) Run ends if everyone is down at once |
 | Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
@@ -410,6 +410,28 @@ Decisions made by Claude (**revisit in the next playtest**): which weapon goes t
 - **HUD:** the weapon row starts with the main weapon (6 pips; a green bar once evolved), and a second row shows passives. Custom game's "All weapons" became **Full arsenal** (5 random weapons, every slot filled).
 - **Balance after step 2** (solo invincible autopilot, which picks cards at random and kites). First measurement: with v0.22.1's stage boost (x2 / x3.5) on top of 5 weapon levels, single auto weapons did over half the damage and main weapons fell to 4-33% in stage 3 (Mortimer's scythe 4-8%). Changes: `AUTO_DAMAGE_BY_DEPTH` 1 / 1.5 / 2.25; every main weapon level also adds ~15% of the hero's starting damage to the main weapon (+2 Kael / +5 Mortimer / +2 Morwen / +3 Vesper); Mortimer 30 -> 40 damage and 0.8 -> 0.75 s; Vesper 20 -> 24; Grave Spikes and Storm Lantern weaker, Seeking Bolts a little weaker; Hellfire Trail (flames 5 s, 28 damage) and Orbiting Skulls (wider orbit, 22 damage) stronger, since both did ~0-3% (the autopilot kites, so close-range weapons rarely touch anything; watch them with humans). Result: main weapons do ~20-50% of a hero's damage in stage 3 (Vesper's 7-13% when her spears stayed at level 3-5), boss fights Kael 55 / 80 / 82 and 78 / 68 / 35 s, Mortimer 87 / 148 / 32 and 23 / 95 / 16, Morwen 29 / 38 / 29 and 56 / 45 / 60, Vesper 85 / 125 / 40 and 96 / 125 / 91 (before her last buff). Evolutions happened in about 6 of 8 runs; shops sell 5-7 relics per run.
 
+### Playtest 7 changes (v0.24.0, owner's seventh list, after a 4-player run of v0.23.0)
+The owner and three friends played a full 4-player run ("It was a fun time!"). Requested and done:
+1. **Boss fights were too crowded** ("way too much stuff and can't get to the boss"; the owner asked for the horde to die when the boss comes, but still a horde). When the boss arrives every regular enemy crumbles away (no drops; awake champions and the Grave Robber stay), and the boss comes with an **escort** of 12 stage enemies (+6 per extra player) around it. Then the horde trickles in at **25%** (was 40%), its ramp stops growing, and at most **40 + 25 per player** regular enemies are alive (65 solo, 140 with four). Measured (solo invincible autopilot, `--fixed-fps 60`; boss fights stage 1 / 2 / 3): Kael 53 / 92 / 107 s, Mortimer 106 / 81 / 71 s, Morwen 50 / 81 / 76 s, Vesper 54 / 56 / 44 s; all four win (v0.23.0: roughly 30-150 s). The sweep removed 77-169 enemies per boss. Not measured: 4 players, which is where the crowding was.
+2. **Rituals fill faster together:** +50% per extra player inside (2 players 10 s, 4 players 6 s); "x1.5" / "x2" shows over the circle.
+3. **Spirit Daggers fly as knives** (a dagger sprite pointing the way it flies, turned in 8 steps so it stays crisp; `AutoWeapon.sprite`, `ProjectileManager.sprite_sources`).
+4. **"You are here"** during the "3, 2, 1": a ring closing in on your hero and a bouncing "YOU" arrow (below you near the top wall). Gone when play resumes.
+5. **Better card icons:** a 16x16 version (`<icon>_lg`) of every icon a level-up card can show (37: every weapon, evolution, main weapon, passive and the two fillers), drawn at 2x in a frame colored by kind (gold weapon, blue passive, green evolution). The Game Guide uses them too; the HUD and lists keep the small ones.
+6. **Card text spilling over the border:** titles, descriptions and previews wrap, and all three cards grow to the tallest one's text.
+7. **Run summary overflow:** with four players the Embers line made one card wider and pushed the 4th card off the screen. Every card now has a fixed width; long lines wrap or are cut with "..." (hover for the full text).
+8. **Run summary, upgraded** (owner: "love all the little details"): player cards with a colored header band, a big score, Weapons / Passives (with levels) / Relics rows and notes at the bottom; each boss trophy shows its stage's time; a new **Stages** page (per stage: time, boss fight, kills, damage taken, downs, team level, events, most enemies at once, result; hover for more) recorded by the host from the `[balance]` numbers (`RunStats.stage_rows`); Highlights add the fastest boss kill, map events, loot (power-ups, chests, quests, evolutions) and co-op leaders for power-ups and chests (new append-only `RunStats.Stat`s: POWER_UPS, CHESTS, RITUALS, QUESTS, EVOLUTIONS).
+9. **Change your pick** while others are still choosing (see Co-op rules).
+10. **Left trigger picks** the focused level-up card (action `pick_card`).
+11. **Party page:** no perk description on the cards (the hero picker shows it). Follow-up: each card shows the hero's weapon (icon + name) and their perk's name.
+12. **Join Game dialog:** the title menu's paste box moved into a dialog opened by Join Game (Paste button for gamepads; an invite already on the clipboard is filled in).
+13. **The game's name is Medieval Survival** (title screen, window title, exe details, README, release titles, the Discord feedback name). Files keep "GameTest" (see the top of this document); saves stay where they were (`custom_user_dir_name`). The updater already accepts a future `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip`, so the files can be renamed in a later release once friends are on v0.24.0.
+14. **Difficulty on the run summary:** a colored chip (Easy / Normal / Hard / Custom), every difficulty value, the score factor and any custom game settings (`RunConfig.difficulty_details()` / `custom_details()`). The lobby's summary line spells out a Custom difficulty too.
+15. **Difficulty page:** the current preset is lit (toggle look), a **Custom** chip lights when the sliders match no preset, a line lists what differs from Normal, and those sliders turn gold with "(Normal 100%)" beside them. Opening the page focuses the current preset: before, focus always landed on Easy, which looked like Easy was selected.
+Follow-ups: the name was corrected from "Medieval Dynasty" to **Medieval Survival**, and the controls line at the bottom of the screen during play is gone (owner: they're easy to remember; the host still sees the invite line online).
+Also: the Game Guide's 9 tabs no longer fit one row and stretched the page off the screen; tabs now wrap onto a second row.
+
+Decisions made by Claude (**revisit in the next playtest**): the escort size, the 25% trickle and the caps, no XP from the swept horde, +50% ritual speed per player, the marker's look, every icon, what the run summary shows (and leaving out "the Gravekeeper" from the card header to save room), the Custom chip and gold values, and keeping the GameTest file names for one more release.
+
 ### Next (proposed, in rough priority)
 **The auto-fire redesign above comes first** (owner, 2026-10-10). Weapon evolutions (item 1 below) are now part of its step 2.
 
@@ -419,14 +441,14 @@ Owner added the top three (2026-10-10, v0.20.0) to the plan after asking Claude 
 3. **Easier joining.** Port forwarding is the biggest hurdle before friends can play. A small relay server with short join codes, or Steam invites through Steamworks ($100 fee); see Ideas for Later, *Join codes*.
 
 Also on the list:
-4. Co-op playtest of v0.15–v0.20 (most of it hasn't been played by a human): is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, the hero weapons, Watch demos, metal music, the run summary pages. Then tune numbers.
-5. Working title (replace "GameTest" in the title, window, and build file names).
+4. Co-op playtest of v0.24.0 (the first 4-player run, on v0.23.0, produced the seventh list): is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, the hero weapons, Watch demos, metal music, the run summary pages. Then tune numbers.
+5. ~~Working title~~ Named **Medieval Survival** (v0.24.0). Still to do: rename the exe / zip files in a release after v0.24.0 (the updater accepts both names from v0.24.0 on).
 6. Meta/feel: hero portraits, more animation.
 7. Release prep later: real audio direction.
 
 ## 8. Open questions
 
-- Working title?
+- ~~Working title?~~ Medieval Survival (v0.24.0).
 - Hero names (Kael, Mortimer, Morwen, Vesper): picked by the owner from Claude's suggestions; confirm with friends.
 - ~~Do the four character abilities feel distinct and balanced?~~ Abilities become auto weapons in the redesign (§7).
 - Auto-fire redesign: do the targeting rules feel fair, is the HP bar too forgiving or too harsh, do heroes still feel different with perks instead of abilities?

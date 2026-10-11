@@ -88,6 +88,9 @@ var quest_id: int = -1
 var quest_progress: int = 0
 ## Local player only: while downed, the camera shows this teammate (null = yourself).
 var spectate_target: Player = null
+## Local player only, set by the arena: a "you are here" marker (the "3, 2, 1"
+## after level-ups and the shop, so you find your hero again before play resumes).
+var show_here_marker: bool = false
 ## Host: sequence number of the last input it simulated for this player.
 var last_processed_seq: int = -1
 ## Client debug stats for the local player.
@@ -387,6 +390,8 @@ func _draw() -> void:
 	if health.is_downed():
 		_draw_downed(color)
 		return
+	if show_here_marker:
+		_draw_here_marker(color)
 	_draw_hp_bar()
 	_draw_weapons()
 	var modulate := Color.WHITE
@@ -399,6 +404,38 @@ func _draw() -> void:
 	# The real hitbox, always visible: in a bullet hell you dodge with this dot.
 	draw_circle(Vector2.ZERO, stats.hitbox_radius + 0.5, HITBOX_OUTLINE_COLOR)
 	draw_circle(Vector2.ZERO, stats.hitbox_radius, Color.WHITE)
+
+
+## "You are here": a ring closing in on your hero and a bouncing arrow with
+## "YOU" over your head, in your color.
+func _draw_here_marker(color: Color) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	var pulse := fmod(now * 1.5, 1.0)
+	var bright := color.lightened(0.35)
+	# A ring shrinking toward you, again and again, plus a steady one.
+	draw_arc(Vector2.ZERO, lerpf(34.0, 14.0, pulse), 0.0, TAU, 40, Color(bright, 0.9 * (1.0 - pulse)), 1.0)
+	draw_arc(Vector2.ZERO, 14.0, 0.0, TAU, 32, Color(bright, 0.55), 1.0)
+	draw_circle(Vector2.ZERO, 14.0, Color(color, 0.12))
+	var bounce := roundf(absf(sin(now * 5.0)) * 3.0)
+	# Arrow pointing at you from above, or from below when you're at the top of
+	# the screen (the camera stops at the arena's walls).
+	var below := get_global_transform_with_canvas().origin.y < 36.0
+	var direction := 1.0 if below else -1.0
+	var tip := (stats.body_radius + 9.0 if below else -2.0 - PixelArt.size_of(stats.sprite).y / 2.0 - 2.0) - direction * bounce
+	for pass_index: int in 2:
+		for row: int in 4:
+			var half := row
+			var y := tip + direction * row
+			if pass_index == 0:
+				draw_rect(Rect2(-half - 1, y - 1, half * 2 + 3, 3), HITBOX_OUTLINE_COLOR)
+			else:
+				draw_rect(Rect2(-half, y, half * 2 + 1, 1), bright)
+	var font := ThemeDB.fallback_font
+	var text := "YOU"
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var at := Vector2(-width / 2.0, tip + direction * 13.0 if below else tip - 6.0).round()
+	draw_string(font, at + Vector2(1, 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, HITBOX_OUTLINE_COLOR)
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, bright)
 
 
 ## Teammates' names float over their heads (co-op), in their color.

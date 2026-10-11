@@ -19,3 +19,4 @@ radius = 0.0
 radius_per_level = 0.0
 speed = 300.0
 reach = 230.0
+sprite = "dagger"

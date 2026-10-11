@@ -39,7 +39,8 @@ static func parse(json_text: String) -> ReleaseInfo:
 				continue
 			var asset_name: String = str(asset.get("name", ""))
 			var url: String = str(asset.get("browser_download_url", ""))
-			if asset_name.begins_with("GameTest-") and asset_name.ends_with("-windows.zip") and is_trusted(url):
+			if (asset_name.begins_with("GameTest-") or asset_name.begins_with("MedievalSurvival-")) \
+					and asset_name.ends_with("-windows.zip") and is_trusted(url):
 				info.zip_url = url
 				info.zip_size = int(asset.get("size", 0))
 	return info

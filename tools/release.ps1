@@ -70,7 +70,7 @@ $zip = Join-Path $project "builds\GameTest-$version-windows.zip"
 if (-not (Test-Path $zip)) { Fail "missing $zip" }
 
 # gh creates the tag on GitHub at this commit, uploads the zip, then publishes.
-gh release create $tag $zip --repo $repo --target $head --title "GameTest $tag" --notes-file $notesFile
+gh release create $tag $zip --repo $repo --target $head --title "Medieval Survival $tag" --notes-file $notesFile
 if ($LASTEXITCODE -ne 0) { Fail "gh release create failed" }
 git -C $project fetch --quiet --tags origin
 Write-Host "OK: https://github.com/$repo/releases/tag/$tag" -ForegroundColor Green

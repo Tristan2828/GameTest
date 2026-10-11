@@ -208,6 +208,8 @@ func status_text(name_of: Callable) -> String:
 			parts.append("You chose %s." % Cards.title(_my_pick, me.stats if me != null else null))
 		if not names.is_empty():
 			parts.append("Waiting for %s" % ", ".join(names))
+			if _my_pick_sent:
+				parts.append("(You can still pick another card.)")
 	if countdown_left >= 0.0:
 		parts.append("%ds left" % ceili(countdown_left))
 	return "   ".join(parts)
@@ -230,9 +232,12 @@ func _show_choices(level: int, choices: Array[int], rerolls: int = 0) -> void:
 				_pick_locally(_my_choices[_rng.randi() % _my_choices.size()]))
 
 
+## Your pick, or a different card while the others are still choosing.
 func _pick_locally(card: int) -> void:
-	if _my_pick_sent or not _my_choices.has(card):
+	if not _my_choices.has(card) or (_my_pick_sent and card == _my_pick):
 		return
+	if _my_pick_sent and waiting_ids.is_empty():
+		return  # Everyone else has chosen: the round is ending.
 	_my_pick_sent = true
 	_my_pick = card
 	if _panel != null:

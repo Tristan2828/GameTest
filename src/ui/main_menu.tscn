@@ -40,7 +40,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.78, 0.4, 1)
 theme_override_font_sizes/font_size = 27
-text = "GameTest"
+text = "Medieval Survival"
 horizontal_alignment = 1
 
 [node name="Tagline" type="Label" parent="Center/Panel"]
@@ -88,14 +88,10 @@ tooltip_text = "Port to host on (UDP)"
 text = "7777"
 placeholder_text = "Port"
 
-[node name="AddressEdit" type="LineEdit" parent="Center/Panel"]
-unique_name_in_owner = true
-layout_mode = 2
-placeholder_text = "Paste invite (IP:port)"
-
 [node name="JoinButton" type="Button" parent="Center/Panel"]
 unique_name_in_owner = true
 layout_mode = 2
+tooltip_text = "Paste the invite your host sent you"
 text = "Join Game"
 
 [node name="InfoRow" type="HBoxContainer" parent="Center/Panel"]

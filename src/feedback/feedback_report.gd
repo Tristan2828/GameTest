@@ -41,7 +41,7 @@ static func message_text(kind: int, player_name: String, message: String, contex
 
 ## The JSON part: the message, posted under a fixed name, never pinging anyone.
 static func payload_json(text: String, has_screenshot: bool) -> String:
-	var payload := {"username": "GameTest feedback", "content": text, "allowed_mentions": {"parse": []}}
+	var payload := {"username": "Medieval Survival feedback", "content": text, "allowed_mentions": {"parse": []}}
 	if has_screenshot:
 		payload["attachments"] = [{"id": 0, "filename": "screenshot.png"}]
 	return JSON.stringify(payload)

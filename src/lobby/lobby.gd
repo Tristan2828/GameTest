@@ -3,7 +3,7 @@ extends CanvasLayer
 ## Pre-run lobby: everyone picks a character and readies up; the host starts.
 ##
 ## The main page is the party: one card per player (their name, hero walking on
-## the spot, perk, HP and ready state). Your own card (or Choose Hero)
+## the spot, HP and ready state). Your own card (or Choose Hero)
 ## opens the hero picker sub-screen with all four heroes; each hero's Watch
 ## button opens a looping demo of their weapon (HeroDemoPopup).
 ##
@@ -22,10 +22,11 @@ signal start_requested
 const AUTOPILOT_HOST_MIN_SECONDS: float = 4.0
 const AUTOPILOT_CLIENT_DELAY: float = 0.5
 const COPIED_FEEDBACK_SECONDS: float = 4.0
-const PARTY_CARD_SIZE: Vector2 = Vector2(148, 178)
+const PARTY_CARD_SIZE: Vector2 = Vector2(148, 176)
 const LABEL_COLOR: Color = Color(0.6, 0.57, 0.68)
 const VALUE_COLOR: Color = Color(0.95, 0.93, 1.0)
 const PERK_COLOR: Color = Color(0.95, 0.78, 0.4)
+const WEAPON_COLOR: Color = Color(0.55, 0.85, 1.0)
 const HP_COLOR: Color = Color(0.95, 0.45, 0.5)
 const READY_COLOR: Color = Color(0.55, 0.95, 0.5)
 const CARD_BG: Color = Color(0.1, 0.08, 0.14)
@@ -308,7 +309,7 @@ func _refresh_party(me: int) -> void:
 		_my_card.grab_focus()
 
 
-## One player's card: name, hero walking on the spot, perk, HP, ready state.
+## One player's card: name, hero walking on the spot, HP, ready state.
 ## Your own card is a button that opens the hero picker.
 func _party_card(peer_id: int, me: int) -> Button:
 	var color := _color_for(peer_id)
@@ -365,10 +366,22 @@ func _party_card(peer_id: int, me: int) -> Button:
 	var hero := _card_label(character.full_name(), VALUE_COLOR)
 	hero.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lines.add_child(hero)
-	var perk := _card_label("%s: %s" % [character.perk_name, character.perk_description], PERK_COLOR)
-	perk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	perk.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lines.add_child(perk)
+	# The weapon (icon + name) and the perk's name; the full perk text is in the
+	# hero picker (owner: the description was too much here).
+	var weapon := HBoxContainer.new()
+	weapon.alignment = BoxContainer.ALIGNMENT_CENTER
+	weapon.add_theme_constant_override("separation", 3)
+	weapon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var icon := SpriteIcon.new(PixelArt.big_icon(character.main_weapon_icon), Vector2(16, 16))
+	icon.max_scale = 1
+	weapon.add_child(icon)
+	weapon.add_child(_card_label(character.main_weapon_name, WEAPON_COLOR))
+	lines.add_child(weapon)
+	lines.add_child(_card_label("Perk: %s" % character.perk_name, PERK_COLOR))
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_child(spacer)
 	var hp := maxi(character.max_hp + RunSetup.config.hp_bonus, 1)
 	lines.add_child(_card_label("%d HP" % hp, HP_COLOR))
 	var status := "HOST" if peer_id == 1 else ("READY" if is_ready else "not ready")

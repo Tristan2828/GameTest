@@ -14,6 +14,9 @@ func _enter_tree() -> void:
 	# Godot's built-in "confirm" for menus has no gamepad button by default, so
 	# controllers could move between buttons but not press them.
 	_add_action("ui_accept", [_joy(JOY_BUTTON_A)])
+	# The left trigger also picks the focused level-up card, so a gamepad works
+	# one-handed: left stick to choose, left trigger to pick (owner request).
+	_add_action("pick_card", [_axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
 	_add_action("copy_invite", [_key(KEY_F1)])
 	_add_action("restart", [_key(KEY_R), _joy(JOY_BUTTON_BACK)])
 	_add_action("pause", [_key(KEY_ESCAPE), _joy(JOY_BUTTON_START)])

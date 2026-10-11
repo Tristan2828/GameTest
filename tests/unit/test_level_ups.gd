@@ -80,12 +80,32 @@ func test_finishes_early_when_everyone_picked() -> void:
 	assert_eq(session.final_picks(_rng()), {1: 0, 2: 1})
 
 
-func test_rejects_invalid_and_double_picks() -> void:
+func test_rejects_invalid_and_repeated_picks() -> void:
 	var session := _session_for([1, 2])
 	assert_false(session.pick(1, 99), "not one of the offered choices")
 	assert_false(session.pick(5, 0), "not a participant")
 	assert_true(session.pick(1, 0))
-	assert_false(session.pick(1, 1), "already picked")
+	assert_false(session.pick(1, 0), "the same card again changes nothing")
+
+
+func test_a_pick_can_be_changed_while_others_choose() -> void:
+	var session := _session_for([1, 2])
+	assert_true(session.pick(1, 0))
+	session.tick(10.0)
+	assert_true(session.pick(1, 1), "changed their mind")
+	assert_almost_eq(session.countdown_left, LevelUpSession.COUNTDOWN_SECONDS - 10.0, 0.001,
+		"changing doesn't restart the countdown")
+	assert_false(session.pick(1, 99), "still only offered cards")
+	session.pick(2, 0)
+	assert_eq(session.final_picks(_rng()), {1: 1, 2: 0})
+
+
+func test_no_changes_once_everyone_has_picked() -> void:
+	var session := _session_for([1, 2])
+	session.pick(1, 0)
+	session.pick(2, 1)
+	assert_false(session.pick(1, 1), "the round is over")
+	assert_eq(session.final_picks(_rng()), {1: 0, 2: 1})
 
 
 func test_unpicked_players_get_a_random_offered_choice() -> void:

@@ -7,6 +7,8 @@ extends RefCounted
 ## - Nothing times out until someone picks. The first pick starts a countdown.
 ## - Ends when everyone has picked, or when the countdown runs out. Anyone who
 ##   hasn't picked by then gets a random one of their choices.
+## - Until then, a player who already picked may pick another of their cards
+##   instead (v0.24.0). It doesn't restart the countdown.
 
 const COUNTDOWN_SECONDS: float = 30.0
 
@@ -24,11 +26,11 @@ func start(offered: Dictionary[int, Array]) -> void:
 	countdown_left = -1.0
 
 
-## Returns true if the pick was accepted.
+## Returns true if the pick was accepted (a new pick, or a changed one).
 func pick(peer_id: int, upgrade_id: int) -> bool:
-	if not choices.has(peer_id) or picks.has(peer_id):
+	if not choices.has(peer_id) or is_finished():
 		return false
-	if not choices[peer_id].has(upgrade_id):
+	if not choices[peer_id].has(upgrade_id) or picks.get(peer_id, -1) == upgrade_id:
 		return false
 	picks[peer_id] = upgrade_id
 	if countdown_left < 0.0:

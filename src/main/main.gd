@@ -115,6 +115,10 @@ func _screenshot_info_pages() -> void:
 	await get_tree().create_timer(0.2).timeout
 	await save_screenshot(get_tree(), "settings.png")
 	_menu.show_menu()
+	_menu._open_join_dialog()
+	await get_tree().create_timer(0.2).timeout
+	await save_screenshot(get_tree(), "join_dialog.png")
+	_menu.show_menu()
 	_feedback.open(null, _feedback_context())
 	await get_tree().create_timer(0.2).timeout
 	await save_screenshot(get_tree(), "feedback_title.png")

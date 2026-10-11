@@ -64,6 +64,12 @@ var _frozen: PackedFloat32Array = PackedFloat32Array()
 var _any_frozen: bool = false
 ## Color of frozen bullets.
 @export var frozen_glow_color: Color = Color(0.45, 0.8, 1.0, 0.55)
+## DamageSource -> PixelArt sprite: bullets from these sources are drawn as that
+## sprite pointing the way they fly (Spirit Daggers are knives), not as glowing
+## dots. The sprite points right; "<sprite>_diag" (pointing up-right) is used
+## for diagonal directions, so it's only ever turned by whole quarter turns and
+## stays crisp.
+var sprite_sources: Dictionary[int, String] = {}
 
 
 func _init() -> void:
@@ -287,12 +293,33 @@ func _draw() -> void:
 	var icy := PixelArt.disc_texture(glow_radius, frozen_glow_color, core_radius, core_color)
 	var half := Vector2(texture.get_size()) / 2.0
 	var view := PixelArt.visible_rect(self)
+	var any_sprites := not sprite_sources.is_empty()
 	for i: int in _count:
 		if _ages[i] < 0.0:
 			continue
 		var point := position_of(i)
-		if view.has_point(point):
+		if not view.has_point(point):
+			continue
+		if any_sprites and sprite_sources.has(_sources[i]):
+			_draw_sprite_bullet(sprite_sources[_sources[i]], point, _velocities[i].angle())
+		else:
 			draw_texture(icy if _any_frozen and _frozen[i] > 0.0 else texture, point - half)
+	if any_sprites:
+		draw_set_transform(Vector2.ZERO)
+
+
+## A sprite bullet turned to the nearest of 8 directions.
+func _draw_sprite_bullet(sprite: String, at: Vector2, angle: float) -> void:
+	var octant := posmod(roundi(angle / (PI / 4.0)), 8)
+	var sprite_name := sprite
+	var turns := octant / 2
+	if octant % 2 == 1:
+		# The diagonal sprite points up-right (octant 7); turn it from there.
+		sprite_name = sprite + "_diag"
+		turns = (octant + 1) / 2
+	var tex := PixelArt.texture(sprite_name)
+	draw_set_transform(at.round(), turns * PI / 2.0)
+	draw_texture(tex, -(Vector2(tex.get_size()) / 2.0).floor())
 
 
 ## Order doesn't matter, so fill the gap with the last bullet.

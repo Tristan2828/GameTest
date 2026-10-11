@@ -344,6 +344,19 @@ func clear_all() -> void:
 	rebuild_grid()
 
 
+## Host: remove every regular enemy (not bosses, nor those `keep` returns true
+## for) without kills or drops: the horde crumbling when a boss arrives.
+## Returns how many went.
+func clear_regulars(keep: Callable) -> int:
+	var removed := 0
+	for enemy: Enemy in _pool:
+		if enemy.active and not enemy.type.is_boss and not keep.call(enemy):
+			_release(enemy)
+			removed += 1
+	rebuild_grid()
+	return removed
+
+
 ## Host: pack every active enemy into bytes and send them to the given peers,
 ## one message per SNAPSHOT_CHUNK pool indices.
 func send_snapshot(peer_ids: Array[int]) -> void:

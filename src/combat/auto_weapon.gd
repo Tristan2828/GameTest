@@ -49,7 +49,8 @@ enum Kind { ORBIT, SEEKER, AURA, CHAIN, BOOMERANG, TRAIL, ERUPTION, BLAST, HEX, 
 ## evolution), and the passive (Upgrades id) you need alongside the maxed base.
 @export var evolves_from: int = -1
 @export var catalyst: int = -1
-## Boomerang only: the sprite thrown (the main weapon's is "scythe").
+## Boomerang: the sprite thrown (the main weapon's is "scythe"). Daggers: the
+## projectile's sprite, pointing right (plus "<sprite>_diag"; see ProjectileManager).
 @export var sprite: String = ""
 
 

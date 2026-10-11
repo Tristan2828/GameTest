@@ -62,6 +62,12 @@ var ember_boosts: bool = true
 
 const FLAGS: Array[String] = ["single_stage", "boss_enabled", "start_with_weapons", "ember_boosts"]
 
+## Short names of the difficulty values, for summaries ("Enemy HP 150%").
+const DIFFICULTY_NAMES: Dictionary[String, String] = {
+	"enemy_health": "Enemy HP", "boss_health": "Boss HP", "enemy_count": "Enemies",
+	"xp_rate": "XP", "coin_rate": "Coins", "hp_bonus": "Bonus HP",
+}
+
 
 ## Sets a numeric setting, clamped and snapped to its slider step.
 func set_value(key: String, value: float) -> void:
@@ -88,6 +94,48 @@ func difficulty_name() -> String:
 		if matches:
 			return preset_name
 	return "Custom"
+
+
+## One difficulty value as shown to players: "150%" or "+20" / "-20" / "0".
+func difficulty_value_text(key: String) -> String:
+	if key == "hp_bonus":
+		return "%+d" % hp_bonus if hp_bonus != 0 else "0"
+	return "%d%%" % roundi(float(get(key)) * 100.0)
+
+
+## True when this difficulty value isn't the Normal preset's.
+func differs_from_normal(key: String) -> bool:
+	return not is_equal_approx(float(get(key)), float(PRESETS["Normal"][key]))
+
+
+## "Enemy HP 150%, XP 75%" for the values that differ from Normal (`every`:
+## all six), or "" when none do.
+func difficulty_details(every: bool = false) -> String:
+	var parts := PackedStringArray()
+	for key: String in DIFFICULTY_NAMES:
+		if every or differs_from_normal(key):
+			parts.append("%s %s" % [DIFFICULTY_NAMES[key], difficulty_value_text(key)])
+	return ", ".join(parts)
+
+
+## The run settings other than difficulty that change balance, e.g.
+## "Single stage: The Crypt, 2:00 waves, +3 levels" ("" for a normal full run).
+func custom_details() -> String:
+	var parts := PackedStringArray()
+	if single_stage:
+		parts.append("Single stage: %s" % Stages.get_stage(stage).title)
+	if not boss_enabled:
+		parts.append("no boss")
+	if not is_equal_approx(wave_seconds, float(LIMITS["wave_seconds"][3])):
+		var whole := roundi(wave_seconds)
+		parts.append("%d:%02d waves" % [whole / 60, whole % 60])
+	if bonus_levels > 0:
+		parts.append("+%d levels" % bonus_levels)
+	if start_with_weapons:
+		parts.append("full arsenal")
+	if not ember_boosts:
+		parts.append("no Ember boosts")
+	return ", ".join(parts)
 
 
 ## Records: harder settings score more, easier ones less (1.0 = Normal).
@@ -128,7 +176,10 @@ func summary() -> String:
 		extras += "   no Ember boosts"
 	if soundtrack != 0:
 		extras += "   %s music" % Tracks.SOUNDTRACKS[clampi(soundtrack, 0, Tracks.SOUNDTRACKS.size() - 1)]
-	return "Difficulty: %s   %s   %d:%02d waves%s" % [difficulty_name(), mode, whole / 60, whole % 60, extras]
+	var difficulty := difficulty_name()
+	if difficulty == "Custom":
+		difficulty += " (%s)" % difficulty_details()
+	return "Difficulty: %s   %s   %d:%02d waves%s" % [difficulty, mode, whole / 60, whole % 60, extras]
 
 
 func to_dict() -> Dictionary:

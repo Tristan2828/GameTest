@@ -3,7 +3,7 @@ extends Node
 ## Checks GitHub for a newer release when the title screen opens and, when asked,
 ## updates the game in place:
 ##   1. download the release zip (user://update/),
-##   2. take GameTest.exe out of it and write it next to the running exe,
+##   2. take the game exe (GAME_EXE_NAMES) out of it and write it next to the running exe,
 ##   3. rename the running exe to "<name>.old" (Windows allows renaming a running
 ##      exe, not overwriting it) and the new one into its place,
 ##   4. start the new exe and quit. The next start deletes the ".old" file.
@@ -17,6 +17,9 @@ enum State { OFF, CHECKING, UP_TO_DATE, AVAILABLE, DOWNLOADING, INSTALLING, FAIL
 const DOWNLOAD_PATH: String = "user://update/latest.zip"
 const OLD_SUFFIX: String = ".old"
 const NEW_SUFFIX: String = ".new"
+## The exe inside a release zip. Still GameTest.exe (what v0.23.0 and older
+## updaters look for); the new name is accepted so the files can be renamed later.
+const GAME_EXE_NAMES: Array[String] = ["gametest.exe", "medievalsurvival.exe"]
 
 var state: State = State.OFF
 var latest: ReleaseInfo = null
@@ -87,7 +90,7 @@ func _request(url: String, save_to: String, done: Callable) -> void:
 	add_child(_http)
 	_http.request_completed.connect(done, CONNECT_ONE_SHOT)
 	# GitHub's API requires a User-Agent.
-	var err := _http.request(url, PackedStringArray(["User-Agent: GameTest-updater", "Accept: application/vnd.github+json"]))
+	var err := _http.request(url, PackedStringArray(["User-Agent: MedievalSurvival-updater", "Accept: application/vnd.github+json"]))
 	if err != OK:
 		done.call(HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray())
 
@@ -131,11 +134,11 @@ static func _install(zip_path: String, exe_path: String) -> String:
 		return "The download is damaged."
 	var exe_name := ""
 	for entry: String in zip.get_files():
-		if entry.get_file().to_lower() == "gametest.exe":
+		if GAME_EXE_NAMES.has(entry.get_file().to_lower()):
 			exe_name = entry
 	if exe_name.is_empty():
 		zip.close()
-		return "The download has no GameTest.exe."
+		return "The download has no game exe in it."
 	var bytes := zip.read_file(exe_name)
 	zip.close()
 	if bytes.size() < 1_000_000:

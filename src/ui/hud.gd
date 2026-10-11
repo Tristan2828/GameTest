@@ -80,7 +80,7 @@ func set_status(text: String) -> void:
 	_status_label.text = text
 
 
-## Bottom-left: controls hint, host invite.
+## Bottom-left: the host's invite (online).
 func set_info(text: String) -> void:
 	_info_label.text = text
 

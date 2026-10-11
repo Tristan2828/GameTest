@@ -47,8 +47,18 @@ const BOSS_BOUNTY: int = 25
 const BOSS_BOUNTY_PER_STAGE: int = 15
 ## Horde waves last this long, then the boss arrives.
 const WAVE_DURATION: float = 240.0
-## Horde spawn rate while the boss is alive (and no pack surges).
-const BOSS_FIGHT_SPAWN_RATE: float = 0.4
+## Horde spawn rate while the boss is alive (and no pack surges). The ramp
+## also stops growing once the boss is out. v0.24.0: 0.4 -> 0.25 and the cap
+## below (owner, after a 4-player run: "way too much stuff, can't get to the boss").
+const BOSS_FIGHT_SPAWN_RATE: float = 0.25
+## At most this many regular enemies during a boss fight (+ per player).
+const BOSS_FIGHT_MAX_ALIVE: int = 40
+const BOSS_FIGHT_MAX_ALIVE_PER_PLAYER: int = 25
+## When the boss arrives, the old horde crumbles away and the boss brings its
+## own: this many enemies (+ per extra player) around it.
+const BOSS_ESCORT: int = 12
+const BOSS_ESCORT_PER_EXTRA_PLAYER: int = 6
+const BOSS_ESCORT_RADIUS: Vector2 = Vector2(40.0, 100.0)
 const BOSS_SPAWN_DISTANCE: float = 220.0
 const BOSS_BANNER_SECONDS: float = 3.0
 ## "3, 2, 1" before play resumes after a level-up or the shop.
@@ -69,7 +79,6 @@ const SPAWN_DISTANCE_MIN: float = 380.0
 const SPAWN_DISTANCE_MAX: float = 440.0
 const MIN_SPAWN_DISTANCE_FROM_ANY_PLAYER: float = 340.0
 const PACK_RADIUS: float = 28.0
-const CONTROLS_HINT: String = "WASD / L-stick move (your weapons fire by themselves)   Esc / Start menu"
 const COPIED_FEEDBACK_SECONDS: float = 4.0
 const SPARK_COLOR: Color = Color(1.0, 0.9, 0.6)
 const HURT_COLOR: Color = Color(1.0, 0.25, 0.3)
@@ -194,6 +203,10 @@ func _ready() -> void:
 	_player_spawner.spawn_function = _spawn_player
 	_projectiles.bounds = BOUNDS
 	_projectiles.spawn_backtrack = Player.MUZZLE_DISTANCE
+	for weapon_id: int in AutoWeapons.ALL.size():
+		var weapon := AutoWeapons.get_weapon(weapon_id)
+		if weapon.kind == AutoWeapon.Kind.DAGGERS and not weapon.sprite.is_empty():
+			_projectiles.sprite_sources[DamageSource.of_weapon(weapon_id)] = weapon.sprite
 	_enemy_bullets.bounds = BOUNDS
 	_enemies.bounds = BOUNDS
 	_events.bounds = BOUNDS
@@ -403,12 +416,11 @@ func _play_phase_jingle() -> void:
 	if _is_run_finished() and not LaunchOptions.screenshot_dir.is_empty():
 		await get_tree().create_timer(1.7).timeout  # After the summary's count-up.
 		await Main.save_screenshot(get_tree(), "run_end.png")
-		_hud.run_summary._show_page(1)
-		await get_tree().create_timer(0.3).timeout
-		await Main.save_screenshot(get_tree(), "run_end_weapons.png")
-		_hud.run_summary._show_page(2)
-		await get_tree().create_timer(0.3).timeout
-		await Main.save_screenshot(get_tree(), "run_end_highlights.png")
+		for page: Array in [[RunSummaryPanel.PAGE_WEAPONS, "run_end_weapons.png"],
+				[RunSummaryPanel.PAGE_STAGES, "run_end_stages.png"], [RunSummaryPanel.PAGE_HIGHLIGHTS, "run_end_highlights.png"]]:
+			_hud.run_summary._show_page(page[0])
+			await get_tree().create_timer(0.3).timeout
+			await Main.save_screenshot(get_tree(), page[1])
 		_hud.run_summary._show_page(0)
 
 
@@ -638,7 +650,11 @@ func _spawn_enemies(delta: float) -> void:
 	_balance_peak_alive = maxi(_balance_peak_alive, _enemies.active_count())
 	var rate := BOSS_FIGHT_SPAWN_RATE if _boss_spawned else 1.0
 	rate *= by_depth(SPAWN_RATE_BY_DEPTH, _run_depth()) * _config.enemy_count
-	for type_id: int in _director.tick(delta, _elapsed, alive_players.size(), _enemies.active_count(), rate):
+	# During the boss fight the ramp stays where it was when the boss came, and
+	# fewer regular enemies may be alive at once.
+	var ramp_time := minf(_elapsed, _wave_duration) if _boss_spawned else _elapsed
+	var cap := boss_fight_max_alive(_player_nodes().size()) + 1 if _boss_spawned else SpawnDirector.MAX_ALIVE
+	for type_id: int in _director.tick(delta, ramp_time, alive_players.size(), _enemies.active_count(), rate, cap):
 		var point := _offscreen_spawn_point(alive_players)
 		if point.is_finite():
 			_enemies.spawn(type_id, point, _scaled_hp(type_id))
@@ -876,6 +892,20 @@ func _print_balance(phase: Phase) -> void:
 		_run_depth(), Phase.keys()[phase], _elapsed, boss_seconds, _team.level, now[0] - _balance_start[0],
 		(now[1] - _balance_start[1]) / maxf(_elapsed, 1.0), now[2] - _balance_start[2], max_hp, now[3] - _balance_start[3],
 		_balance_peak_alive, _player_nodes().size()])
+	# The same numbers for the run summary's Stages page.
+	_run_stats.add_stage_row({
+		RunStats.StageField.MAP: _stage,
+		RunStats.StageField.SECONDS: roundi(_elapsed),
+		RunStats.StageField.BOSS_SECONDS: roundi(boss_seconds) if _balance_boss_at >= 0.0 else -1,
+		RunStats.StageField.KILLS: now[0] - _balance_start[0],
+		RunStats.StageField.HP_LOST: now[2] - _balance_start[2],
+		RunStats.StageField.DOWNS: now[3] - _balance_start[3],
+		RunStats.StageField.LEVEL: _team.level,
+		RunStats.StageField.EVENTS: _balance_counts.get("champion", 0) + _balance_counts.get("ritual", 0)
+			+ _balance_counts.get("thief caught", 0),
+		RunStats.StageField.CLEARED: 1 if phase == Phase.STAGE_CLEAR else 0,
+		RunStats.StageField.PEAK_ENEMIES: _balance_peak_alive,
+	})
 	_balance_start = now
 	_balance_boss_at = -1.0
 	_balance_peak_alive = 0
@@ -999,6 +1029,7 @@ func _record_weapon_breakdown(player: Player) -> void:
 func _receive_run_stats(data: Dictionary) -> void:
 	_final_stats = RunStats.decode(data)
 	var stage_in_run := _final_stats.stage_reached - _config.first_stage() + 1
+	_hud.run_summary.config = _config
 	_hud.run_summary.score_multiplier = _config.score_multiplier()
 	_hud.run_summary.difficulty_name = _config.difficulty_name()
 	_hud.run_summary.first_stage = _config.first_stage()
@@ -1027,10 +1058,13 @@ func _save_record(stage_in_run: int) -> int:
 ## (-1 = not counted: test runs, like Records).
 func _earn_embers() -> int:
 	var local := _local_player()
-	if local == null or DisplayServer.get_name() == "headless" or LaunchOptions.autopilot:
+	if local == null:
 		return -1
 	var amount := Embers.earned_for(_final_stats.bosses_defeated, _final_stats.victory,
 		_final_stats.get_stat(local.peer_id, RunStats.Stat.KILLS), _config.score_multiplier())
+	if DisplayServer.get_name() == "headless" or LaunchOptions.autopilot:
+		# Test runs earn nothing; screenshot runs still show the line (not saved).
+		return amount if not LaunchOptions.screenshot_dir.is_empty() else -1
 	Embers.add_earned(amount)
 	return amount
 
@@ -1097,8 +1131,23 @@ func _spawn_boss() -> void:
 	var hit_points := roundi(_scaled_hp(boss_type_id) * (1.0 + boss_type.hp_per_extra_player * (players - 1)))
 	if LaunchOptions.weak_bosses:
 		hit_points = maxi(roundi(hit_points * 0.02), 1)
+	# The horde so far crumbles away (no drops; event champions and thieves stay)...
+	var swept := _enemies.clear_regulars(_events.owns_enemy)
 	_enemies.spawn(boss_type_id, at, hit_points)
-	print("Boss spawned with %d HP at %.1fs" % [hit_points, _elapsed])
+	# ...and the boss brings a fresh one.
+	var escort := BOSS_ESCORT + BOSS_ESCORT_PER_EXTRA_PLAYER * (players - 1)
+	for i: int in escort:
+		var type_id := _director.pick_type(_elapsed)
+		var offset := Vector2.from_angle(TAU * i / escort + _rng.randf_range(-0.2, 0.2)) 			* _rng.randf_range(BOSS_ESCORT_RADIUS.x, BOSS_ESCORT_RADIUS.y)
+		_enemies.spawn(type_id, (at + offset).clamp(BOUNDS.position, BOUNDS.end), _scaled_hp(type_id))
+	print("Boss spawned with %d HP at %.1fs (%d enemies swept, %d escorts)" % [hit_points, _elapsed, swept, escort])
+	if not LaunchOptions.screenshot_dir.is_empty():
+		get_tree().create_timer(1.5).timeout.connect(func() -> void: Main.save_screenshot(get_tree(), "boss_arrives.png"))
+
+
+## How many regular enemies may be alive during a boss fight.
+static func boss_fight_max_alive(player_count: int) -> int:
+	return BOSS_FIGHT_MAX_ALIVE + BOSS_FIGHT_MAX_ALIVE_PER_PLAYER * maxi(player_count, 1)
 
 
 ## Host: run the boss's attack schedule.
@@ -1236,6 +1285,7 @@ func _pay_quest(peer_id: int) -> void:
 		_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, coins)
 	var text := "%s completed a quest: %s! (%s)" % [player.display_name(), Quests.TITLES[quest_id], reward]
 	_balance_count("quest")
+	_run_stats.add(peer_id, RunStats.Stat.QUESTS, 1)
 	print(text)
 	_show_quest_done(peer_id, text)
 	for target: int in _ready_peers:
@@ -1280,6 +1330,7 @@ func _on_power_up_collected(kind: int, collector_peer_id: int) -> void:
 		return
 	_quest_count(collector_peer_id, Quests.Id.SCAVENGER)
 	_balance_count(PowerUps.TITLES[kind])
+	_run_stats.add(collector_peer_id, RunStats.Stat.POWER_UPS, 1)
 	var at := player.state.position
 	match kind:
 		PowerUps.Kind.HEART:
@@ -1342,6 +1393,7 @@ func _on_chest_opened(peer_id: int, at: Vector2) -> void:
 	var player := _player_by_id(peer_id)
 	if player == null:
 		return
+	_run_stats.add(peer_id, RunStats.Stat.CHESTS, 1)
 	_show_chest_opened(at)
 	for target: int in _ready_peers:
 		_receive_chest_opened.rpc_id(target, at)
@@ -1365,6 +1417,7 @@ func _grant_evolution(player: Player, card: int) -> void:
 	var before := Cards.title(Cards.MAIN_LEVEL if card == Cards.MAIN_EVOLUTION else Cards.weapon(
 		AutoWeapons.get_weapon(Cards.weapon_id(card)).evolves_from), player.stats)
 	_level_up.host_grant(player.peer_id, card, _ready_peer_list())
+	_run_stats.add(player.peer_id, RunStats.Stat.EVOLUTIONS, 1)
 	_events.announce("%s's %s evolved into %s!" % [player.display_name(), before, Cards.title(card, player.stats)])
 
 
@@ -1380,6 +1433,7 @@ func _on_ritual_completed(at: Vector2, inside: Array[int]) -> void:
 	_balance_count("ritual")
 	for peer_id: int in inside:
 		_quest_count(peer_id, Quests.Id.RITUALIST)
+		_run_stats.add(peer_id, RunStats.Stat.RITUALS, 1)
 	for peer_id: int in inside:
 		var player := _player_by_id(peer_id)
 		if player != null:
@@ -1923,16 +1977,17 @@ func _update_hud() -> void:
 	_hud.set_boss(boss.type.display_name if boss != null else "", boss.hp_ratio if boss != null else 0.0)
 	_hud.set_progress(_team.level, _team.progress_ratio())
 	_update_minimap(local, boss)
+	if local != null:
+		local.show_here_marker = _phase == Phase.COUNTDOWN and not local.is_downed()
 
 	var status := "Solo"
 	if Net.is_online():
 		status = "Host" if multiplayer.is_server() else "Client  ping %d ms" % Net.ping_ms()
 	_hud.set_status("Stage %d/%d   %s   players %d" % [_run_depth(), _stage_count(), status, _player_nodes().size()])
 
-	var info := CONTROLS_HINT
-	if Net.is_online() and multiplayer.is_server():
-		info = _invite_hud_text() + "\n" + info
-	_hud.set_info(info)
+	# No controls line any more (owner: they're easy to remember); only the
+	# host's invite, so it can still be copied with F1.
+	_hud.set_info(_invite_hud_text() if Net.is_online() and multiplayer.is_server() else "")
 
 	var name_of := func(peer_id: int) -> String:
 		var player := _player_by_id(peer_id)
@@ -1995,9 +2050,12 @@ func _update_minimap(local: Player, boss: Enemy) -> void:
 		return
 	var markers: Array[Array] = []
 	var teammates: Array[Array] = []
+	var standing := PackedVector2Array()
 	for player: Player in _player_nodes():
 		var color := Player.SLOT_COLORS[player.slot % Player.SLOT_COLORS.size()]
 		markers.append([player.world_position(), color, player.is_local(), player.is_downed()])
+		if not player.is_downed():
+			standing.append(player.world_position())
 		# Edge arrows only for downed teammates (go revive them; v0.18.0, owner
 		# request: arrows to healthy teammates were clutter). While we watch a
 		# teammate, an arrow also points back to our own body.
@@ -2008,6 +2066,7 @@ func _update_minimap(local: Player, boss: Enemy) -> void:
 	if local != null:
 		var screen := get_viewport_rect().size
 		view = Rect2(local.view_center() - screen / 2.0, screen)
+	_events.player_positions = standing  # For the ritual's "x2" when several stand in it.
 	var events := _events.markers()
 	_hud.teammate_arrows.show_state(view, teammates, events)
 	_hud.minimap.events = events

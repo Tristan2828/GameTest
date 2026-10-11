@@ -4,11 +4,23 @@ extends RefCounted
 ## sends one message at the end (`encode()` / `decode()`); every peer shows them.
 
 ## Per-player counters. Sent as numbers: only add new ones at the end.
-## HP_LOST counted hearts until v0.22.0.
-enum Stat { KILLS, DAMAGE, BOSS_DAMAGE, HP_LOST, DOWNS, COINS_EARNED, XP_GATHERED, REVIVES }
+## HP_LOST counted hearts until v0.22.0. v0.24.0 added POWER_UPS (grabbed),
+## CHESTS (opened), RITUALS (stood in when one finished), QUESTS (done) and
+## EVOLUTIONS (weapons evolved).
+enum Stat { KILLS, DAMAGE, BOSS_DAMAGE, HP_LOST, DOWNS, COINS_EARNED, XP_GATHERED, REVIVES,
+	POWER_UPS, CHESTS, RITUALS, QUESTS, EVOLUTIONS }
 
 ## Row labels for the panel, same order as Stat.
-const STAT_LABELS: Array[String] = ["Kills", "Damage", "Boss damage", "Damage taken", "Downed", "Coins earned", "XP gathered", "Revives"]
+const STAT_LABELS: Array[String] = ["Kills", "Damage", "Boss damage", "Damage taken", "Downed", "Coins earned", "XP gathered", "Revives",
+	"Power-ups", "Chests", "Rituals", "Quests", "Evolutions"]
+## The numbers on each player's Overview card, in order (the rest are on the
+## Highlights page).
+const CARD_STATS: Array[Stat] = [Stat.KILLS, Stat.DAMAGE, Stat.BOSS_DAMAGE, Stat.HP_LOST, Stat.DOWNS, Stat.REVIVES,
+	Stat.COINS_EARNED, Stat.XP_GATHERED]
+
+## One row per stage played (team numbers), for the Stages page: these fields
+## in this order. MAP is the Stages id; BOSS_SECONDS is -1 when the boss never came.
+enum StageField { MAP, SECONDS, BOSS_SECONDS, KILLS, HP_LOST, DOWNS, LEVEL, EVENTS, CLEARED, PEAK_ENEMIES }
 
 ## Co-op awards: the player who leads in this stat gets the title.
 const AWARDS: Dictionary[Stat, String] = {
@@ -34,6 +46,17 @@ var bosses_defeated: int = 0
 var victory: bool = false
 ## What ended the run, e.g. "The Bone Warden" (empty when the horde did it).
 var fell_to: String = ""
+## One PackedInt32Array per stage played (StageField order).
+var stage_rows: Array[PackedInt32Array] = []
+
+
+## Records a finished (or lost) stage's team numbers.
+func add_stage_row(values: Dictionary[StageField, int]) -> void:
+	var row := PackedInt32Array()
+	row.resize(StageField.size())
+	for field: StageField in values:
+		row[field] = values[field]
+	stage_rows.append(row)
 
 
 func add(peer_id: int, stat: Stat, amount: int) -> void:
@@ -150,9 +173,13 @@ func encode() -> Dictionary:
 	for peer_id: int in sources:
 		for row: Array in sources_for(peer_id):
 			source_values.append_array([peer_id, row[0], row[1], row[2], row[3]])
+	var stage_values := PackedInt32Array()
+	for row: PackedInt32Array in stage_rows:
+		stage_values.append_array(row)
 	return {
 		"ids": ids, "values": values, "sources": source_values, "seconds": run_seconds, "stage": stage_reached,
 		"level": team_level, "bosses": bosses_defeated, "victory": victory, "fell_to": fell_to,
+		"stage_rows": stage_values,
 	}
 
 
@@ -173,4 +200,8 @@ static func decode(data: Dictionary) -> RunStats:
 	stats.bosses_defeated = data.get("bosses", 0)
 	stats.victory = data.get("victory", false)
 	stats.fell_to = data.get("fell_to", "")
+	var stage_values: PackedInt32Array = data.get("stage_rows", PackedInt32Array())
+	var fields := StageField.size()
+	for i: int in range(0, stage_values.size() - fields + 1, fields):
+		stats.stage_rows.append(stage_values.slice(i, i + fields))
 	return stats

@@ -18,7 +18,8 @@ const ROW_FOCUS_BORDER: Color = Color(0.95, 0.78, 0.4)
 const TAB_SELECTED_COLOR: Color = Color(0.95, 0.78, 0.4)
 
 var _title_label: Label
-var _tabs_row: HBoxContainer
+## Tabs wrap onto a second line when they don't fit (the Game Guide has 9).
+var _tabs_row: HFlowContainer
 var _scroll: ScrollContainer
 ## Rows go in here (cleared when the tab changes).
 var list: VBoxContainer
@@ -48,9 +49,10 @@ func _init() -> void:
 	_title_label = label("", 18, TITLE_COLOR)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_title_label)
-	_tabs_row = HBoxContainer.new()
-	_tabs_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_tabs_row.add_theme_constant_override("separation", 3)
+	_tabs_row = HFlowContainer.new()
+	_tabs_row.alignment = FlowContainer.ALIGNMENT_CENTER
+	_tabs_row.add_theme_constant_override("h_separation", 3)
+	_tabs_row.add_theme_constant_override("v_separation", 2)
 	_tabs_row.visible = false
 	column.add_child(_tabs_row)
 	_scroll = ScrollContainer.new()
@@ -144,8 +146,9 @@ func add_row(content: Control, focusable: bool = true) -> PanelContainer:
 	return row
 
 
+## A line of text above rows (wraps, so a long one can't widen the page).
 func add_heading(text: String) -> Label:
-	var heading := label(text, 9, HEADING_COLOR)
+	var heading := label(text, 9, HEADING_COLOR, true)
 	list.add_child(heading)
 	return heading
 

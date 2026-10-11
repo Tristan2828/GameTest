@@ -1,8 +1,8 @@
-# GameTest
+# Medieval Survival
 
-Online co-op (1–4 players) twin-stick roguelite bullet-hell shooter with dark fantasy pixel art, made in Godot 4. Windows only, mouse + keyboard or gamepad.
+Online co-op (1–4 players) roguelite bullet-hell survivor (you move and dodge; your weapons fire by themselves) with dark fantasy pixel art, made in Godot 4. The repository is still called GameTest. Windows only, mouse + keyboard or gamepad.
 
-**Playtesting?** Grab the latest zip from [Releases](https://github.com/Tristan2828/GameTest/releases/latest), unzip it, and run `GameTest.exe`. The included `README.txt` explains hosting, joining and controls.
+**Playtesting?** Grab the latest zip from [Releases](https://github.com/Tristan2828/GameTest/releases/latest), unzip it, and run `GameTest.exe` (the exe keeps its old name so in-game updates keep working). The included `README.txt` explains hosting, joining and controls.
 
 ## For developers
 - `DESIGN.md`: game design, the source of truth

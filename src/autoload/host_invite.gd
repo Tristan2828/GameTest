@@ -13,7 +13,7 @@ signal changed
 
 const PUBLIC_IP_URL: String = "https://api.ipify.org"
 const UPNP_DISCOVER_TIMEOUT_MS: int = 2000
-const MAPPING_DESCRIPTION: String = "GameTest"
+const MAPPING_DESCRIPTION: String = "Medieval Survival"
 
 ## "203.0.113.5:7777" once known, else empty.
 var address: String = ""

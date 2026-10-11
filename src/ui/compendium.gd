@@ -29,7 +29,7 @@ func _entry(sprite: String, title: String, description: String, details: String,
 		title_color: Color = NAME_COLOR, tint: Color = HERO_COLOR) -> VBoxContainer:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 6)
-	var icon := SpriteIcon.new(sprite, ICON_SIZE)
+	var icon := SpriteIcon.new(PixelArt.big_icon(sprite), ICON_SIZE)
 	icon.tint = tint
 	line.add_child(icon)
 	var text := VBoxContainer.new()
@@ -202,8 +202,9 @@ func _show_events() -> void:
 		MapEvents.CHAMPION_COLOR)
 	_entry("chest", "Champion's chest", "The first player to touch it evolves a weapon if one is ready (see Evolutions), or else gets a weapon or a weapon level (%d coins if there's nothing left to give)." % Arena.CHEST_COINS_WHEN_MAXED,
 		"", MapEvents.CHEST_COLOR)
-	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills; with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d%% of their HP." % [roundi(Arena.RITUAL_XP_SHARE * 100.0), roundi(Arena.RITUAL_HEAL_SHARE * 100.0)],
-		"%ds to fill. One is placed at the start of each stage, another pops up later and fades if nobody starts it." % roundi(MapEvents.RITUAL_SECONDS),
+	_entry("icon_ritual", "Ritual circle", "Stand inside to start it. Enemies pour in while it fills (faster with more of you inside: +%d%% per extra player); with nobody inside it slowly drains. When it's full: a ring of XP gems worth %d%% of a level, and everyone inside heals %d%% of their HP." % [roundi(MapEvents.RITUAL_EXTRA_PLAYER_SPEED * 100.0),
+		roundi(Arena.RITUAL_XP_SHARE * 100.0), roundi(Arena.RITUAL_HEAL_SHARE * 100.0)],
+		"%ds to fill alone. One is placed at the start of each stage, another pops up later and fades if nobody starts it." % roundi(MapEvents.RITUAL_SECONDS),
 		MapEvents.RITUAL_COLOR)
 	_entry("grave_robber", "Grave Robber", "A thief who runs from you, dropping stolen coins. Catch it within %ds for a shower of coins." % roundi(MapEvents.RUNNER_SECONDS),
 		"Pops up twice per stage.", MapEvents.RUNNER_COLOR)
