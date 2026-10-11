@@ -17,8 +17,9 @@ enum State { OFF, CHECKING, UP_TO_DATE, AVAILABLE, DOWNLOADING, INSTALLING, FAIL
 const DOWNLOAD_PATH: String = "user://update/latest.zip"
 const OLD_SUFFIX: String = ".old"
 const NEW_SUFFIX: String = ".new"
-## The exe inside a release zip. Still GameTest.exe (what v0.23.0 and older
-## updaters look for); the new name is accepted so the files can be renamed later.
+## The exe inside a release zip: MedievalSurvival.exe after v0.24.0, GameTest.exe
+## before. The update keeps the running exe's own file name, so a friend who
+## updates in place keeps their GameTest.exe (and their shortcuts).
 const GAME_EXE_NAMES: Array[String] = ["gametest.exe", "medievalsurvival.exe"]
 
 var state: State = State.OFF

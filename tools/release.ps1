@@ -49,10 +49,10 @@ if ($previousTag) {
 	git -C $project log --format="- %s" "$previousTag..HEAD" | ForEach-Object { $notes.Add($_) }
 	$notes.Add("")
 }
-$notes.Add("**Download** ``GameTest-$version-windows.zip`` below, unzip it, and run ``GameTest.exe``. Everyone in a game needs the same version.")
+$notes.Add("**Download** ``MedievalSurvival-$version-windows.zip`` below, unzip it, and run ``MedievalSurvival.exe``. Everyone in a game needs the same version.")
 $notes.Add("")
 $notes.Add("**First download?** Right-click the zip > Properties > tick **Unblock** > OK before unzipping, or Windows will warn about the game (if it does: **More info** > **Run anyway**). Already playing? Use **Update now** on the title screen instead; updates don't get the warning.")
-$notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "GameTest-$tag-notes.md"
+$notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "MedievalSurvival-$tag-notes.md"
 $notes | Set-Content -Encoding utf8 $notesFile
 
 Write-Host "Release $tag from $($head.Substring(0, 7))" -ForegroundColor Cyan
@@ -66,7 +66,7 @@ if ($DryRun) {
 
 & (Join-Path $PSScriptRoot "build.ps1")
 if ($LASTEXITCODE -ne 0) { Fail "build failed" }
-$zip = Join-Path $project "builds\GameTest-$version-windows.zip"
+$zip = Join-Path $project "builds\MedievalSurvival-$version-windows.zip"
 if (-not (Test-Path $zip)) { Fail "missing $zip" }
 
 # gh creates the tag on GitHub at this commit, uploads the zip, then publishes.

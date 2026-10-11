@@ -1,15 +1,18 @@
-# Builds the Windows game: a single GameTest.exe (game data embedded) plus a zip
+# Builds the Windows game: a single MedievalSurvival.exe (game data embedded) plus a zip
 # that's ready to send to friends.
 #
 # Usage:  pwsh tools/build.ps1
-# Output: builds/windows/GameTest.exe and builds/GameTest-<version>-windows.zip
+# Output: builds/windows/MedievalSurvival.exe and builds/MedievalSurvival-<version>-windows.zip
+# (GameTest.exe / GameTest-<version>-windows.zip up to v0.24.0.)
 # Needs the Godot 4.7.2 export templates installed (Editor > Manage Export Templates).
 # Set $env:GODOT to override the Godot console executable path.
 
 $godot = if ($env:GODOT) { $env:GODOT } else { "C:\Code Tools\Godot\Godot_v4.7.2-stable_win64_console.exe" }
 $project = Split-Path -Parent $PSScriptRoot
 $outDir = Join-Path $project "builds\windows"
-$exe = Join-Path $outDir "GameTest.exe"
+$exe = Join-Path $outDir "MedievalSurvival.exe"
+# An exe from a build before the rename would end up in the zip too.
+Remove-Item (Join-Path $outDir "GameTest.exe") -ErrorAction SilentlyContinue
 
 $versionLine = Select-String -Path (Join-Path $project "project.godot") -Pattern '^config/version="(.+)"' | Select-Object -First 1
 $version = if ($versionLine) { $versionLine.Matches[0].Groups[1].Value } else { "dev" }
@@ -64,7 +67,7 @@ if ($exitCode -ne 0 -or -not (Test-Path $exe) -or ($output | Select-String -Patt
 }
 
 Copy-Item (Join-Path $PSScriptRoot "README-friends.txt") (Join-Path $outDir "README.txt")
-$zip = Join-Path $project "builds\GameTest-$version-windows.zip"
+$zip = Join-Path $project "builds\MedievalSurvival-$version-windows.zip"
 Compress-Archive -Path (Join-Path $outDir "*") -DestinationPath $zip -Force
 Write-Host "OK: built $exe" -ForegroundColor Green
 Write-Host "    zip for friends: $zip" -ForegroundColor Green

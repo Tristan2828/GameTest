@@ -46,7 +46,7 @@ jobs:
                 value: ([.assets[] | select(.name | endswith(".zip")) | "[" + .name + "](" + .browser_download_url + ")"]
                         | if length == 0 then "See the release page." else join("\n") end)
               }],
-              footer: { text: "Unzip and run GameTest.exe (Medieval Survival). Everyone needs the same version to play together." },
+              footer: { text: "Unzip and run MedievalSurvival.exe. Everyone needs the same version to play together." },
               timestamp: .published_at
             }]
           }' release.json > payload.json

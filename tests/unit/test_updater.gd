@@ -88,3 +88,30 @@ func test_install_refuses_a_zip_without_the_game() -> void:
 
 func test_updater_stays_off_in_tests_and_the_editor() -> void:
 	assert_false(Updater.can_run())
+
+
+func test_parse_finds_the_renamed_zip() -> void:
+	var renamed := SAMPLE_RELEASE.replace("GameTest-0.15.0-windows.zip", "MedievalSurvival-0.15.0-windows.zip")
+	assert_string_ends_with(ReleaseInfo.parse(renamed).zip_url, "MedievalSurvival-0.15.0-windows.zip")
+
+
+## A friend's GameTest.exe updated from a release whose zip holds
+## MedievalSurvival.exe: the new game goes in under the friend's file name.
+func test_install_takes_the_renamed_exe_into_an_old_file_name() -> void:
+	DirAccess.make_dir_recursive_absolute(WORK_DIR)
+	var exe := ProjectSettings.globalize_path(WORK_DIR.path_join("GameTest.exe"))
+	var zip_path := ProjectSettings.globalize_path(WORK_DIR.path_join("renamed.zip"))
+	var old_file := FileAccess.open(exe, FileAccess.WRITE)
+	old_file.store_string("old game")
+	old_file.close()
+	var new_bytes := PackedByteArray()
+	new_bytes.resize(1_500_000)
+	new_bytes.fill(9)
+	var packer := ZIPPacker.new()
+	packer.open(zip_path)
+	packer.start_file("MedievalSurvival.exe")
+	packer.write_file(new_bytes)
+	packer.close_file()
+	packer.close()
+	assert_eq(Updater._install(zip_path, exe), "")
+	assert_eq(FileAccess.get_file_as_bytes(exe).size(), new_bytes.size(), "new game under the old name")

@@ -11,12 +11,12 @@ then paste your notes back to Claude (see **Reporting back** at the end).
 
 ## 1. How to run things quickly
 
-Normal play: run `builds\windows\GameTest.exe` (or the zip you send friends).
+Normal play: run `builds\windows\MedievalSurvival.exe` (or the zip you send friends).
 
 To jump straight to something, open PowerShell and run:
 
 ```powershell
-$g = "C:\Repos\GameTest\builds\windows\GameTest.exe"
+$g = "C:\Repos\GameTest\builds\windows\MedievalSurvival.exe"
 & $g -- --solo --start-at=230                      # Crypt boss (Bone Warden) in 10 s
 & $g -- --solo --start-stage=2 --start-at=230      # Marsh boss (Mire Hag)
 & $g -- --solo --start-stage=3 --start-at=230      # Cathedral boss (Ashen Bishop)
