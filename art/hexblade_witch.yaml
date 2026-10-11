@@ -1,0 +1,55 @@
+# Morwen the Hexblade Witch, 12x16: pointed hat with a purple hex band, glowing green eyes, brooch. P/p = player color.
+frames:
+  idle:
+    - |
+      .....kk.....
+      ....kKxk....
+      ....kKxk....
+      ...kKxxxk...
+      ...kKxxxk...
+      ..kxiiiixk..
+      kkkxxxxxxkkk
+      .kkkkkkkkkk.
+      ..kffffffk..
+      ..kfvffvfk..
+      ..kffffffk..
+      .kPkkkkkkPk.
+      kPPPPiiPPPpk
+      kpPPPPPPPPpk
+      .kpppPPpppk.
+      ..kkkkkkkk..
+  walk:
+    - |
+      .....kk.....
+      ....kKxk....
+      ....kKxk....
+      ...kKxxxk...
+      ...kKxxxk...
+      ..kxiiiixk..
+      kkkxxxxxxkkk
+      .kkkkkkkkkk.
+      ..kffffffk..
+      ..kfvffvfk..
+      ..kffffffk..
+      .kPkkkkkkPk.
+      kPPPPiiPPPpk
+      kpPPPPPPPPpk
+      .kpppPPpppk.
+      .kkkkkkkk...
+    - |
+      .....kk.....
+      ....kKxk....
+      ....kKxk....
+      ...kKxxxk...
+      ...kKxxxk...
+      ..kxiiiixk..
+      kkkxxxxxxkkk
+      .kkkkkkkkkk.
+      ..kffffffk..
+      ..kfvffvfk..
+      ..kffffffk..
+      .kPkkkkkkPk.
+      kPPPPiiPPPpk
+      kpPPPPPPPPpk
+      .kpppPPpppk.
+      ...kkkkkkkk.

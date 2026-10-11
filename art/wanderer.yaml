@@ -1,0 +1,49 @@
+# Kael the Wanderer, 12x14: hooded traveler, glowing eyes, belt with a gold buckle. P/p = player color.
+frames:
+  idle:
+    - |
+      ....kkkk....
+      ...kPPPPk...
+      ..kPPPPPpk..
+      ..kPxxxxpk..
+      .kPxexxexpk.
+      .kPxxxxxxpk.
+      .kPPxxxxppk.
+      kPPPPPPPPppk
+      kPcccgccccpk
+      kPPPPPPPPppk
+      kpPPPPPPPppk
+      .kppppppppk.
+      .kCCk..kCCk.
+      .kkkk..kkkk.
+  walk:
+    - |
+      ....kkkk....
+      ...kPPPPk...
+      ..kPPPPPpk..
+      ..kPxxxxpk..
+      .kPxexxexpk.
+      .kPxxxxxxpk.
+      .kPPxxxxppk.
+      kPPPPPPPPppk
+      kPcccgccccpk
+      kPPPPPPPPppk
+      kpPPPPPPPppk
+      .kppppppppk.
+      kCCk...kCCk.
+      kkkk....kkk.
+    - |
+      ....kkkk....
+      ...kPPPPk...
+      ..kPPPPPpk..
+      ..kPxxxxpk..
+      .kPxexxexpk.
+      .kPxxxxxxpk.
+      .kPPxxxxppk.
+      kPPPPPPPPppk
+      kPcccgccccpk
+      kPPPPPPPPppk
+      kpPPPPPPPppk
+      .kppppppppk.
+      .kCCk...kCCk
+      .kkk....kkkk

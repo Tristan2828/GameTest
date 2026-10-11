@@ -18,10 +18,10 @@ music:                  # `gamekit music render` runs this Godot script to turn 
 
 assets:
   # --- Heroes (P/p areas = player color, recolored per player) ---
-  - {id: wanderer, kind: sprite, source: claude, status: todo, file: art/wanderer.png, size: [12, 14], frames: {idle: 1, walk: 2}}
-  - {id: gravekeeper, kind: sprite, source: claude, status: todo, file: art/gravekeeper.png, size: [14, 16], frames: {idle: 1, walk: 2}}
-  - {id: hexblade_witch, kind: sprite, source: claude, status: todo, file: art/hexblade_witch.png, size: [12, 16], frames: {idle: 1, walk: 2}}
-  - {id: necromancer, kind: sprite, source: claude, status: todo, file: art/necromancer.png, size: [12, 16], frames: {idle: 1, walk: 2}}
+  - {id: wanderer, kind: sprite, source: claude, status: draft, file: art/wanderer.png, size: [12, 14], frames: {idle: 1, walk: 2}}
+  - {id: gravekeeper, kind: sprite, source: claude, status: draft, file: art/gravekeeper.png, size: [14, 16], frames: {idle: 1, walk: 2}}
+  - {id: hexblade_witch, kind: sprite, source: claude, status: draft, file: art/hexblade_witch.png, size: [12, 16], frames: {idle: 1, walk: 2}}
+  - {id: necromancer, kind: sprite, source: claude, status: draft, file: art/necromancer.png, size: [12, 16], frames: {idle: 1, walk: 2}}
 
   # --- Enemies (champions are the same sprite, scaled and tinted) ---
   - {id: shambler, kind: sprite, source: claude, status: todo, file: art/shambler.png, size: [12, 12], frames: {idle: 1, walk: 2}}

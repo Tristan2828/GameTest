@@ -1,0 +1,55 @@
+# Vesper the Necromancer, 12x16: hooded skull face with red eyes, robe with a purple sash. P/p = player color.
+frames:
+  idle:
+    - |
+      ....kkkk....
+      ...kKxxxk...
+      ..kKxxxxxk..
+      ..kxbbbbxk..
+      ..kxrbbrxk..
+      ..kxBbbBxk..
+      ..kxbkkbxk..
+      .kPkxbbxkpk.
+      kPPPkkkkPPpk
+      kPPPPPPPPPpk
+      kpPPPuuPPPpk
+      kpPPPPPPPPpk
+      .kpPPPPPPpk.
+      .kppPPPPppk.
+      ..kppppppk..
+      ..kkk..kkk..
+  walk:
+    - |
+      ....kkkk....
+      ...kKxxxk...
+      ..kKxxxxxk..
+      ..kxbbbbxk..
+      ..kxrbbrxk..
+      ..kxBbbBxk..
+      ..kxbkkbxk..
+      .kPkxbbxkpk.
+      kPPPkkkkPPpk
+      kPPPPPPPPPpk
+      kpPPPuuPPPpk
+      kpPPPPPPPPpk
+      .kpPPPPPPpk.
+      .kppPPPPppk.
+      ..kppppppk..
+      ..kkk...kkk.
+    - |
+      ....kkkk....
+      ...kKxxxk...
+      ..kKxxxxxk..
+      ..kxbbbbxk..
+      ..kxrbbrxk..
+      ..kxBbbBxk..
+      ..kxbkkbxk..
+      .kPkxbbxkpk.
+      kPPPkkkkPPpk
+      kPPPPPPPPPpk
+      kpPPPuuPPPpk
+      kpPPPPPPPPpk
+      .kpPPPPPPpk.
+      .kppPPPPppk.
+      ..kppppppk..
+      .kkk...kkk..

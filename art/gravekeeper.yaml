@@ -1,0 +1,55 @@
+# Mortimer the Gravekeeper, 14x16: wide-brimmed hat with a red band, gaunt face, grey beard, belted coat. P/p = player color.
+frames:
+  idle:
+    - |
+      ...kkkkkkkk...
+      ...kKxxxxxk...
+      ...kKxxxxxk...
+      .kkkRRRRRRkkk.
+      kKKxxxxxxxxxxk
+      .kkkkkkkkkkkk.
+      ..kffffffffk..
+      ..kfekffkefk..
+      ..kfFffffFfk..
+      .kPkBBBBBBkPk.
+      kPPPkBBBBkPPpk
+      kPPPPkkkkPPPpk
+      kPccccgccccPpk
+      kpPPPPPPPPPPpk
+      .kppppppppppk.
+      ..kkk....kkk..
+  walk:
+    - |
+      ...kkkkkkkk...
+      ...kKxxxxxk...
+      ...kKxxxxxk...
+      .kkkRRRRRRkkk.
+      kKKxxxxxxxxxxk
+      .kkkkkkkkkkkk.
+      ..kffffffffk..
+      ..kfekffkefk..
+      ..kfFffffFfk..
+      .kPkBBBBBBkPk.
+      kPPPkBBBBkPPpk
+      kPPPPkkkkPPPpk
+      kPccccgccccPpk
+      kpPPPPPPPPPPpk
+      .kppppppppppk.
+      .kkk......kk..
+    - |
+      ...kkkkkkkk...
+      ...kKxxxxxk...
+      ...kKxxxxxk...
+      .kkkRRRRRRkkk.
+      kKKxxxxxxxxxxk
+      .kkkkkkkkkkkk.
+      ..kffffffffk..
+      ..kfekffkefk..
+      ..kfFffffFfk..
+      .kPkBBBBBBkPk.
+      kPPPkBBBBkPPpk
+      kPPPPkkkkPPPpk
+      kPccccgccccPpk
+      kpPPPPPPPPPPpk
+      .kppppppppppk.
+      ..kk......kkk.
