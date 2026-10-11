@@ -2,6 +2,8 @@
 
 **The game:** a dark fantasy pixel-art survivor in the style of Vampire Survivors. You only move; your weapons fire by themselves at hordes of undead. It's co-op for 1–4 players, and a run goes through 3 stages, each about 4 minutes of waves and then a boss. The current audio is all chiptune-style synth made in code (square, saw, sine, triangle and noise waves). New audio should fit dark medieval pixel art: retro and gritty, not orchestral and glossy.
 
+**Tracking:** `assets.yaml` (repo root) lists every ID below with its size, frames, source, status and license; this brief says what each one should be. Keep the two in step.
+
 ## Technical requirements (all files)
 - **Format:** OGG Vorbis for music, WAV (16-bit) for sound effects. 44.1 kHz.
 - **Where to put them:** `assets/audio/music/<id>.ogg` and `assets/audio/sfx/<id>.wav`, named with the IDs from the tables below (e.g. `crypt.ogg`, `metal_crypt.ogg`, `hit.wav`).
@@ -35,7 +37,7 @@ The player picks a soundtrack in the custom game settings: Classic, Metal, Metal
 
 Metal tuning: the guitars sit low (E2 / D2 / C2 roots), with the bass quiet underneath. Keep the low end from getting muddy, because a lot of sound effects play on top of it.
 
-## Sound effects (25 in use)
+## Sound effects (26 in use)
 
 General rule: **the game is very busy.** Hundreds of enemies, constant hits and deaths. Frequent sounds must be **short, soft and not harsh**. The engine already adds ±5% random pitch to every play and limits how often each sound can repeat (the "Max rate" column).
 

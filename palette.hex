@@ -1,7 +1,6 @@
-; GameTest palette, exported from PALETTE in src/art/pixel_art.gd.
-; The name after each color is its drawing key in text sprites.
-; P / p are recolored per player at runtime (slot color and a darker shade);
-; magenta here is only a placeholder so sprites using them render and check.
+; GameTest palette: PixelArt.PALETTE (src/art/pixel_art.gd). The name after each color is its
+; drawing key in text sprites. P / p are the player colors the game recolors per player:
+; draw them as #FF00FF (main) and #800080 (shade), as docs/ART_BRIEF.md says.
 17121c k
 453d4f K
 f2ede0 w
@@ -42,4 +41,4 @@ b88c6b F
 c780ff i
 753db8 I
 ff00ff P
-a300a3 p
+800080 p

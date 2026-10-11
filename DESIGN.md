@@ -123,6 +123,7 @@ A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vamp
 - **Art style:** Pixel art. Sprites are text grids with a shared palette (`src/art/pixel_art.gd`).
 - Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
 - Audio: everything is synthesized in code from text (no audio files). Sound effects use a small synth with filters, layering and echo; music is five looping chiptune-style tracks written as text scores (menu, Crypt, Marsh, Cathedral, boss). Final audio direction TBD after playtesting.
+- **Real art and audio files (owner decision, 2026-10-11):** the text sprites and the code synth are being replaced by files: PNG in `assets/art/` (one file per frame, named like today's sprites), WAV in `assets/audio/sfx/`, looping OGG in `assets/audio/music/`. Any ID without a file keeps its text sprite or synth sound, so it can happen a few files at a time. What each asset should be: `docs/ART_BRIEF.md` and `docs/AUDIO_BRIEF.md`. What exists and its status: `assets.yaml` (193 assets), kept with the [gamekit](https://github.com/Tristan2828/gamekit) tools (Claude-drawn pixel art, Aseprite export, packs with license tracking, sfxr sound effects, music rendered from `Tracks` through `tools/render_music.gd`). Levels: sound effects peak at -3 dBFS, music at -16 LUFS. Next: the game loads a file when one exists (not built yet).
 - **Metal soundtrack (v0.15.0, owner request):** four more tracks with distorted power-chord riffs (palm-muted chugs and ringing chords), double kick, crashes and an overdriven lead: Crypt (E minor gallop), Marsh (slow Phrygian doom), Cathedral (neoclassical thrash), boss (tremolo riffs over a blast beat). The host picks in Custom Game: Classic / Metal / Metal boss fights / Shuffle (alternates per stage). The menu stays classic.
 
 ## 7. Milestones
@@ -465,7 +466,7 @@ Also on the list:
 4. Co-op playtest of v0.24.0 (the first 4-player run, on v0.23.0, produced the seventh list): is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, the hero weapons, Watch demos, metal music, the run summary pages. Then tune numbers.
 5. ~~Working title~~ Named **Medieval Survival** (v0.24.0). From the release after v0.24.0 the files are `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip` (owner request). Friends on v0.24.0 update in place (their file keeps its old name); v0.23.0 and older must download once by hand.
 6. Meta/feel: hero portraits, more animation.
-7. Release prep later: real audio direction.
+7. Real art and audio files (§6): the loader that prefers files, then the first batch (heroes, common enemies) and the music rendered from today's scores. New, longer music (60-120 s loops, `docs/AUDIO_BRIEF.md`) later.
 
 ## 8. Open questions
 

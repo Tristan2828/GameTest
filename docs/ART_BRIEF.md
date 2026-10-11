@@ -4,6 +4,8 @@
 
 Today every sprite is hand-written as text rows in `src/art/pixel_art.gd` (one character per pixel, from a shared 40-color palette). That file is the best reference for the current look: open it to see each sprite's shapes and colors.
 
+**Tracking:** `assets.yaml` (repo root) lists every ID below with its size, frames, source, status and license; this brief says what each one should be. Keep the two in step.
+
 ## Technical requirements (all files)
 - **Format:** PNG, RGBA, transparent background, **1 pixel = 1 game pixel**. Don't upscale: the game scales up itself (640x360 base resolution, nearest-neighbor, integer scaling).
 - **Where to put them:** `assets/art/<sprite_id>.png`, named with the sprite IDs below (e.g. `assets/art/ghoul.png`, `assets/art/ghoul_walk_1.png`).
