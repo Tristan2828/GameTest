@@ -1061,6 +1061,7 @@ func _receive_run_stats(data: Dictionary) -> void:
 	_hud.run_summary.bosses_enabled = _config.boss_enabled
 	_hud.run_summary.local_record_rank = _save_record(stage_in_run)
 	_hud.run_summary.local_embers = _earn_embers()
+	_hud.run_summary.local_unlock = _unlock_hero()
 	var is_host := multiplayer.is_server()
 	var restart_hint := "or press R / Select" if is_host else "Waiting for the host to return to character select..."
 	_hud.run_summary.open(_final_stats, _player_nodes(), Stages.get_stage(_final_stats.stage_reached).title, _stage_count(),
@@ -1077,6 +1078,17 @@ func _save_record(stage_in_run: int) -> int:
 	var entry := RunRecords.entry_for(_final_stats, local.peer_id, local.character_id, _config, stage_in_run,
 		map_title, _player_nodes().size())
 	return RunRecords.add(entry)
+
+
+## A won full run unlocks the next hero on this PC (HeroUnlocks). Returns the
+## newly unlocked hero's id, or -1. Test runs don't count, like Records.
+func _unlock_hero() -> int:
+	var local := _local_player()
+	if local == null or DisplayServer.get_name() == "headless" or LaunchOptions.autopilot:
+		return -1
+	if not HeroUnlocks.run_counts(_final_stats.victory, _config):
+		return -1
+	return HeroUnlocks.record_win(local.character_id)
 
 
 ## Adds this PC's player's Embers for the run (Ember Shrine). Returns how many

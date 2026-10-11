@@ -103,7 +103,8 @@ func test_champion_chest_gives_a_weapon() -> void:
 	var arena := await _arena()
 	var player := arena._player_by_id(1)
 	arena._on_chest_opened(1, Vector2(100, 100))
-	assert_eq(player.weapon_levels.size(), 1)
+	# A random weapon or weapon level: the main weapon's next level counts too.
+	assert_eq(player.weapon_levels.size() + (player.main_level - 1), 1)
 
 
 func test_ritual_reward_heals_and_drops_xp() -> void:

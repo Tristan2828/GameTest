@@ -1,11 +1,9 @@
 # Game Design Document
 
-> Name: **Medieval Survival** (owner's choice, v0.24.0). From the release after v0.24.0 the exe and zip are `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip`; the GitHub repo and the save folder (`%APPDATA%/Godot/app_userdata/GameTest`) keep the old working title GameTest.
-> Last updated: 2026-10-10 (v0.24.0)
+> Name: **Medieval Survival** (owner's choice, v0.24.0). The GitHub repo is `Tristan2828/medieval-survival` (renamed from `GameTest`). From v0.25.0 the files are `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip`; the save folder stays `%APPDATA%\Godot\app_userdata\GameTest`.
+> Last updated: 2026-10-11 (v0.25.0)
 
-A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vampire Survivors-style hordes, auto-firing weapons and build power fantasy, with readable, dodgeable bullet patterns.
-
-> **Redesign (2026-10-10, owner decision):** the game moved from a twin-stick shooter (aim + fire) to **movement only** like Vampire Survivors: weapons fire on their own and the player's skill is dodging. Step 1 is in v0.22.0, step 2 (weapons on level-up cards, passive slots, evolutions) in v0.23.0. See §7 *Auto-fire redesign*. Milestone history below still describes aiming, abilities and hearts as they were at the time.
+A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vampire Survivors-style hordes, auto-firing weapons and build power fantasy, with readable, dodgeable bullet patterns. Movement is the only control (since v0.22.0; it was a twin-stick shooter before, see §7 *Auto-fire redesign*).
 
 ---
 
@@ -16,7 +14,7 @@ A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vamp
   2. **Real dodging.** Tiny hitbox, a small HP bar, readable enemy bullet patterns. Movement is the only control, so where you stand is the skill.
   3. **Better with friends.** Online co-op for 1–4 players, but solo is fully supported.
   4. **Easy to pick up.** Simple controls, short runs, friends can jump in quickly.
-- **Audience:** Me and my friends. Long-term goal is a complete game.
+- **Audience:** Me and my friends; not for sale. Long-term goal is a complete game.
 - **Platform:** Windows PC.
 
 ## 2. Tech
@@ -27,80 +25,100 @@ A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vamp
 | Language | GDScript, **statically typed** throughout |
 | Development | AI-assisted coding. Keep everything text-editable and verifiable via `godot --headless` |
 | Networking | Godot built-in high-level multiplayer (ENet), host-authoritative |
-| Connection | Direct IP. The **host** makes the game reachable: Host Game tries UPnP to open the router port automatically, otherwise the host forwards UDP 7777 once by hand. The host gets an invite (`public IP:port`) copied to the clipboard; **friends just paste it and click Join**, no extra apps. Doesn't work if the host is behind CGNAT; fallback is a host-side tunnel such as playit.gg (friend still just pastes an address) |
+| Connection | Direct IP. The **host** makes the game reachable: Host Game tries UPnP to open the router port automatically, otherwise the host forwards UDP 7777 once by hand. The host gets an invite (`public IP:port`) copied to the clipboard; **friends paste it into Join Game**, no extra apps. Doesn't work if the host is behind CGNAT; fallback is a host-side tunnel such as playit.gg |
 | Input | Mouse + keyboard and gamepad, both fully supported |
 | Base resolution | **640x360**, integer-scaled (3x at 1080p, 4x at 1440p, 6x at 4K) |
 | Tests | GUT addon, plus a headless host+client smoke test script |
+| Updates | The title screen checks GitHub's latest release; **Update now** downloads the zip, swaps the running exe and restarts |
 
 ### Networking approach
 - One player hosts; the host owns the true game state. Solo uses the same code with an offline peer (acts as a host with nobody connected).
-- **Lobby, then drop-in:** everyone meets in the lobby (hero picks, ready-up, host's settings); friends who connect during a run drop straight into it (as the Wanderer).
+- **Lobby, then drop-in:** everyone meets in the lobby (hero picks, ready-up, host's settings); friends who connect during a run drop straight into it (as Kael the Wanderer).
 - Clients send one input per tick (60/s) to the host. The host simulates and sends snapshots at **30/s**.
-- **Own player: predict and correct.** The client simulates its own movement immediately with the same deterministic code as the host. When a host snapshot disagrees, it corrects, smoothing small errors and snapping big ones.
+- **Own player: predict and correct.** The client simulates its own movement (and when its main weapon fires) with the same deterministic code as the host. When a host snapshot disagrees, it corrects, smoothing small errors and snapping big ones.
+- **Targeting:** each player's own computer picks its main weapon's target (`AutoAim`, from the enemies its screen shows) and sends it in its input, so the shooter's prediction and the host's attack match.
 - Other players and enemies on clients: smoothed toward the latest snapshot positions.
 - Enemies: host simulates; positions and HP sent in compact batches, interpolated on clients.
 - Bullets: **never synced individually.** Send pattern events (`pattern id, origin, aim, seed`) and let every client simulate the bullets deterministically. Bullet position = `origin + velocity * age`.
-  - Player shots spawn on receipt. That matches the remote shooter, who is also shown slightly delayed. Enemy and boss patterns carry the host's clock (`time`), so clients fast-forward late-arriving patterns by the network delay (M3).
-  - Only the host's bullets deal damage. Client bullets are visual.
+  - Player shots spawn on receipt. Enemy and boss patterns carry the host's clock, so clients fast-forward late-arriving patterns by the network delay: what you dodge on your screen matches what the host checks.
+  - Only the host deals damage. Client bullets and weapon effects are visual.
+- Every change to a player's build is one **card** number announced by the host (§4); late joiners replay each player's `card_history`.
 - Heavy use of object pooling for enemies, bullets, and pickups.
 
 ## 3. Core gameplay
 
 ### Format
-- Movement-only roguelite (weapons fire by themselves; twin-stick until v0.21) with runs made of **arena stages in sequence**.
-- Each stage: a few minutes of enemy waves, then a boss, then a shop / upgrade break.
+- Movement-only roguelite (weapons fire by themselves) with runs made of **3 arena stages in sequence**.
+- Each stage: **4:00 of enemy waves**, then a boss; **stage clear = boss dead**. A shop between stages. Beating the stage 3 boss = **Victory**.
 - **Run length target:** 15–20 minutes.
 
+### Stages
+Each has its own floor, enemy mix, champion, boss and music (data-driven `StageDef` resources).
+1. **The Crypt:** Shamblers, Bats, Ghouls, Cultists (ranged, from 2:00). Boss: the **Bone Warden** (rings, spiral, aimed fans).
+2. **The Bone Marsh:** Mire Crawlers (fast swarms), Plague Spitters (slow bullet rings), Ghouls. Boss: the **Mire Hag** (sweeping bullet walls with a gap, random sprays, rings).
+3. **The Burning Cathedral:** Flame Imps (fast, erratic), Fallen Paladins (tanky, aimed lines), Cultists. Boss: the **Ashen Bishop** (rotating crosses, aimed bursts, fans).
+- Every boss gets faster with extra attacks below 50% HP (phase 2). Boss HP 6000, +75% per extra player.
+
 ### Threat model (hybrid)
-- Hordes of enemies that swarm the player (contact damage).
-  - **Spawning:** continuous ramp (Vampire Survivors style). A steady trickle off-screen around the players gets denser over time, with occasional **pack surges** (a tight cluster from one direction).
-  - **First melee roster (M2):** Shambler (basic, medium speed, low HP), Bat (fast, very weak, erratic), Ghoul (slow, tanky, big).
-- Some enemy types, and all bosses, fire readable bullet patterns.
-- **Bullet density:** readable (Enter the Gungeon-like), not hardcore shmup. See *Ideas for Later*.
+- Hordes that swarm the player (contact damage). **Spawning:** a continuous ramp off-screen around the players, with occasional **pack surges** (a tight cluster from one direction every 35–50 s).
+- Some enemy types, all champions and all bosses fire readable bullet patterns (Enter the Gungeon-like density, not hardcore shmup).
+- **Stage scaling** (stage 1 / 2 / 3): enemy HP x1 / x4 / x9, boss HP x1 / x4.5 / x12, spawn rate x1 / x1.4 / x1.8, enemy damage x1 / x1.3 / x1.6; stages 2 and 3 start their spawn ramp 45 s / 90 s in. Auto weapons grow x1 / x1.5 / x2.25 to keep up (`AUTO_DAMAGE_BY_DEPTH`).
+- **Boss fights:** when the boss arrives every regular enemy crumbles away (no drops; awake champions and the Grave Robber stay) and the boss brings an **escort** of 12 stage enemies (+6 per extra player). Then the horde trickles in at 25% without growing, with at most 40 + 25 per player regular enemies alive. (Playtest 7: the 4-player boss fight was "way too much stuff and can't get to the boss".)
 
 ### Player
-- **Controls (v0.22.0):** movement only (WASD / arrows / left stick). Weapons fire by themselves; there is no aim, Fire or ability button. The mouse cursor hides during play and comes back for level-up cards, the shop and menus.
-- **Health (v0.22.0):** an **HP bar** (Kael 100, Morwen 70, Vesper 90, Mortimer 150), with a hitbox much smaller than the sprite. Touching enemies drains their contact damage (all of them together) every 0.5 s with no safe time; an enemy bullet takes its damage and then bullets pass through you for 0.5 s (`hit_invulnerability`). Enemies hit 1.0x / 1.3x / 1.6x harder by stage. See §7 *Auto-fire redesign* for the numbers.
+- **Controls:** movement only (WASD / arrows / left stick). Weapons fire by themselves; there is no aim, fire or ability button. Heroes face the way they last moved. The mouse cursor hides during play and comes back for level-up cards, the shop and menus.
+- **Health:** an **HP bar** (Kael 100, Morwen 70, Vesper 90, Mortimer 150), with a hitbox much smaller than the sprite. Touching enemies drains their contact damage (all of them together) every 0.5 s with no safe time, so being surrounded is deadly. An enemy bullet takes its damage and then bullets pass through you for 0.5 s (`hit_invulnerability`). Damage: Shambler 5, Bat 3, Ghoul 8, Cultist / Imp / Crawler 4, Spitter 5, Paladin 8, champions 10, bosses 15 to touch; bullets 15, champions 18, bosses 20 (times the stage scaling).
 - **Healing:** Recovery (HP per second: Mortimer's perk, Ghoul Blood, Bloodstone), Heart pickups (30% of max HP), every team level-up (5%), finished rituals (25%), Grave Blast (10%), Vampire Fang (1 HP per 3 kills), and full HP at every stage start.
-- **Downed:** at 0 HP the player is downed and lies in a revive circle until a teammate revives them (see Co-op rules).
-- **Movement:** free 8-direction / analog movement. Heroes face the way they last moved.
+- **Downed:** at 0 HP the player is downed and lies in a revive circle until a teammate revives them (§5).
 
 ### Weapons
-- **Main weapon (v0.19.0; fires by itself since v0.22.0):** each hero has their own, and each picks its own target (`AutoAim`):
-  - Kael: **Bolt Gun** at the nearest enemy. Mortimer: **Reaper's Scythe** the way he faces, plus one behind him. Morwen: **Chain Lightning** at a random enemy nearby. Vesper: **Bone Spears**, a row toward a random enemy nearby.
-- **Auto weapons (v0.23.0):** 11, offered on level-up cards and found on altars and in champions' chests, up to level 5, in 6 weapon slots (the main weapon is one): Orbiting Skulls, Seeking Bolts, Holy Aura, Hellfire Trail, Grave Blast, Hex Snare, Bone Effigy (the old hero abilities, since v0.22.0), Storm Lantern, Bone Cleaver, Grave Spikes (auto versions of the heroes' weapons) and Spirit Daggers. Four of them evolve (Death Spiral, Soul Barrage, Sanctuary, Inferno Path), and so does every main weapon; see §7 *Auto-fire redesign*, step 2.
+- **Main weapon:** each hero has their own, which picks its own target (`AutoAim`) and has levels 2–6 plus an evolution (§4).
+  - Kael: **Bolt Gun** at the nearest enemy.
+  - Mortimer: **Reaper's Scythe** thrown the way he faces and back, **plus one behind him** (with only the front throw, running from a crowd meant facing away from it; his boss fights took 4+ minutes).
+  - Morwen: **Chain Lightning** at a random enemy nearby, jumping on; with a boss in reach it goes for the boss half the time, and a jump with nobody new to reach strikes the last enemy again for 60%.
+  - Vesper: **Bone Spears**, a row rising toward a random enemy nearby after a short warning.
+  - Targeting reach: bolts as far as they fly (~384 px); the scythe throws with an enemy within 1.5x its reach; lightning and spears pick from enemies within their reach. Nothing in reach: no attack.
+- **Auto weapons:** 11, offered on level-up cards, altars and champion chests, up to level 5: Orbiting Skulls, Seeking Bolts, Holy Aura, Hellfire Trail, Grave Blast, Hex Snare, Bone Effigy, Storm Lantern, Bone Cleaver, Grave Spikes (auto versions of the heroes' weapons) and Spirit Daggers (thrown ahead and behind). Four of them evolve (§4).
+  - **Grave Blast** goes off when an enemy is close: damage around you, clears enemy bullets within 150 px, heals 10%, 1 s safe. **Hex Snare** binds the biggest nearby crowd for 3 s (+50% damage taken; bosses aren't bound). **Bone Effigy** lures regular enemies within 150 px for 4 s, then bursts. Hex Snare and the Effigy go at the middle of the biggest crowd within reach (`AutoWeapons.crowd_center`). Arcane Focus and Holy Water also make the Snare and Effigy last longer (see §7 *Open code items*).
 
 ### Characters
-- Multiple playable characters, each with a **unique kit**: main weapon, stats (HP, speed), a small **perk** and their main weapon's own level steps (levels 2-6, v0.23.0; v0.22.0: perks replaced abilities). Perks: Kael **Light Feet** (moves 10% faster), Mortimer **Undying** (regenerates 0.5 HP/s), Morwen **Hexborn** (+10% crit chance), Vesper **Grave Harvest** (her kills burst for 8 damage).
-- Encourages team composition in co-op.
+- Each hero has a **unique kit**: main weapon with its own level steps, stats (HP, speed) and a small **perk**: Kael **Light Feet** (moves 10% faster), Mortimer **Undying** (regenerates 0.5 HP/s), Morwen **Hexborn** (+10% crit chance), Vesper **Grave Harvest** (her kills burst for 8 damage).
+- Names (owner's pick): **Kael** the Wanderer, **Mortimer** the Gravekeeper, **Morwen** the Hexblade Witch, **Vesper** the Necromancer (`CharacterStats.hero_name`). The name leads in the UI; logs and reports use the class.
+- **Unlocks:** you start with Kael only; winning a full run as a hero unlocks the next (§4 Meta).
+- The hero picker has a **Watch** demo per hero (`HeroDemo`): a scripted ~8 s loop drawn in code with the hero's real numbers, their weapon for ~4 s, then a dodge through a bullet fan. Local only.
 
 ## 4. Progression
 
 ### In-run
-- **XP level-ups:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. On level-up, each player picks 1 of 3 cards. Each card shows its level as pips (owned / this pick / left to max) and the player's real stat before -> after taking it. **Since v0.23.0 the cards are weapons, weapon levels and passives** with 6 weapon and 6 passive slots, plus evolutions (§7 *Auto-fire redesign*, step 2).
-  - **Late levels (v0.18.0):** from level 15 on, a level also costs 1.5·(n−15)² more, so teams stop snowballing through stages 2–3 (an invincible solo autopilot used to reach level 44–53 by the end; now ~40).
-  - **Pacing (v0.15.0):** level n costs 10 + 9·(n−1) XP, times +40% per extra player (spawns grow 60%, so bigger teams level slightly faster). History: v0.13 cost 5 + 5·(n−1) with no team factor (a 2-player team got ~30 level-ups in stage 1: too many pauses); v0.14.0 cost 16 + 14·(n−1) × the spawn factor, which left the team too weak to beat stage 1. Measured with the autopilot (solo, it can't dodge or collect everything): level 13 by the boss and the horde under control, vs level 7 and an overrun arena in v0.14. Sharpened Bolts went +3 → +4 damage and Quick Hands 12% → 15%.
-  - *History (before the v0.23.0 cards):*
-  - M2 upgrades are **stat upgrades only** (damage, fire rate, move speed, max hearts, extra bolt, pierce, pickup radius, dash cooldown, heal). Auto weapons come later.
-  - **v0.16.0: 25 upgrades** (owner asked for more, a mix of stats and new mechanics, a couple of trade-offs and one per hero). New:
-    - *Stats:* Long Shot (bolt range +30%), Steady Nerves (+0.3 s safety after a hit), Swift Bolts (bolt speed +20%), Arcane Focus (ability power +20%).
-    - *Mechanics:* Keen Edge (10% chance a main-gun bolt does double damage; gold sparks), Corpse Blast (enemies you kill burst for 12 damage in 32 px; bursts don't chain), Giant Slayer (+25% damage to bosses) and Executioner (+30% to enemies below half health), both from all your damage sources, Ricochet (after its last hit a bolt bounces to the closest enemy within 110 px), Hunting Bolts (bolts turn toward enemies within 130 px).
-    - *Trade-offs:* Glass Cannon (+10 damage, −1 max heart; once; not offered at 1 max heart) and Reckless Haste (fire 25% faster, move 10% slower).
-    - *Hero-only* (only offered to that hero; the Compendium says whose): Afterimage (Wanderer: untouchable 0.3 s longer after a Dash), Hallowed Blast (Gravekeeper: +40% blast damage, heals 1 more), Deep Hex (Witch: hex +1 s, hexed enemies +25% damage), Ossuary (Necromancer: Effigy +1.5 s, burst +50%).
-    - An upgrade can carry extra effects (`Upgrade.extra_effects`, used by trade-offs and hero upgrades); cards show one before -> after line per effect.
-    - Networking: damage bonuses and crits are rolled by the host (`HitBonus`, in `EnemyManager.damage`); crits reach clients as a snapshot flag. Corpse Blast bursts go to clients as one batched message per tick. Ricochet and homing run on every peer for their own (visual) bolts; the host decides the real hits, as before.
-- **Weapon pickups:** new auto weapons found during stages (altars and champions' chests). v0.17.0: 7 weapons (see Playtest 4 changes). v0.23.0: 11, also offered on level-up cards, up to level 5.
-- **Power-up pickups (v0.17.0):** Heart, Soul Magnet, Holy Bomb, Frost Hourglass (see Playtest 4 changes).
-- **Passive items / relics:** v0.23.0: 12 passives with 5 levels in 6 slots (level-up cards); relics stay in the shop with no slot limit.
-- **Shop between stages:** spend coins on items.
+- **XP:** enemies drop **XP gems**. Any player who walks near pulls them in (magnet radius), and they fill the shared team bar. Level n costs 10 + 9·(n−1) XP, +1.5·(n−15)² from level 15 on (so teams stop snowballing through stages 2–3), times +40% per extra player (spawns grow 60%, so bigger teams level slightly faster).
+- **Level-up cards (`Cards`):** each player picks 1 of 3. A card is a new weapon, a weapon level (the main weapon too) or a passive level. Cards show level pips (owned / this pick / left to max) and the real stat before -> after. Weights: levels of what you carry x2, the main weapon's next level x3, anything new x1. Nothing left to offer: **Blood Draught** (heal 40, only when hurt) and **Coin Pouch** (+20 coins). Everyone starts a run with 1 card **reroll**; the shop sells more.
+- **Slots:** 6 weapons (the main weapon is one) and 6 passives. Auto weapons go to level 5, main weapons to level 6, evolutions have one level.
+- **Main weapon levels 2–6** (`CharacterStats.main_levels`; each also adds ~15% of the hero's starting damage): Kael: Extra Bolt, Piercing Bolts, Ricochet, Extra Bolt, Hunting Bolts. Mortimer: Twin Scythes, Heavy Blade, Long Reach, Grim Harvest, Twin Scythes. Morwen: Forked Lightning, Long Arc, Conductor, Split Bolt, Forked Lightning. Vesper: Longer Row, Wide Spikes, Quick Rise, Splinters, Longer Row.
+- **12 passives, 5 levels each** (`Upgrade.passive`): Sharpened Edge (+20% of the hero's starting damage, all weapons; a share rather than a flat number so every hero gains alike), Quick Hands (all weapons 10% faster), Fleet Foot (+8% speed), Heart Container (+20 HP), Grave Magnet (+25% pickup range), Steady Nerves (+0.1 s bullet safety), Arcane Focus (+15% auto weapon damage), Keen Edge (+8% main weapon crit), Corpse Blast (kills burst for 8 in 32 px), Giant Slayer (+15% vs bosses), Executioner (+15% vs wounded), Ghoul Blood (+0.4 HP/s). Damage bonuses and crits are rolled by the host (`HitBonus`).
+- **Evolutions (8):** max the weapon, carry its passive (any level), then open a champion's chest (the opener) or beat a boss (everyone who's ready). Bolt Gun + Quick Hands = **Storm Bolter**; Reaper's Scythe + Heart Container = **Harvester**; Chain Lightning + Keen Edge = **Tempest**; Bone Spears + Corpse Blast = **Bone Cathedral**; Orbiting Skulls + Arcane Focus = **Death Spiral**; Seeking Bolts + Quick Hands = **Soul Barrage**; Holy Aura + Ghoul Blood = **Sanctuary**; Hellfire Trail + Fleet Foot = **Inferno Path**. Listed in the Game Guide.
+- **Altars** (at 1:20 and 2:40; 1 / 2 / 2 / 3 at a time for 1–4 players, each near a different player): the weapon on the altar (new, or a level), else a level of a weapon you carry, else 10 coins. First touch takes it.
+- **Power-ups** (1% of regular kills, at most one per 18 s, plus one from every champion): Heart (30% HP; 40% of drops), Soul Magnet (every XP gem flies to you; 25%), Holy Bomb (400 damage x stage HP growth to regular enemies within 260 px, clears enemy bullets there; 15%), Frost Hourglass (regular enemies and enemy bullets freeze for 4 s; frozen bullets still hurt; 20%).
+- **Coins:** enemies sometimes drop them (4% basic, 20% tougher enemies, x0.75 / 0.25 / 0.25 by stage), plus events and a boss bounty for everyone (25, +15 per stage).
+- **Shop between stages:** each player sees their own 4 relic offers (45–100 coins; one of each per player, no slot limit; some have drawbacks, e.g. Cursed Skull and Iron Boots) and buys with their own coins. Relic rerolls cost 10, then +10 each within the same shop; card rerolls cost 15. It closes when everyone presses Ready, or 45 s after the first Ready. `co_op_only` relics (Mourner's Bell) aren't offered solo.
+- **Quests:** in the shop each player picks 1 of 3 for the next stage (free; a random one if they don't pick; changeable until Ready). Done during that stage = paid at once (coins or a free relic). Champion Hunter (45 coins), Ritualist (relic), Thief Catcher (35), Slayer: 1000 kills (40), Untouchable: 45 s without losing HP (relic), Gold Digger: 80 coins (relic), Arsenal: 12000 auto weapon damage (45), Scavenger: 2 power-ups (35), Guardian: revive a teammate (relic, co-op only).
+
+### Map events (`MapEvents`, host-run, synced as a small snapshot)
+- **Champion lair** (one per stage, away from the middle): a dark statue of the stage's champion (a crowned, bigger, recolored stage enemy that shoots back) that wakes when a player comes within 150 px. 1200–1600 HP in stage 1, +60% per extra player. Drops coins, a power-up and a **chest**: the first player to touch it gets a ready evolution, else a random weapon or weapon level.
+- **Ritual circle** (one at the start, one pop-up at 2:20 that fades after 50 s if unused): stand inside for 15 s to fill it (+50% speed per extra player inside; it drains over 30 s when empty) while waves of stage enemies come. Full: XP worth 1.5 levels and 25% HP for everyone inside.
+- **Grave Robber** (pop-ups at 1:10 and 3:20): a fast thief that runs from the nearest player, dropping coins. Caught within 20 s: 14 coins.
+- Pop-ups stop once the boss arrives. Events show as edge arrows with their icon, minimap shapes and toasts with a bell.
 
 ### Meta
-- ~~**None.** Each run stands alone, with no unlocks or permanent upgrades.~~ Changed (owner decision, v0.21.0): a **very light** permanent stat shop.
-- **Embers (permanent progression):** every finished run earns Embers on your own PC (`user://embers.cfg`; headless and autopilot runs don't count). The title menu's **Ember Shrine** sells small permanent boosts. Owner choices: a tiny stat shop (not unlocks or cosmetics), a fully upgraded hero is only ~5-10% stronger, about 100 runs to buy everything, earned from progress (bosses, victory, a little from kills), no extra hearts, a free **Refund all** button, and each player can switch their own boosts off. Records scores ignore boosts.
-  - Earning: 8 per boss killed + 6 for a victory + 1 per 100 of your kills (max 10), times the run's score multiplier (clamped 0.25-2). A victory is ~40, dying in stage 2 ~15.
-  - Boosts (3 ranks each, prices 50 / 100 / 175, ~1950 in total): **Keen Eye** +2% main-weapon crit chance, **Swiftness** +2% move speed, **Focus** -3% auto weapon cooldowns (ability cooldown before v0.22.0), **Greed** +5% chance a coin you pick up is worth 1 more, **Reach** +6% pickup radius, **Resolve** +0.05 s of bullet safety after a hit. (A +% XP boost was dropped: XP is shared by the team.)
-  - Co-op: everyone brings their own boosts (sent to the host on connecting, applied to that player's stats on every peer through the spawn data). The host can turn them off for everyone in Custom Game (**Ember boosts** On/Off).
-- **Records (v0.15.0):** each PC keeps its own best runs (top 10 per hero, `user://records.cfg`) with a score: 10 per kill + 1 per 10 damage + 3000 per boss + 5000 for a victory, times the difficulty (enemy/boss health and enemy count; bonus HP, starting levels, extra XP and Full arsenal lower it). Shown on the title menu's Records page and as "Score" on the run summary. Bragging rights only, no unlocks.
+- **Embers (owner decision, v0.21.0: a very light permanent stat shop):** every finished run earns Embers on your own PC (`user://embers.cfg`); the title menu's **Ember Shrine** sells small permanent boosts. Owner choices: a tiny stat shop, a fully upgraded hero only ~5–10% stronger, about 100 runs to buy everything, earned from progress, a free **Refund all**, each player can switch their own boosts off. Records scores ignore boosts.
+  - Earning: 8 per boss killed + 6 for a victory + 1 per 100 of your kills (max 10), times the run's score multiplier (clamped 0.25–2). A victory is ~40, dying in stage 2 ~15.
+  - Boosts (3 ranks each, prices 50 / 100 / 175, ~1950 in total): **Keen Eye** +2% main-weapon crit chance, **Swiftness** +2% move speed, **Focus** −3% auto weapon cooldowns, **Greed** +5% chance a coin is worth 1 more, **Reach** +6% pickup radius, **Resolve** +0.05 s of bullet safety. (No +% XP: XP is shared.)
+  - Co-op: everyone brings their own boosts (sent to the host on connecting, applied through the spawn data). The host can turn them off for everyone in Custom Game.
+- **Hero unlocks (owner request, after v0.24.0):** a new player has Kael. **Winning a full run** (any difficulty, not a single-stage custom game) as a hero unlocks the next in `Characters.ALL` order: Kael -> Mortimer -> Morwen -> Vesper (`user://unlocks.cfg`, `HeroUnlocks`). In co-op each player picks from their own unlocks, and a team win counts for everyone, downed or not. Locked heroes show dark in the picker with "Win a run as X to unlock" (their Watch demo still plays); the run summary shows "NEW HERO: ...". Mid-run joiners are Kael; autopilot, headless runs and `--character` ignore locks and unlock nothing.
+- **Records:** each PC keeps its best runs (top 10 per hero, `user://records.cfg`) with a score: 10 per kill + 1 per 10 damage + 3000 per boss + 5000 for a victory, times the difficulty factor. Bragging rights only.
+
+### Run setup (lobby, host only; saved on the host's PC, clients see it read-only)
+- **Difficulty:** sliders for enemy health, boss health, enemy count, XP gain, coin drops (25%–300%) and bonus HP (−40..+60). Presets Easy / Normal / Hard; a **Custom** chip lights when the sliders match none.
+- **Custom Game:** full run or a **single stage** on a chosen map (first-stage toughness), wave length (1–10 min), boss on/off (off = survive the timer), starting level-ups (0–10), **Full arsenal** (5 random weapons), soundtrack, Ember boosts on/off.
 
 ## 5. Co-op rules
 
@@ -108,382 +126,103 @@ A 2D top-down roguelite bullet-hell survivor for online co-op with friends: Vamp
 |---|---|
 | Players | 1–4 |
 | Friendly fire | Off |
-| XP | **Shared** team XP bar; each player picks their **own** upgrade |
-| Level-up flow | **Pauses for everyone.** Since XP is shared, all players level up at once and choose simultaneously. The pause waits until someone picks, then the rest have a **30s countdown**. It resumes once everyone has picked, and anyone who hasn't picked when time runs out gets a random upgrade. Several level-ups at once are chosen one after another. While waiting, your pick stays highlighted and you can **pick another card instead** (v0.24.0; the countdown keeps running). Cards are picked with a click, A, Enter or the **left trigger** (one-handed gamepad play, v0.24.0). Online, play resumes after a **3-second "3, 2, 1" countdown** (also after the shop) during which your hero is marked with a ring and a "YOU" arrow (v0.24.0); solo resumes right away (v0.18.0) |
-| Loot (weapons, coins, power-ups, chests) | **Shared world drops, first come first served** (relics are bought in the shop with your own coins) |
-| Death | **Downed and revivable** (v0.15.0, owner request; replaced ghosts). At 0 HP you lie in a circle (30 px) and can't move or attack. A teammate standing in the circle revives you in **4 s** (two helpers: 2 s; `revive_speed` and the Mourner's Bell relic make it faster); you get up with half your max HP (rounded up) and 2 s of safety. Nobody in the circle: the progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Space / Enter / click / A / RB cycles, ending on your own body). Teammates see a pulsing edge arrow with a "+" and the name, a blinking "+" on the minimap and a "Red is down!" line. (Since v0.18.0 only downed teammates get edge arrows; healthy ones are on the minimap.) Run ends if everyone is down at once |
-| Difficulty scaling | **More enemies, same toughness:** spawn rate rises with player count (start: +60% per extra player). Enemy HP stays the same. Tune in playtests |
-| Pause | Solo: the Esc menu pauses the game. Online: nobody can pause; the Esc menu only blocks your own controls. (v0.17.0's host pause that froze everyone was removed in v0.18.0: the owner saw the game desync and it wasn't worth it) |
-| Names | Each player types a display name on the title menu (saved on their PC, max 12 characters, only characters the pixel font draws). Without one you're called by your slot color ("Red"). Shown on lobby cards, over teammates' heroes, on edge arrows, in toasts and "Waiting for..." lines, and on the run summary. Clients send it to the host on connecting; the host sends the list to everyone (`Net.names`) |
-| Map events and quests | Events are shared (anyone can wake a champion, hold a ritual, catch a thief); a chest goes to whoever touches it first. Quests are personal (each player picks their own) |
+| XP | **Shared** team XP bar; each player picks their **own** card |
+| Level-up flow | **Pauses for everyone.** All players choose at once. After the first pick the rest have a **30 s countdown**; anyone who hasn't picked gets a random card. Several level-ups are chosen one after another. While waiting your pick stays highlighted and you can **pick another card instead**. Cards are picked with a click, A, Enter or the **left trigger** (one-handed gamepad play). Online, play resumes after a **"3, 2, 1"** during which your hero gets a ring and a "YOU" arrow; solo resumes at once |
+| Loot (weapons, coins, power-ups, chests) | **Shared world drops, first come first served** (relics are bought with your own coins). Downed players don't pick up coins or power-ups (they still pull XP gems) |
+| Death | **Downed and revivable** (owner request, v0.15.0). At 0 HP you lie in a 30 px circle. A teammate standing in it revives you in **4 s** (two helpers: 2 s; Mourner's Bell is faster); you get up with half your max HP and 2 s of safety. Nobody in the circle: progress drains slowly. Not revived: you get up at the next stage. Your screen follows a living teammate after 1.5 s (Space / Enter / click / A / RB cycles). Teammates see a pulsing edge arrow with a "+", a blinking "+" on the minimap and a "Red is down!" line. Run ends if everyone is down at once |
+| Difficulty scaling | **More enemies, same toughness:** spawn rate +60% per extra player; regular enemy HP stays the same; bosses +75% and champions +60% HP per extra player |
+| Pause | Solo: the Esc menu pauses. Online: nobody can pause; the Esc menu only blocks your own controls. (A host pause in v0.17.0 desynced and was removed) |
+| Names | Each player types a display name on the title menu (saved on their PC, max 12 characters). Without one you're called by your slot color ("Red"). Shown on lobby cards, over teammates' heroes, on edge arrows, in toasts and on the run summary |
+| Edge arrows | Only map events and downed teammates; healthy teammates are on the minimap (owner: arrows to everyone were clutter) |
+| Map events and quests | Events are shared (anyone can wake a champion, hold a ritual, catch a thief); a chest goes to whoever touches it first. Quests are personal |
 
 ## 6. Art & audio
 
 - **Setting:** Dark fantasy (undead hordes, demons, dark magic).
-- **Art style:** Pixel art. Sprites are text grids with a shared palette (`src/art/pixel_art.gd`).
-- Bullets must stay readable against backgrounds (high-contrast, glowing projectiles).
-- Audio: everything is synthesized in code from text (no audio files). Sound effects use a small synth with filters, layering and echo; music is five looping chiptune-style tracks written as text scores (menu, Crypt, Marsh, Cathedral, boss). Final audio direction TBD after playtesting.
-- **Real art and audio files (owner decision, 2026-10-11):** the text sprites and the code synth are being replaced by files: PNG in `assets/art/` (one file per frame, named like today's sprites), WAV in `assets/audio/sfx/`, looping OGG in `assets/audio/music/`. Any ID without a file keeps its text sprite or synth sound, so it can happen a few files at a time. What each asset should be: `docs/ART_BRIEF.md` and `docs/AUDIO_BRIEF.md`. What exists and its status: `assets.yaml` (193 assets), kept with the [gamekit](https://github.com/Tristan2828/gamekit) tools (Claude-drawn pixel art, Aseprite export, packs with license tracking, sfxr sound effects, music rendered from `Tracks` through `tools/render_music.gd`). Levels: sound effects peak at -3 dBFS, music at -16 LUFS. The game uses a file when one exists (loader added 2026-10-11, after v0.24.0); the 9 music tracks are files now, rendered from today's scores at -16 LUFS and played 4 dB down (`Music.FILE_VOLUME_DB`) so the mix with the synth sound effects stays as it was.
-- **Metal soundtrack (v0.15.0, owner request):** four more tracks with distorted power-chord riffs (palm-muted chugs and ringing chords), double kick, crashes and an overdriven lead: Crypt (E minor gallop), Marsh (slow Phrygian doom), Cathedral (neoclassical thrash), boss (tremolo riffs over a blast beat). The host picks in Custom Game: Classic / Metal / Metal boss fights / Shuffle (alternates per stage). The menu stays classic.
+- **Art style:** Pixel art. Sprites are text grids with a shared palette (`src/art/pixel_art.gd`); bosses drawn at 2x; player sprites recolored per player. Floor props are small, faded and outline-free so they never compete with monsters (owner, v0.20.0).
+- Bullets must stay readable against backgrounds (high-contrast, glowing projectiles; the player's hitbox dot is always visible).
+- **Audio:** sound effects come from a small code synth (filters, layering, echo). Music is 5 classic chiptune tracks (menu, Crypt, Marsh, Cathedral, boss) plus 4 metal ones (distorted power-chord riffs; owner request, v0.15.0), written as text scores in `Tracks`. The host picks Classic / Metal / Metal boss fights / Shuffle in Custom Game; the menu stays classic.
+- **Real art and audio files (owner decision, 2026-10-11):** the text sprites and synth are being replaced by files a few at a time: PNG in `assets/art/` (one per frame, named like the sprites), WAV in `assets/audio/sfx/`, looping OGG in `assets/audio/music/`. Any ID without a file keeps its text sprite or synth sound. What each asset should be: `docs/ART_BRIEF.md` / `docs/AUDIO_BRIEF.md`; status: `assets.yaml`, kept with the [gamekit](https://github.com/Tristan2828/gamekit) tools. Levels: sound effects peak at −3 dBFS, music at −16 LUFS. So far: the hero sprites, and the 9 music tracks (rendered from today's scores by `tools/render_music.gd`, played 4 dB down, `Music.FILE_VOLUME_DB`, so the mix stays as it was).
 
-## 7. Milestones
+## 7. History and status
 
-### Milestone 1: Online movement & shooting ✅ (done 2026-10-09; internet playtest with a friend felt smooth)
-- Godot project setup and project rules file (`CLAUDE.md`, Godot 4.x only, typed GDScript).
-- Host / join by IP.
-- 2+ players move, dash, and shoot (mouse and gamepad).
-- Dummy enemies that take damage, synced across clients.
-- **Goal:** prove the netcode early, before content is built on top of it.
+### Where things stand (2026-10-11)
+- **Released:** v0.25.0 (the Playtest 8 changes below and the first art/audio files). It is the first with `MedievalSurvival` file names and the first after the repo rename: **v0.24.0 and older can't update to it** (their updater only trusts links under the old repo name), so friends download it once by hand; later versions update in place.
+- **Played by humans:** M1 and M2 online with a friend; a solo v0.11 run; two-player co-op runs of v0.13 and v0.14; a full 4-player run of v0.23.0 ("It was a fun time!").
+- **Not yet played:** v0.24.0 and v0.25.0 (checklist 3.0n / 3.0o in `docs/PLAYTEST.md`), and whatever the 4-player run didn't get to from v0.22–v0.23. Balance numbers since v0.18.0 come from the solo invincible autopilot (it picks cards at random and dodges badly), so they compare stages and heroes, not real difficulty.
+- Logs: `%APPDATA%\Godot\app_userdata\GameTest\logs\godot.log` (newest run; older runs are timestamped). The host logs downs and boss kills.
 
-### Milestone 2: Hordes, XP, level-ups ✅ (playtested 2026-10-09: fun, everything worked; fixed gamepad card picking in 0.3.1)
-- Shambler / Bat / Ghoul hordes with ramping spawns and pack surges; hearts, i-frames, downed state.
-- XP gems with magnet pull, shared team level, networked level-up pause with 9 stat upgrades.
-- 5-minute timed stage, "Stage clear" / "Run over", host restart (R / Start).
+### Releases
+Details: `docs/releases/v<version>.md` and the git history. "Claude's call" items are defaults to revisit in a playtest (`docs/PLAYTEST.md` §4).
+- **M1 (2026-10-09):** online movement and shooting; internet playtest felt smooth.
+- **M2:** hordes, XP gems, shared level, networked level-up pause. Playtested: fun.
+- **M3:** stage flow (waves then boss), the Bone Warden, Cultists, enemy bullet fast-forward on clients, seeded floors.
+- **M4:** 3 stages, shop and relics, coins, altars with auto weapons.
+- **M5:** lobby (hero pick, ready-up), four characters, three themed stages, Difficulty and Custom Game pages.
+- **v0.7–v0.11 (Claude's passes):** pause menu and settings, particles and screen shake, pixel-art sprites, baked floors, synthesized music and sounds, one UI theme, animations.
+- **v0.12.0 (playtest 1):** better gems, minimap, pixel font, fewer coins, hero abilities (since removed).
+- **v0.13.0:** 4th hero, run summary.
+- **v0.14.0 (playtest 2):** fewer level-ups, pick highlight and level pips, weapon icons, resume countdown, Game Guide and Playtest Checklist on the title menu, Difficulty / Custom Game pages, a boss-fight frame-rate fix (one baked texture per bullet glow instead of `draw_circle`). v0.14.1: in-game updater.
+- **v0.15.0 (playtest 3):** cheaper levels again (v0.14 made stage 1 unbeatable), revives instead of ghosts, run summary stars and Weapons page, Records, metal soundtrack.
+- **v0.16.0:** in-game feedback (Discord `#feedback` webhook baked into builds from a git-ignored file; owner chose Discord over GitHub issues: no accounts, screenshots attach); 16 more upgrades (since folded into passives).
+- **v0.17.0 (playtest 4):** map events, quests, 4 auto weapons, power-ups, a host pause (removed in v0.18.0). Owner's Q&A picks: champion lairs, rituals and thieves (not cursed shrines), free personal quests.
+- **v0.18.0 (playtest 5):** display names, Exit Game, lobby party page + hero picker, run summary Highlights and scrolling, minimap shapes, edge arrows only for events and downed teammates, "Compendium" renamed "Game Guide" (plain words), stages 2–3 much harder (owner: "super easy"), point-blank hits and chest pickup radius fixed.
+- **v0.19.0:** a main weapon per hero (scythe, lightning and spears moved from the auto-weapon pool).
+- **v0.20.0 (playtest 6):** quieter floor props, hero names, Watch demos. v0.20.1: 4-player performance pass.
+- **v0.21.0:** Embers and the Ember Shrine. v0.21.1: exe name, version and icon; Windows download warning help.
+- **v0.22.0 / v0.22.1:** auto-fire redesign step 1 and a balance pass (below).
+- **v0.23.0:** auto-fire redesign step 2 (below).
+- **v0.24.0 (playtest 7, after the 4-player run):** boss sweep + escort and a capped boss-fight horde; rituals fill faster together; knife-shaped Spirit Daggers; a "YOU" marker during the countdown; 16x16 card icons; cards that fit their text; changing your pick; left trigger picks; run summary rebuild (fixed-width cards, difficulty chip, Stages page); Join Game dialog; Difficulty page Custom chip; the name Medieval Survival. Claude's calls: the boss-fight numbers, no XP from the swept horde, +50% ritual speed per player, the marker and icon art, the run summary's contents.
 
-### Milestone 3: First stage + first boss ✅ (stage 1 and its boss playtested solo 2026-10-09; stages 2–3 not yet)
-Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
-- **Stage flow:** 4:00 of horde waves, then the boss arrives. The horde keeps trickling at 40% rate during the fight, with no pack surges. **Stage clear = boss defeated** (no longer a timer).
-- **First boss, "The Bone Warden":** a slow, huge undead that drifts toward the players and cycles attacks:
-  - ring bursts (bullets in every direction)
-  - a spiral
-  - aimed fans at each player
-  - Below 50% HP: phase 2, faster with a double spiral.
-  - Boss HP scales with player count (+75% per extra player). Regular enemies still don't scale (see Co-op rules).
-- **First ranged enemy, Cultist** (from 2:00): keeps its distance and fires a slow 3-bullet aimed fan.
-- **Enemy bullets:** 1 heart per hit; readable speeds (90–140 px/s); magenta glow with a white core. Dashing passes through them.
-- ~~**Bomb:** 2 per stage.~~ Replaced in v0.12.0 by character abilities (the Gravekeeper's Grave Blast works like the old bomb, on a cooldown).
-- **Fair dodging online:** enemy bullet patterns are fast-forwarded on clients by the network delay, so what you dodge on your screen matches what the host checks.
-- **Arena look:** dark stone floor with seeded variation, plus decorative graves and bones (no collision yet).
+### Auto-fire redesign (owner decision, 2026-10-10)
+**Why:** aiming and dodging fought over the same hands: the game became either "aim well" or "dodge well", and builds couldn't take over aiming the way they do in Vampire Survivors. New direction: a close Vampire Survivors-style game with our own flavor (dark fantasy, co-op, real bullet patterns, stages + bosses + shop). The owner chose to finish both steps before the next playtest.
+- **Step 1 (v0.22.0):** movement only; main weapons target themselves; the hero abilities became auto weapons anyone can find (Dash removed); perks instead of abilities; an HP bar instead of hearts. Claude's calls: Mortimer's back throw, the reach rules, every HP and damage number, the perks, Ghoul Blood and Bloodstone. Plan change: the client picks its own target (it reuses the tested shot prediction).
+- **Balance pass (v0.22.1, autopilot only):** Sharpened Edge became a share of each hero's own damage (flat +4 was +40% for Kael, +13% for Mortimer); Morwen's boss focus; auto weapons much stronger (together they did under 5% of the damage); Corpse Blast weaker; fewer coins and pricier relics (runs ended with 500–1000 unspent); rarer power-ups; rituals worth more; co-op gets more altars; harder quest targets. Added the `[balance-detail]` / `[balance-picks]` report lines.
+- **Step 2 (v0.23.0):** level-up cards offer weapons, weapon levels and passives; 6 + 6 slots; the old weapon-only upgrades became main weapon levels; 25 upgrades merged into 12 passives (Shadow Step, Glass Cannon, Reckless Haste, Long Shot, Swift Bolts retired; the shop's Cursed Skull and Iron Boots are the trade-offs now); 8 evolutions; 11 auto weapons; card rerolls. Claude's calls: card weights, passive numbers, evolution ingredients, Spirit Daggers, damage tuning so main weapons still do ~20–50% of a hero's damage in stage 3.
 
-### Milestone 4: Multi-stage run, ghosts, coins & shop, relics, auto weapons ✅ (shop seen in the solo playtest: too many coins, fixed in v0.12.0; the rest not yet playtested)
-Decisions made by Claude while the owner was away. **Revisit in the next playtest.**
-- **Run = 3 stages** in the same crypt arena (distinct stages/themes come in M5). Each stage is harder:
-  - ~~Spawn rate +35% per stage. Enemy and boss HP +50% per stage.~~ Far too gentle (owner, v0.17: "stage 2 and 3 are super easy"). **v0.18.0:** enemy HP x1 / x4 / x9, boss HP x1 / x4.5 / x12, spawn rate x1 / x1.4 / x1.8, and stages 2 and 3 start their spawn ramp 45 s / 90 s in (see Playtest 5 changes).
-  - Beating the stage 3 boss = **Victory**.
-- **Between stages:** a **shop break**. The run keeps your team level, upgrades, relics, weapons and coins.
-- ~~**Ghosts:** a downed player becomes a ghost until the next stage (floats around, collects gems and coins).~~ Replaced in v0.15.0 by revives (see Co-op rules). Everyone still respawns with full hearts and a ready ability at the start of the next stage.
-- **Coins:** enemies sometimes drop coins (v0.12.0: 4% basic, 20% tougher enemies), plus a boss bounty for everyone (25, +15 per stage). First come, first served: coins go to whoever picks them up.
-- **Shop:**
-  - Each player sees their own 4 relic offers with prices and buys with their own coins.
-  - Relics cost 40–80 (v0.12.0, after the playtest showed 350 coins in round 1). Target: about one relic per shop, two if you save.
-  - Rerolls cost 10, then +10 each within the same shop.
-  - The shop closes when everyone presses Ready, or 45s after the first Ready (same pattern as level-ups).
-- **Relics:** passive items with stat effects and trade-offs (e.g. Cursed Skull: +damage, −1 max heart). Each relic can be bought once.
-- **Auto weapons:**
-  - Found as **weapon altars** that appear twice per stage (~1:20 and ~2:40). First player to touch one takes it. Taking a weapon you already own levels it up (max level 3).
-  - Three weapons to start: **Orbiting Skulls** (circle you, hurt on touch), **Seeking Bolts** (auto-fire at the nearest enemy), and **Holy Aura** (pulses damage around you).
+### Playtest 8 changes (v0.25.0, owner's eighth list)
+1. **Update button didn't work for some people:** the repo rename from `GameTest` to `medieval-survival` made GitHub's API answer with download links under the new name, which the updater didn't trust. `ReleaseInfo` now trusts both names. Also sturdier: when the API refuses (60 checks an hour per connection) it falls back to the release page's redirect (`ReleaseInfo.from_tag_url`); a failed check shows "Check again"; it refuses to update when running from inside the zip or without write access; a locked `.old` file gets another name; downloads run on a thread; if Windows won't start the new exe, the menu says to restart.
+2. **Hellfire Trail more muted:** about a quarter of the glow; darker, see-through flames.
+3. **Opened chests stayed on screen** (host and solo): `MapEvents` stopped redrawing when the last event went. Now it redraws once more.
+4. **Hero unlocks** (§4 Meta). Owner choices: a won full run, own unlocks only in co-op.
 
-### Milestone 5: Characters, lobby, three themed stages ✅ (implemented; characters reworked around abilities in v0.12.0; not yet fully playtested)
-The owner approved the plan; details below are Claude's defaults. **Revisit in the next playtest.**
-- **Lobby:**
-  - Solo/Host/Join leads to a lobby: pick a character, press Ready, and the host starts (solo starts right away).
-  - After Victory or Run over, the host returns everyone to the lobby.
-  - Friends joining mid-run still drop in, as the Wanderer.
-  - **Party page + hero picker (v0.18.0, owner request):** the lobby's main page shows the whole party, one card per player (name, their hero walking on the spot, ability, hearts, ready state; 3 players = 3 cards). Your own card or **Choose Hero** opens a sub-screen with the four heroes; picking one goes back.
-  - **Difficulty and Custom Game pages (v0.14.0, owner request; defaults by Claude, revisit):** the host sets them in the lobby; friends see them read-only, and a summary line shows the current choice. Saved on the host's PC.
-    - *Difficulty:* sliders for enemy health, boss health, enemy count (spawn rate), XP gain, coin drops (25%–300%), and bonus hearts (−2 to +3). Presets: Easy / Normal / Hard.
-    - *Custom Game:* full run or a **single stage** on a chosen map (won by clearing it; it always has first-stage toughness whichever map), wave length (1–10 min), boss on/off (off = survive the timer to win), starting level-ups (0–10), start with every auto weapon.
-- **Characters (one passive ability each):**
-  - **Wanderer:** balanced. Ability **Dash** (0.8s): quick dash, can't be hit while dashing.
-  - **Gravekeeper:** slow, 5 hearts, short-range shotgun. Ability **Grave Blast** (14s): clears nearby enemy bullets, damages enemies around you, heals 1 heart.
-  - **Hexblade Witch:** fast, 2 hearts, rapid piercing bolts. Ability **Hex Snare** (7s): hurls a hex ~80px ahead; enemies inside (55px) are bound for 3s (can't move or attack) and take +50% damage. Bosses aren't bound but still take the extra damage. *(v0.13.0, replaced Blink: the owner felt it was just another dash.)*
-  - **Necromancer** *(v0.13.0, 4th character for 4-player games)*: medium speed, 3 hearts, a fan of 3 bone shards (Extra Bolt adds 2). Ability **Bone Effigy** (10s): raises a decoy ~40px ahead for 4s; regular enemies within 150px chase it instead of players, then it bursts (70px, 45 damage). Bosses ignore it.
-  - *Decisions made by Claude while the owner was away (v0.13.0): the two new abilities, the Necromancer's look and stats. Revisit in the next playtest.*
-  - (v0.12.0: the old passives Second Wind and Grave Ward were removed when abilities replaced dash/bomb.)
-- **Stages** (each has its own floor, enemy mix and boss; data-driven `StageDef` resources):
-  1. **The Crypt:** Shamblers, Bats, Ghouls, Cultists. Boss: the Bone Warden.
-  2. **The Bone Marsh:** Mire Crawlers (fast swarms), Plague Spitters (slow bullet rings), Ghouls. Boss: the Mire Hag (sweeping bullet walls, random sprays).
-  3. **The Burning Cathedral:** Flame Imps (fast, erratic), Fallen Paladins (tanky, aimed lines), Cultists. Boss: the Ashen Bishop (rotating crosses, aimed bursts).
+Claude's calls: a single-stage custom game doesn't unlock, easier difficulties do; a downed player still gets the unlock when the team wins; how much Hellfire is muted.
 
-### Polish pass (v0.7.0, by Claude while the owner was away)
-- Pause menu (Esc / Start) replaces instant-leave; solo pauses, online only blocks your input.
-- Settings: master/effects volume, fullscreen, screen shake (saved).
-- Game feel: particles (hit sparks, death puffs), screen shake, hurt flash.
-- Sound: 14 synthesized placeholder effects; no music yet (Audio still TBD, see section 6).
-- End-of-run stats table (kills, damage, times downed).
-- Everything awaiting human review is listed in `docs/PLAYTEST.md`.
-
-### Pixel art pass (v0.8.0, by Claude)
-- All characters, enemies, bosses, pickups and orbit skulls are pixel-art sprites drawn as text grids in `src/art/pixel_art.gd`, using one shared limited palette.
-- Player sprites are tinted with each player's slot color; bosses are drawn at 2x; bats and imps animate.
-- Bullets stay as glowing code-drawn circles and the player's hitbox dot is always visible (readability first).
-
-### Floors and sound pass (v0.9.0, by Claude)
-- Floors: each stage's ground is baked into one image from a seed (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet), with pixel-art props, shadows and candle light.
-- Sound: richer synthesized effects, plus music: calm menu/between-stages track, one per stage, and a boss theme, crossfading as the game changes phase. Music volume in Settings.
-
-### UI pass (v0.10.0, by Claude)
-- One theme for all menus: dark purple panels, square pixel borders, gold focus ring (gamepad), crisp non-antialiased text.
-- Title screen: large gold title, tagline, dimmed Crypt floor backdrop.
-- Removed the aim line drawn on players (owner request); sprites face the aim direction.
-
-### Animation pass (v0.11.0, by Claude)
-- Walk cycles for all heroes and walking enemies; attack poses for bosses and ranged enemies when they fire; enemies squash and fade on death (bosses take longer); coins spin and pickups bob.
-- Fixed: left-facing sprites were drawn one sprite-width off their real position (players and enemy hitboxes didn't line up with what you saw).
-
-### Playtest 1 changes (v0.12.0)
-Owner played solo, beat stage 1. Requested and done:
-1. Better gem art: three crystal tiers (blue / green / big violet) with a glow.
-2. Minimap (top-right) with your view, players, horde, boss, altars; the side near a wall lights up red.
-3. Readable text: a hand-drawn pixel font everywhere; shop and level-up cards split into title / description / price.
-4. Shop economy: far fewer coins, higher prices, escalating rerolls (see Milestone 4 notes).
-5. Character abilities replace dash and bomb (see Milestone 5 notes).
-6. Title screen shows version, build commit and date.
-Also: lobby cards restyled.
-
-### Playtest 2 changes (v0.14.0)
-Owner played a co-op run with one friend ("awesome, a great start"). Requested and done:
-1. Your level-up pick stays highlighted (gold border, others dimmed) while others choose; status says "You chose X".
-2. Level pips on level-up cards (filled / blinking gold for this pick / hollow up to max).
-3. Auto weapons shown as pixel icons with level pips: HUD, run-end cards, and over altars.
-4. Arrows at the screen edge point to off-screen teammates (their color; faded for ghosts).
-5. Lobby portraits now show your real player color (they never redrew, so everyone saw Blue); color squares show who picked each hero.
-6. A 3-second "3, 2, 1" countdown with beeps before play resumes after level-ups and the shop (`Arena.Phase.COUNTDOWN`).
-7. Victory / Run over has a "Return to character select" button for the host (R / Select still works).
-8. New boss arrival sound: impact, tolling bell and a dissonant horn swell (the old low growl was hard to hear).
-9. Far fewer level-ups (see Progression, Pacing). Difficulty was judged good, so enemies are unchanged. **Watch:** with half the upgrades, players are weaker by stage 2–3; if it gets too hard, make upgrades stronger rather than more frequent.
-10. *(Added after the playtest list)* Title menu: **Compendium** (heroes, weapons, upgrades, relics, pickups, enemies, bosses; all numbers read from the game data) and **Playtest Checklist** (the items in `docs/PLAYTEST.md`, tick as you test, "Copy what's left" to paste to Claude).
-11. *(Added after the playtest list)* Lobby: **Difficulty** and **Custom Game** pages (see Milestone 5, Lobby).
-12. *(Reported after)* Slowdown for 10-20 s after a boss spawns with 2 players: boss bullets (7 s lifetime, aimed at each player) were each drawn as two `draw_circle` shapes, hundreds of draw calls rebuilt every physics tick. Now one baked texture per bullet/gem glow, off-screen ones skipped: client physics step with ~110 bullets 4.7 ms -> 1.1 ms, draw calls ~650 -> ~150. Enemy grid also cheaper (~15%).
-13. *(Requested after)* In-game updater: the title screen checks GitHub's latest release; if newer, **Update now** downloads the zip, swaps `GameTest.exe` (renames the running one to `.old`) and restarts. Falls back to opening the release page.
-
-### Playtest 3 changes (v0.15.0)
-Owner and friend played more v0.14 runs. Requested and done:
-1. **Difficulty:** v0.14's level-up pacing made stage 1 unbeatable. Levels are cheaper again and two upgrades are stronger (see Progression, Pacing).
-2. **Revives instead of ghosts** (see Co-op rules, Death), and the downed player's screen follows a living teammate.
-3. **In-game cursor** (Settings): Crosshair / Ring / Dot / System arrow, 4 sizes, 7 colors, dark outline, scaled to the window (`GameCursor`, a hardware cursor). Menus keep the normal arrow.
-4. **Run summary:** a star for the best player in each stat (lowest for Hearts lost and Downed; none on ties or solo); weapons, upgrades and relics as pixel icons (hover for names; the same icons are on level-up and shop cards and in the Compendium); a **Weapons** page with damage, share, DPS (over the time the weapon was owned) and kills for the main gun, ability and each auto weapon (the host tags all damage with a `DamageSource`).
-5. **Records** page and per-player Score (see Meta).
-6. **Soundtrack** option with four metal tracks (see Art & audio).
-
-Decisions made by Claude (**revisit in the next playtest**): revive numbers (4 s, 30 px circle, half hearts, slow drain, no bleed-out timer), the spectate delay and controls, the Mourner's Bell relic (40 coins, co-op only), the cursor default (cyan crosshair, medium), the score formula, and the metal track arrangements. Test aid: `--test-down=<s>` knocks out the first client's player so revives can be checked without dying; the autopilot now walks to downed teammates.
-
-### In-game feedback (v0.16.0, owner request)
-- **Send feedback** on the title menu and the pause menu: your name (remembered), kind (Suggestion / Bug report / Praise), a message, and a **screenshot of the game** (checkbox, on by default in a game; the pause menu hides itself for the picture).
-- Game info is added automatically: version and build, OS, stage and map, time into the wave or boss fight, phase, team level, your hero, position, hearts and build counts, solo / co-op (host or client, ping) and the run settings.
-- Posts to the Discord `#feedback` channel through a webhook (owner chose Discord over GitHub issues: no accounts for friends, screenshots attach natively, no GitHub token in the game). The link is baked into builds from a git-ignored file. Without it, Send copies the message to the clipboard.
-- 20 s between sends; messages are capped at 1500 characters and can't ping anyone.
-
-### More upgrades (v0.16.0, owner request)
-16 new level-up upgrades (25 in total), see Progression, In-run. The owner chose the mix (stats, new mechanics, a couple of trade-offs, one per hero). Decisions made by Claude (**revisit in the next playtest**): every number (crit 10% / x2, burst 12 damage in 32 px, +25% vs bosses, +30% vs wounded below 50%, ricochet range 110 px, homing turn 2.5 rad/s per pick within 130 px), the stack limits, which upgrades are trade-offs, and the four hero upgrades. With 22 upgrades offered to each hero instead of 9, a favourite shows up less often; **watch** whether runs feel too random. Test aid: `--give-upgrades=<id,id,...>` (`Upgrades.ALL` ids) gives every player those upgrades at the start.
-
-### Playtest 4 changes (v0.17.0, owner's fourth list)
-The owner asked for map events (a reason to explore), arrows to them, quests picked in the shop, more weapons and pickups, and a real host pause. The owner chose in a Q&A: champion lairs, ritual circles and treasure thieves (not cursed shrines); a few events placed at stage start plus pop-ups; edge arrows + minimap; free personal quests (1 of 3, no penalty); all four proposed weapons and pickups; host-only pause; rewards that vary by event.
-1. **Map events** (`MapEvents`, host-run, synced as a small snapshot 10 times a second):
-   - **Champion lair** (one per stage, placed at the start away from the middle): a dark statue of the stage's champion on a red ring. It wakes when a player comes within 150 px. Champions are crowned, recolored, bigger versions of a stage enemy that shoot back (Ghoul Champion: 8-bullet rings; Plague Champion: 12-bullet bursts; Paladin Champion: 7-bullet aimed fans), 1200–1600 HP in stage 1, +60% per extra player. Killing one drops 10 coins (3 each), a power-up and a **chest**: the first player to touch it gets a random auto weapon they can still level (30 coins if all are maxed).
-   - **Ritual circle** (one at the start, one pop-up at 2:20 that fades after 50 s if nobody starts it): stand inside to start it; 15 s of standing fills it, with nobody inside it drains over 30 s. While held, waves of 2 (+1 per extra player) stage enemies come from 200 px away every 1.2 s. When full: XP gems worth 60% of the current level, and everyone inside heals 1.
-   - **Grave Robber** (pop-ups at 1:10 and 3:20): a fast thief (88 speed, 220 HP, no contact damage) that runs from the nearest player and turns away from walls, dropping a coin every 1.5 s. Caught within 20 s: 14 coins (2 each). Otherwise it escapes.
-   - Pop-ups stop once the boss arrives; everything left is cleared when the stage ends.
-   - **Finding them:** edge arrows in the event's color with its icon (crown, ritual sigil, coin, chest), blinking minimap squares, and toasts under the timer with a bell sound.
-2. **Quests** (`Quests`, `QuestTracker`): in the shop each player picks 1 of 3 for the next stage (free; a random offer if they don't pick; can change until Ready). Done during that stage = paid at once (coins or a free relic); unfinished ones expire. Nine quests: Champion Hunter (45 coins), Ritualist (relic), Thief Catcher (35), Slayer: 250 kills (40), Untouchable: 60 s without losing a heart (relic), Gold Digger: 40 coins (relic), Arsenal: 4000 auto weapon damage (45), Scavenger: 2 power-ups (35), Guardian: revive a teammate (relic, co-op only). The HUD shows "Quest: Slayer 120/250" under the weapon icons. Quests only exist for stages 2 and 3 (the first shop comes after stage 1).
-3. **Four new auto weapons** (7 in total; altars and chests pick from all of them):
-   - **Chain Lightning:** every 1.5 s strikes the nearest enemy within 200 px and jumps to 3 more (+1 per level) within 100 px; 12 damage (+5/level).
-   - **Reaper's Scythe:** every 1.8 s a scythe flies 110 px out in your aim direction and back to you (1.2 s), cutting each enemy once each way; 18 damage (+7/level); 1 / 2 / 3 scythes spread around you.
-   - **Hellfire Trail:** walking leaves a flame every 10 px that burns 2 s; enemies in your flames take 5 damage (+3/level) every 0.5 s (once per tick however many flames).
-   - **Bone Spears:** every 2 s (faster per level) 2 (+1/level) random enemies within 220 px get a closing warning ring, then a spear strikes 0.45 s later for 30 damage (+12/level) in 14 px.
-   - Networking: only the host deals damage. Scythe throws, lightning paths and spear spots are small events; every peer draws Hellfire from where it sees each player walk.
-4. **Power-ups** (a third pickup pool): 1.2% of regular kills drop one (at most one per 10 s), plus one from every champion. Heart (heal 1; 35% of drops), Soul Magnet (every XP gem on the map flies to you; 25%), Holy Bomb (400 damage × stage HP growth to every regular enemy within 260 px, clears enemy bullets there; bosses spared; 20%), Frost Hourglass (regular enemies and every enemy bullet already flying freeze for 4 s; frozen bullets still hurt; 20%). The Holy Bomb is its own line on the run summary's Weapons page.
-5. **Host pause** (removed again in v0.18.0, see Co-op rules).
-6. Compendium: an **Events** tab (events and every quest), the new pickups and weapons; champions and the Grave Robber on the Enemies tab.
-
-Decisions made by Claude (**revisit in the next playtest**): every number above, the champion designs (recolored stage enemies with a crown instead of new sprites), pop-up times, the quest list and rewards, the weapon and pickup numbers, freezing bullets in place rather than clearing them, and that the Grave Robber does no contact damage.
-
-### Playtest 5 changes (v0.18.0, owner's fifth list)
-1. **Shooting enemies on top of you:** a friend reported enemies inside your hitbox couldn't be hit. Bolts appear at the muzzle (9 px out) and fast ones moved ~6 px a tick, checked only where they landed, so they jumped over enemies right next to you. Now each tick checks the whole path the bolt flew, and a new bolt checks back to the shooter's center (`EnemyManager.find_hit_on_path`). Not a design choice, a bug.
-2. **Exit Game** on the title menu.
-3. **Host pause removed** (it desynced; see Co-op rules).
-4. **Run summary fixes:** the Weapons page ran off the bottom of the screen and took the page tabs with it, so you couldn't go back. The cards now sit in a scroll box sized to the screen (wheel or Up / Down), weapon rows are one compact line each (hover for every number; unused weapons as dim icons), and Esc / B returns to Overview.
-5. **Run summary, beefed up:** letters drop in and shimmer, gold confetti (victory) or rising embers (defeat), the run's bosses as trophies (slain on a gold plinth / the one that ended the run in red / unreached as silhouettes), a team score chip (hover: difficulty multiplier), a crown and "MVP" on the top scorer's card, victory heroes walk on the spot, ticking count-up, and a third **Highlights** page (MVP, deadliest weapon, kill rate, coins, XP, and co-op leaders).
-6. **Lobby party page + hero picker** (see Milestone 5, Lobby).
-7. **Display names** (see Co-op rules).
-8. **Solo skips the "3, 2, 1"** after level-ups and the shop.
-9. **Chests that wouldn't open:** opening needed your center within 12 px of the chest's, so brushing it with your sprite did nothing. Now 20 px (altars 12 -> 16 px). No other cause found (every champion death goes through the same kill path).
-10. **Minimap shapes** (owner: "instead of just squares"): you = a big diamond, teammates = small diamonds, a downed teammate = blinking green "+", boss = skull, weapon altar = sword, champion = crown, ritual = ring, Grave Robber = coin, chest = chest; each with a dark outline. Enemies stay dots.
-11. **Edge arrows only for map events and downed teammates** (owner request: arrows to every teammate were clutter).
-12. **"Compendium" renamed "Game Guide"** (the owner didn't know the word).
-13. **Stages 2–3 rebalanced** (owner: "super easy after you defeat stage 1"). Measured with a new `[balance]` line the host prints at every stage end, on solo invincible autopilot runs (`--invincible` now lets hits land and counts them, but refills hearts) with all four heroes, fast-forwarded with `--fixed-fps 60`:
-    - Before: hits taken 36–93 / 9–10 / 15–25 per stage, boss fights 38–66 s / 8–36 s / 3–7 s. The team's damage roughly triples by stage 3 (levels 44–53, every weapon, relics) while enemies only had +50% / +100% HP, and each stage's spawn ramp started from zero.
-    - After (see Milestone 4 and Progression for the numbers): hits 41 / 52 / 125 on average, boss fights 61 / 76 / 101 s. Stage 2 is a little harder than stage 1, stage 3 is the real test. The Holy Bomb and the Game Guide's HP numbers follow the same tables.
-    - *Not measured:* co-op (the per-player factors are unchanged, so the curve should hold) and real humans, who dodge far better than the autopilot. **Watch** in the next playtest: if stage 3 is a wall, lower `ENEMY_HP_BY_DEPTH[2]` / `BOSS_HP_BY_DEPTH[2]` in `src/arena/arena.gd` first.
-
-Decisions made by Claude (**revisit in the next playtest**): names on the title menu (not the lobby), 12 characters, name tags only over teammates; the party card layout; the Highlights lines; the chest radius; the minimap shapes; "Game Guide" as the new name; every balance number in item 13.
-
-### Hero main weapons (v0.19.0, owner request; released)
-The owner asked for a unique main weapon per hero instead of everyone's bolt gun (one hero keeps it), reusing the existing weapons. Q&A choices: every main weapon stays **aimed** (Claude advised against heroes that don't aim: half the controls would do nothing and co-op skill levels would drift apart), the three weapons that became main weapons leave the pickup pool, each main weapon gets **its own upgrade set**, and the Wanderer stays as is.
-1. **Main weapons** (`CharacterStats.main_weapon`, append-only enum `MainWeapon`; numbers in `characters/*.tres`; pure math in `MainWeapons`):
-   - **Bolt Gun** (Wanderer): unchanged.
-   - **Reaper's Scythe** (Gravekeeper): every 0.8 s a scythe flies 115 px toward your aim and back to you (0.7 s), 30 damage per cut, each enemy cut once out and once back. Replaces the 5-pellet shotgun.
-   - **Chain Lightning** (Hexblade Witch): every 0.3 s lightning strikes the enemy closest to your aim (within 150 px and 35° of the aim, any side within 14 px) for 16, then jumps to 2 more within 70 px. Nothing ahead: a short zap into the air. Replaces the rapid piercing hexes.
-   - **Bone Spears** (Necromancer): every 0.5 s a row of 5 spears rises along your aim (22 px apart, from 22 px out), each after a 0.3 s warning plus 0.04 s per spear (the row runs outward), 20 damage in 11 px. In a line rather than at the cursor: the game only sends aim direction, and a gamepad stick has no distance. Replaces the bone-shard fan.
-   - Networking: like bolts, an attack is predicted by the shooter and decided by the host; the host tells the other peers (scythe throw: aim; spear row: origin + aim + seed; lightning: the paths it hit). Only the host deals damage. The shooter's own lightning is drawn from its own view of the enemies.
-   - **Balance check** (solo invincible autopilot, `--fixed-fps 60`, compared with v0.18.0): Witch and Necromancer within noise of before (both win; stage boss fights 61/49/72 s and 33/53/79 s vs 9/40/49 s and 39/72/181 s). The first scythe (100 px, 24 damage) was clearly weaker (stage 2 boss 181 s vs 92 s); at 115 px / 30 damage two runs won with stage 2 bosses of 117 s and 81 s. Not measured: co-op and real players.
-   - All main-weapon damage is still `DamageSource.MAIN_GUN`; the run summary shows the hero's weapon name and icon. Crits (Keen Edge) work on every main weapon.
-2. **Upgrades:** Sharpened Bolts became **Sharpened Edge** (+4 main weapon damage), Quick Hands, Keen Edge, Glass Cannon and Reckless Haste work for every main weapon. The six bolt upgrades (Extra Bolt, Piercing Bolts, Long Shot, Swift Bolts, Ricochet, Hunting Bolts) are **Wanderer only** (`Upgrade.for_weapon`). 12 new weapon-only upgrades (37 in total):
-   - *Scythe:* Twin Scythes (+1 scythe, fanned 25°; x2), Long Reach (+25% distance; x3), Heavy Blade (+30% size; x3), Grim Harvest (can cut each enemy 3 times per throw; once).
-   - *Lightning:* Forked Lightning (+1 jump; x3), Long Arc (+25% strike and jump range; x3), Conductor (each jump +20% damage over the last; x2), Split Bolt (a second chain splits off at the first enemy; once).
-   - *Spears:* Longer Row (+1 spear; x3), Wide Spikes (+25% size; x3), Quick Rise (warning 30% shorter; x2), Splinters (each spear sprays 3 bone shards for 40% damage; once).
-3. **Relics:** Bone Charm (pierce) and Hunter's Eye (bolt speed) are only offered to bolt heroes (`Relic.for_weapon`).
-4. **Auto weapons:** altars, chests, the "start with weapons" custom setting and `--give-weapons` only use `AutoWeapons.PICKUPS` (4 weapons). The old auto-weapon resources stay registered (append-only ids).
-5. Three new attack sounds (scythe whoosh, lightning zap, bone crack), 12 upgrade icons, and Game Guide hero entries that describe each main weapon.
-
-Decisions made by Claude (**revisit in the next playtest**): which weapon goes to which hero, every number above, spears in a line instead of at the cursor, the 12 upgrades, and that the auto-weapon pool is down to 4 (more auto weapons could refill it later; see Ideas for Later).
-
-### Playtest 6 changes (v0.20.0, owner's sixth list)
-1. **Quieter floor decorations** (owner: tombstones and other props were distracting, the same size as monsters). Owner chose "smaller + flatter": every prop sprite is redrawn at about half size (grave 6x6 instead of 9x11; a Shambler is 13x12) without the black outline creatures have, and baked at 55% opacity and 80% brightness so the floor shows through. Candles and candelabras stay fully lit.
-2. **Hero names** (owner picked the dark-fantasy set): **Kael** the Wanderer, **Mortimer** the Gravekeeper, **Morwen** the Hexblade Witch, **Vesper** the Necromancer (`CharacterStats.hero_name`; `full_name()` = "Kael the Wanderer"). The name leads in the hero picker, party cards, Game Guide, Records tabs and run summary; hero-only upgrades say "Kael only". Logs and reports still use the class.
-3. **Watch demos** (owner asked for a video when picking a hero; chose a Watch button per hero and weapon + ability). The game has no video files, so `HeroDemo` is a tiny scripted scene drawn in code at the game's 1x scale with the hero's real numbers and sprites: ~4 s of their main weapon against Shamblers, then their ability (Dash through a fan of bullets / Grave Blast / Hex Snare / Bone Effigy), ~8 s loop, fixed 60 steps a second so it plays the same every time. `HeroDemoPopup` shows it with the hero's name, class, the weapon and ability text (the one playing lights up) and Pick / Back buttons. Local only, nothing networked.
-
-### v0.21.0: ability ready marker and Embers
-1. **Ability ready marker** (owner feedback: wanted an indicator near the character when the ability is up). Over your own hero's head: a small bar fills while the ability recharges, then a pulsing gold gem; a ring and a quiet chime when it comes back. Only for cooldowns of 3 s or more, so not the Wanderer's Dash. Claude's call: the position (where teammates show names), the look and the chime.
-2. **Embers + Ember Shrine** (owner asked for very light permanent progression; decided in a Q&A round, see *Meta*). Claude's calls: the earning formula and prices, Keen Eye (crit) instead of +% damage (whole-number damage would round small bonuses away), Resolve instead of +% XP (XP is shared by the team), autopilot runs play without boosts and earn none.
-
-### Where things stand (2026-10-10, v0.24.0)
-- **Played by humans:** M1 and M2 online with a friend; a solo v0.11 run (stage 1 and the Bone Warden; it became v0.12.0); two-player co-op runs of v0.13 and v0.14 (they became v0.14.0 and v0.15.0); and a full 4-player run of v0.23.0 ("It was a fun time!"), which became v0.24.0 (Playtest 7 changes above).
-- **Not yet played by a human:** everything new in v0.24.0 and the code review fixes (checklist 3.0n in `docs/PLAYTEST.md`, also shown in-game), and whatever the 4-player run didn't get to from v0.22-v0.23 (3.0k-3.0m). Balance numbers since v0.18.0 come from the autopilot only (solo, invincible, it dodges badly), so they're relative, not absolute.
-- **Updating:** friends on v0.24.0 update from the title screen. The next release renames the files to MedievalSurvival, which only v0.24.0+ updaters find, so anyone on v0.23.0 or older must download once by hand.
-- **Watch item (unconfirmed bug):** in a v0.12 solo run the owner believed they died during the stage 1 boss but the stage counted as cleared. The log showed `STAGE_CLEAR` ~17s after the boss spawned and the code checks "everyone down" first, so it was likely a real (fast) kill. Since v0.13.0 the host logs `Player <id> downed` and `Boss killed by peer <id> at <t>s`; if it's reported again, read `%APPDATA%\Godotpp_userdata\GameTest\logs\godot.log` (the newest run; older runs are timestamped files).
-
-### Auto-fire redesign (step 1 done in v0.22.0, step 2 done in v0.23.0; owner decision 2026-10-10)
-**Why:** the owner found that aiming and dodging fight over the same hands: the game became either "aim well" or "dodge well", and builds couldn't take over the job of aiming the way they do in Vampire Survivors. It would be hard to balance. New direction: a close Vampire Survivors-style game with our own flavor (dark fantasy, co-op, real bullet patterns, stages + bosses + shop). Not for sale; for playing with friends. Decided in a Q&A round.
-
-**Step 1: auto-fire conversion (v0.22.0, implemented; not yet played by a human), then a playtest with friends**
-1. **Controls:** movement only (WASD / arrows / left stick). No Fire, no aim, **no ability button**. The cursor is hidden during runs; the in-game cursor settings (`GameCursor`, Settings cursor rows) go. The mouse still works in menus. Spectating (downed) needs a new cycle button (Claude's call).
-2. **Facing:** heroes face the way they move; standing still keeps the last direction.
-3. **Main weapons fire on their own**, each with its own targeting rule:
-   - **Bolt Gun** (Kael): the nearest enemy (like Magic Wand).
-   - **Reaper's Scythe** (Mortimer): the way you face (like Whip / Knife).
-   - **Chain Lightning** (Morwen): random enemies nearby.
-   - **Bone Spears** (Vesper): random enemies in range.
-4. **Abilities become auto weapons:** Grave Blast, Hex Snare and Bone Effigy leave the heroes and join the auto-weapon pool, so **any hero** can get them (pool 4 -> 7). They fire on their own cooldown at the **biggest nearby crowd** (Effigy: between you and it; nothing nearby: ahead of where you're moving). Each gets levels like the other auto weapons. **Dash is removed** (no replacement). The ability ready marker goes.
-5. **Heroes:** starting weapon + stats + **one small passive perk** each (Claude drafts the perks). The four hero-only upgrades (Afterimage, Hallowed Blast, Deep Hex, Ossuary) are retired or folded into the new auto weapons (ids stay: append-only).
-6. **HP bar instead of hearts:**
-   - Roughly Kael 100, Morwen 70, Vesper 90, Mortimer 150.
-   - **Touching enemies** does a little damage and keeps draining while they touch you (~5 every 0.5 s for a Shambler); no safety time, so being surrounded is deadly.
-   - **Bullets hit hard** (~15 for a Cultist bullet, ~20 for a boss bullet) and give **0.5 s of safety from bullets** only.
-   - Damage grows per stage (~x1.3 / x1.6).
-   - **Healing:** a Recovery stat (slow regen) on upgrades / relics; the Heart power-up heals a share of max HP; full heal at each stage start; a small heal on every level-up. Grave Blast and the ritual circle heal a share of HP.
-   - **Revives** stay as they are; you get up with half your max HP.
-   - Everything heart-based converts to HP: max-heart upgrades, Glass Cannon, relics, the bonus-hearts difficulty slider, Hearts lost / run summary, records, the Embers boost Resolve (safety time).
-7. **Networking:** each player's own computer picks the target (`AutoAim`, from the enemies its screen shows) and sends it in its input like the old mouse aim, so the shooter's prediction and the host's attack always match. (The plan said the host would pick; Claude kept the client pick because it reuses the existing, tested shot prediction.) The ability weapons are host-run like the other auto weapons and shown everywhere from small events.
-
-**How step 1 turned out (v0.22.0).** Claude's calls (**revisit in the playtest**):
-- **Mortimer's scythe also throws behind him** (`MainWeapons.SCYTHE_BACK_THROW`). With only the front throw, running from a crowd meant facing away from it: on the balance check his stage 1 boss took 257 s (Kael's: 8 s) and he never finished stage 2. With the back throw: boss fights 52 / 107 / 128 s and a full-run victory.
-- Targeting reach: bolts as far as they fly (~384 px); the scythe only throws with an enemy within 1.5x its reach; lightning and spears pick from enemies within their reach (+10 px). Nothing in reach: no attack (no wasted shots or sounds).
-- Grave Blast goes off when an enemy is within 1.2x its damage radius (12 s, 50 damage, clears enemy bullets within 150 px, heals 10%, 1 s safe; 10 s / 80 damage since the balance pass below); Hex Snare (7 s, 50 px, 3 s, +50% damage) and Bone Effigy (10 s, lures within 150 px for 4 s, bursts for 45 in 70 px; 70 since the balance pass) go at the middle of the biggest crowd within reach (`AutoWeapons.crowd_center`). Each gets 15% faster per level and Grave Blast / Effigy hit harder per level. Bosses never lure toward the Effigy.
-- Damage: Shambler 5, Bat 3, Ghoul 8, Cultist / Imp / Crawler 4, Spitter 5, Paladin 8, champions 10, bosses 15 to touch; bullets 15, champions 18, bosses 20. Hurt effects scale with the hit (a touch is a small flash, a bullet the full one).
-- HP conversions: Heart Container +20 max HP, Glass Cannon / Cursed Skull -20, Iron Boots +30, Blood Draught heals 40, Vampire Fang 1 HP per 3 kills, Steady Nerves +0.15 s bullet safety, difficulty "Bonus HP" -40..+60 in steps of 10 (Easy +20, Hard -20). New: **Ghoul Blood** upgrade (+0.4 HP/s, x5) and **Bloodstone** relic (+1 HP/s, 60 coins).
-- Ability stats became auto-weapon stats: Shadow Step (-12% auto weapon cooldowns) and Cracked Hourglass (-20%), Arcane Focus (+15% auto weapon damage) and Holy Water (+25%). Arcane Focus and Shadow Step are only offered once you own an auto weapon. Afterimage, Hallowed Blast, Deep Hex and Ossuary are retired (`Upgrade.retired`; ids kept).
-- The Watch demo's second half is now a dodge: a fan of enemy bullets, and the hero steps out of the way.
-- **Balance check** (solo invincible autopilot, `--fixed-fps 60`; the autopilot kites and dodges badly, so "hp lost" is large): boss fights Kael 8 / 30 / 100 s, Mortimer 52 / 107 / 128 s, Morwen 76 / 123 / 160 s, Vesper 67 / 56 / 82 s; all four win. HP lost per stage is roughly 2-30x a hero's max HP for the autopilot; human dodging decides the real difficulty. Not measured: co-op and real players.
-
-**Balance pass (v0.22.0, owner asked Claude to look at upgrades, pickups and events before the playtest; measured only with the autopilot).** The `[balance]` line now has two companions: `[balance-detail]` (coins picked up, power-ups, events and quests done, each damage source's share that stage) and `[balance-picks]` (each player's coins, weapons, relics, upgrades). What the first measurement showed, and what changed:
-- *Hero imbalance:* Sharpened Edge's flat +4 was +40% for Kael (10 damage) but +13% for Mortimer (30). New stat `DAMAGE_SHARE` (append-only id 36): +25% of the hero's **starting** damage per pick, added up so 4 picks double it exactly (`CharacterStats.damage_share`, `Characters.base_damage`). It also powers auto weapons (`WeaponSystem.power`). Glass Cannon +10 -> +50%, Cursed Skull +6 -> +30%.
-- *Morwen vs bosses* (86 / 201 / 143 s boss fights): her lightning picked a random enemy, so in boss fights it mostly zapped the adds, and its jumps went to adds or nowhere. Now (1) with a boss in reach it goes for the boss half the time (`AutoAim.BOSS_FOCUS_SHARE`; the client's aim gets the boss position from `EnemyManager.find_boss()`; lightning only, since with it Vesper's spears became the fastest boss killer), and (2) a jump with nobody new to reach strikes the last enemy again for 60% of base damage (`MainWeapons.GROUNDED_SHARE`; main chain only, no Conductor growth: 50% with growth made stage 3 bosses die in 4 s).
-- *Auto weapons* did under 5% of all damage together (Holy Aura, Orbiting Skulls, Hellfire: ~0%). Base damage +30-80% (Aura / Skulls / Hellfire also bigger), Grave Blast 12 -> 10 s, and `Arena.AUTO_DAMAGE_BY_DEPTH` 1 / 2 / 3.5 (they have 3 levels while enemies get 4x / 9x tougher; a stopgap until step 2's weapon levels). Now ~5-60% by stage 3, depending on what was found; Hellfire and Skulls still the weakest.
-- *Corpse Blast* did 13-38% of all damage: 12 -> 10 per pick.
-- *Coins:* runs ended with 500-1000 unspent and every relic bought by the second shop. Enemy coin drops x0.75 / 0.25 / 0.25 by stage (`COIN_DROP_BY_DEPTH`; events and bosses unchanged, so events matter more) and relic prices ~+30% (40-80 -> 45-100). Now 2-4 relics in the first shop, 1-3 in the second, 5-7 of the 7 by the end (the autopilot buys everything it can).
-- *Power-ups:* 10-20 per stage, Holy Bombs alone up to 19% of the damage. Now 1% of kills, at most one per 18 s, weights Heart 40 / Magnet 25 / Bomb 15 / Frost 20: ~5-9 per stage.
-- *Events:* the ritual's 0.6 of a level was less XP than 15 s of normal fighting: now 1.5 levels. Co-op gets more altars (`WeaponSystem.ALTARS_BY_PLAYERS` 1 / 2 / 2 / 3 per altar time, each near a different player), since loot is first come, first served.
-- *Quests:* Slayer 250 -> 1000 kills (stage 2 alone has ~2000 solo), Gold Digger 40 -> 80 coins, Arsenal 4000 -> 12000, Untouchable 60 -> 45 s (contact drain never pauses).
-- Boss fights after (stage 1 / 2 / 3, s; before: Kael 15 / 63 / 38, Mortimer 49 / 143 / 92, Morwen 86 / 201 / 143, Vesper 42 / 36 / 56): Kael 25 / 36 / 62, 9 / 42 / 84, 55 / 124 / 74; Mortimer 38 / 84 / 51, 59 / 114 / 19, 46 / 89 / 53; Morwen 35 / 118 / 80, 23 / 39 / 29, 17 / 48 / 33; Vesper 33 / 69 / 60, 24 / 79 / 90, 28 / 105 / 70. Single autopilot runs vary a lot with random picks; compare averages. Not measured: co-op, and real players (who pick upgrades on purpose, unlike the autopilot).
-
-**Step 2: build rework (v0.23.0, implemented; not yet played by a human).** The owner chose to finish the whole redesign before the playtest (2026-10-10). The plan:
-1. **Weapons on level-up cards:** cards offer new weapons, weapon levels and passives. **6 weapon slots** (your starting weapon is one); once full, only levels for what you carry.
-2. **Passive items:** the ~25 general upgrades merge into ~12 **passive items with levels** in **6 passive slots** (e.g. Whetstone: +damage per level). Weapon-specific upgrades become that weapon's level-up steps.
-3. **Evolutions:** a max-level weapon + a specific passive; the next **champion or boss chest** you open evolves it. ~4 to start, listed in the Game Guide with both ingredients.
-4. **Altars:** a free level for a weapon you carry (or a new weapon if a slot is free). **Shop:** keeps relics (no slot) and adds paid rerolls of level-up cards.
-5. More auto weapons to fill the pool (target ~10-12 in total).
-
-**How step 2 turned out (v0.23.0).** Claude's calls (**revisit in the playtest**):
-- **Cards (`Cards`).** Every change to a build is one number, a *card*, announced by the host the same way whether it came from a level-up pick, an altar, a chest or a boss: an `Upgrades` id (a passive level or a filler), `WEAPON_BASE + AutoWeapons id`, `MAIN_LEVEL`, `MAIN_EVOLUTION` or `EVOLVE_BASE + evolved id`. Each player keeps `card_history`, and a late joiner replays it (this replaced the separate weapon and upgrade histories). Level-up cards are picked by weight: levels of what you carry x2, the main weapon's next level x3, anything new x1. With nothing left to offer: **Blood Draught** (heal 40, only when hurt) and **Coin Pouch** (+20 coins).
-- **Slots:** 6 weapons (the main weapon is one) and 6 passives. Auto weapons go to **level 5** (was 3); evolutions have one level.
-- **Main weapon levels (2-6):** the old weapon-only upgrades (`CharacterStats.main_levels`). Kael: Extra Bolt, Piercing Bolts, Ricochet, Extra Bolt, Hunting Bolts. Mortimer: Twin Scythes, Heavy Blade, Long Reach, Grim Harvest, Twin Scythes. Morwen: Forked Lightning, Long Arc, Conductor, Split Bolt, Forked Lightning. Vesper: Longer Row, Wide Spikes, Quick Rise, Splinters, Longer Row.
-- **12 passives, 5 levels each** (`Upgrade.passive`): Sharpened Edge (+20% damage, all weapons), Quick Hands (all weapons 10% faster: main fire rate and auto cooldowns; Shadow Step merged in), Fleet Foot (+8% speed), Heart Container (+20 HP), Grave Magnet (+25% pickup range), Steady Nerves (+0.1 s bullet safety), Arcane Focus (+15% auto weapon damage), Keen Edge (+8% main weapon crit), Corpse Blast (8 burst damage), Giant Slayer (+15% vs bosses), Executioner (+15% vs wounded), Ghoul Blood (+0.4 HP/s). **Retired** (ids kept): Shadow Step, Glass Cannon and Reckless Haste (the shop's Cursed Skull and Iron Boots are the trade-offs now), Long Shot and Swift Bolts (the Bolt Gun aims itself, so range and speed did little).
-- **Evolutions (8):** max the weapon, carry its passive (any level), then open a champion's chest (the opener) or beat a boss (everyone who's ready). Heroes: Kael's Bolt Gun + Quick Hands = **Storm Bolter**; Mortimer's Reaper's Scythe + Heart Container = **Harvester**; Morwen's Chain Lightning + Keen Edge = **Tempest**; Vesper's Bone Spears + Corpse Blast = **Bone Cathedral** (each a bundle of the weapon's own stats plus +50% damage, `CharacterStats.evolution`). Auto weapons (new `AutoWeapons` entries that take the base weapon's slot): Orbiting Skulls + Arcane Focus = **Death Spiral**, Seeking Bolts + Quick Hands = **Soul Barrage**, Holy Aura + Ghoul Blood = **Sanctuary**, Hellfire Trail + Fleet Foot = **Inferno Path**. A new Game Guide tab lists them.
-- **Weapon pool 7 -> 11:** the old auto versions of the heroes' weapons are back with their own names and icons (**Storm Lantern**, **Bone Cleaver**, **Grave Spikes**: same code, now boosted by Sharpened Edge / Arcane Focus like the rest), plus **Spirit Daggers** (new `AutoWeapon.Kind.DAGGERS`: thrown the way you last moved *and* behind you, for the same reason as Mortimer's back throw).
-- **Altars:** the weapon on the altar (new, or a level), else a level of a weapon you carry (main weapon included), else coins. **Chests:** a ready evolution first, else a random weapon or weapon level. **Shop:** sells **card rerolls** (15 coins each, kept until used); everyone starts a run with 1. The level-up panel has a Reroll button.
-- **HUD:** the weapon row starts with the main weapon (6 pips; a green bar once evolved), and a second row shows passives. Custom game's "All weapons" became **Full arsenal** (5 random weapons, every slot filled).
-- **Balance after step 2** (solo invincible autopilot, which picks cards at random and kites). First measurement: with v0.22.1's stage boost (x2 / x3.5) on top of 5 weapon levels, single auto weapons did over half the damage and main weapons fell to 4-33% in stage 3 (Mortimer's scythe 4-8%). Changes: `AUTO_DAMAGE_BY_DEPTH` 1 / 1.5 / 2.25; every main weapon level also adds ~15% of the hero's starting damage to the main weapon (+2 Kael / +5 Mortimer / +2 Morwen / +3 Vesper); Mortimer 30 -> 40 damage and 0.8 -> 0.75 s; Vesper 20 -> 24; Grave Spikes and Storm Lantern weaker, Seeking Bolts a little weaker; Hellfire Trail (flames 5 s, 28 damage) and Orbiting Skulls (wider orbit, 22 damage) stronger, since both did ~0-3% (the autopilot kites, so close-range weapons rarely touch anything; watch them with humans). Result: main weapons do ~20-50% of a hero's damage in stage 3 (Vesper's 7-13% when her spears stayed at level 3-5), boss fights Kael 55 / 80 / 82 and 78 / 68 / 35 s, Mortimer 87 / 148 / 32 and 23 / 95 / 16, Morwen 29 / 38 / 29 and 56 / 45 / 60, Vesper 85 / 125 / 40 and 96 / 125 / 91 (before her last buff). Evolutions happened in about 6 of 8 runs; shops sell 5-7 relics per run.
-
-### Playtest 7 changes (v0.24.0, owner's seventh list, after a 4-player run of v0.23.0)
-The owner and three friends played a full 4-player run ("It was a fun time!"). Requested and done:
-1. **Boss fights were too crowded** ("way too much stuff and can't get to the boss"; the owner asked for the horde to die when the boss comes, but still a horde). When the boss arrives every regular enemy crumbles away (no drops; awake champions and the Grave Robber stay), and the boss comes with an **escort** of 12 stage enemies (+6 per extra player) around it. Then the horde trickles in at **25%** (was 40%), its ramp stops growing, and at most **40 + 25 per player** regular enemies are alive (65 solo, 140 with four). Measured (solo invincible autopilot, `--fixed-fps 60`; boss fights stage 1 / 2 / 3): Kael 53 / 92 / 107 s, Mortimer 106 / 81 / 71 s, Morwen 50 / 81 / 76 s, Vesper 54 / 56 / 44 s; all four win (v0.23.0: roughly 30-150 s). The sweep removed 77-169 enemies per boss. Not measured: 4 players, which is where the crowding was.
-2. **Rituals fill faster together:** +50% per extra player inside (2 players 10 s, 4 players 6 s); "x1.5" / "x2" shows over the circle.
-3. **Spirit Daggers fly as knives** (a dagger sprite pointing the way it flies, turned in 8 steps so it stays crisp; `AutoWeapon.sprite`, `ProjectileManager.sprite_sources`).
-4. **"You are here"** during the "3, 2, 1": a ring closing in on your hero and a bouncing "YOU" arrow (below you near the top wall). Gone when play resumes.
-5. **Better card icons:** a 16x16 version (`<icon>_lg`) of every icon a level-up card can show (37: every weapon, evolution, main weapon, passive and the two fillers), drawn at 2x in a frame colored by kind (gold weapon, blue passive, green evolution). The Game Guide uses them too; the HUD and lists keep the small ones.
-6. **Card text spilling over the border:** titles, descriptions and previews wrap, and all three cards grow to the tallest one's text.
-7. **Run summary overflow:** with four players the Embers line made one card wider and pushed the 4th card off the screen. Every card now has a fixed width; long lines wrap or are cut with "..." (hover for the full text).
-8. **Run summary, upgraded** (owner: "love all the little details"): player cards with a colored header band, a big score, Weapons / Passives (with levels) / Relics rows and notes at the bottom; each boss trophy shows its stage's time; a new **Stages** page (per stage: time, boss fight, kills, damage taken, downs, team level, events, most enemies at once, result; hover for more) recorded by the host from the `[balance]` numbers (`RunStats.stage_rows`); Highlights add the fastest boss kill, map events, loot (power-ups, chests, quests, evolutions) and co-op leaders for power-ups and chests (new append-only `RunStats.Stat`s: POWER_UPS, CHESTS, RITUALS, QUESTS, EVOLUTIONS).
-9. **Change your pick** while others are still choosing (see Co-op rules).
-10. **Left trigger picks** the focused level-up card (action `pick_card`).
-11. **Party page:** no perk description on the cards (the hero picker shows it). Follow-up: each card shows the hero's weapon (icon + name) and their perk's name.
-12. **Join Game dialog:** the title menu's paste box moved into a dialog opened by Join Game (Paste button for gamepads; an invite already on the clipboard is filled in).
-13. **The game's name is Medieval Survival** (title screen, window title, exe details, README, release titles, the Discord feedback name). Files keep "GameTest" (see the top of this document); saves stay where they were (`custom_user_dir_name`). The updater already accepts a future `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip`, so the files can be renamed in a later release once friends are on v0.24.0.
-14. **Difficulty on the run summary:** a colored chip (Easy / Normal / Hard / Custom), every difficulty value, the score factor and any custom game settings (`RunConfig.difficulty_details()` / `custom_details()`). The lobby's summary line spells out a Custom difficulty too.
-15. **Difficulty page:** the current preset is lit (toggle look), a **Custom** chip lights when the sliders match no preset, a line lists what differs from Normal, and those sliders turn gold with "(Normal 100%)" beside them. Opening the page focuses the current preset: before, focus always landed on Easy, which looked like Easy was selected.
-Follow-ups: the name was corrected from "Medieval Dynasty" to **Medieval Survival**, and the controls line at the bottom of the screen during play is gone (owner: they're easy to remember; the host still sees the invite line online).
-Also: the Game Guide's 9 tabs no longer fit one row and stretched the page off the screen; tabs now wrap onto a second row.
-
-Decisions made by Claude (**revisit in the next playtest**): the escort size, the 25% trickle and the caps, no XP from the swept horde, +50% ritual speed per player, the marker's look, every icon, what the run summary shows (and leaving out "the Gravekeeper" from the card header to save room), the Custom chip and gold values, and keeping the GameTest file names for one more release.
-
-### Code review (2026-10-10, after v0.24.0)
-The first full review of `src/`, `tools/` and the docs (owner request, after many quick releases and two redesigns). Baseline: all 394 unit tests pass (`run_tests.ps1`; GUT also reports 2 objects leaked at exit). Nothing found breaks a run. Below: bugs worth fixing, cleanups, and docs that fell behind. A, C and D were fixed the same day; **B1** should come before the boss / enemy variety work (same arena code), the rest whenever.
-
-**A. Bugs (all fixed, 2026-10-10; 2 new unit tests, net smoke test passes)**
-1. **Downed players picked things up.** Now only standing players collect coins and power-ups (`Arena._tick_gems`): a Heart was wasted on a downed player, a Holy Bomb went off at the body, coins were pocketed lying down. Claude's call: downed players still pull in XP gems, since XP is shared (as before; a test relies on it).
-2. **Run summary "Passives" row showed filler cards** (Blood Draught, Coin Pouch): `RunSummaryPanel.passive_icons` now lists passives only.
-3. **Altar coins weren't counted.** An altar with nothing left to give (10 coins) now counts toward *Coins earned* and tells the team, like a chest (`WeaponSystem.altar_coins_given`). Neither counts toward Gold Digger, which is about coins picked up.
-4. **Hurt effect from a relic.** Losing max HP at full health (Cursed Skull) no longer plays the hurt flash and sound (`Player._process`).
-5. **Mid-run joiners lost their Ember boosts.** The arena now spawns a new peer's player once their name and boosts arrive (`Net.player_registered`), or after 3 s (`Arena.JOIN_WAIT_SECONDS`).
-6. **Leaving right after hosting** no longer waits for the UPnP search; its answer is dropped when it arrives and the port it opened is closed (unless you're hosting on that port again). Quitting still waits, to close the port (`HostInvite`).
-7. **Quest wording.** Champion Hunter and Thief Catcher now say "Your team defeats / catches..." (everyone gets credit, as before).
-8. **Bone Cleaver** throws at the nearest enemy instead of along the main weapon's aim.
-
-**B. Code health (no behaviour change)**
-1. **Split `src/arena/arena.gd`** (2279 lines: stage flow, rewards, quests, ability weapons, HUD feeding, screenshots, balance lines and every snapshot). Before adding bosses and enemies, move out: event / quest / power-up rewards, the `[balance]` logging and stage rows, Grave Blast / Hex Snare / Bone Effigy resolution (with the effigies), and the HUD / minimap feed. Lower priority: `src/ui/run_summary_panel.gd` (1105 lines).
-2. ~~Two lines in arena.gd mangled by a scripted edit~~ (fixed with the comments below).
-3. **Dead code:** `RunConfig.duplicate_config`, `ShopSession.is_participant`, `Sfx.samples_of`, `Arena.STAGE_COUNT` (`RunConfig.stage_count()` is used). Only tests use `Upgrades.hero_text` / `level_text` / `stacks_owned` and `WeaponIcons.set_weapons` (the pre-v0.23 card UI). The sounds `dash` and `ability_ready` are synthesized at startup but never played; the sprite `icon_quest` is never drawn.
-4. **Names from before cards:** `LevelUpController._receive_upgrade_applied` / `_receive_upgrade_history` / `_submit_pick(upgrade_id)` and `LevelUpSession.pick(upgrade_id)` carry card numbers; `Arena.Effigy.source` defaults to the old `DamageSource.ABILITY`.
-5. **Arcane Focus lengthens Hex Snare and Bone Effigy.** `Arena._on_ability_cast` multiplies their durations by `auto_power` (the auto weapon *damage* multiplier), left over from "ability power". The playtest checklist now mentions it; decide whether to keep it (then say so on the card and in the Game Guide) or drop it.
-6. The lobby rebuilds its party signature and relabels every hero card every frame (`Lobby._process` -> `_refresh`); cheap, but only needs to run when something changes.
-
-**C. Outdated comments in code (fixed, 2026-10-10):** the arena's tick order and two misplaced or stale comments there, `Player._draw_weapons`, the `LaunchOptions` header, `RunConfig.start_with_weapons`, `SpawnDirector.pack_due`, `EffectsLayer`, the smoke test's header, and two player-facing lines (the Game Guide's XP gem entry and the Custom Game "Starting level-ups" hint now say cards).
-
-**D. Documentation (fixed, 2026-10-10):** DESIGN.md (the name note and redesign banner at the top, §2 lobby / pattern clock / Tech table, §3 format, weapons and characters, §4 history marker and Records, §5 loot, §7 one current *Where things stand* with the right log path, *Next* item 1, §8, §9), `docs/PLAYTEST.md` (intro, flags, superseded v0.16-v0.22 items rewritten for cards and passives, boss HP, stage scaling and tune names, shop prices, weapon list, §4 and §5; a line for these fixes in 3.0n), CLAUDE.md (no Dash) and `docs/RELEASING.md` (feedback webhook is set up).
+### Open code items (from the 2026-10-10 code review)
+1. **Split `src/arena/arena.gd`** (~2300 lines) before the boss / enemy work: move out event / quest / power-up rewards, the `[balance]` logging and stage rows, the Grave Blast / Hex Snare / Bone Effigy resolution, and the HUD / minimap feed. Lower priority: `src/ui/run_summary_panel.gd` (~1100 lines).
+2. **Dead code:** `RunConfig.duplicate_config`, `ShopSession.is_participant`, `Sfx.samples_of`, `Arena.STAGE_COUNT`. Only tests use `Upgrades.hero_text` / `level_text` / `stacks_owned` and `WeaponIcons.set_weapons`. The sounds `dash` and `ability_ready` are built but never played; the sprites `ghost` and `icon_quest` are never drawn.
+3. **Names from before cards:** `LevelUpController._receive_upgrade_applied` / `_receive_upgrade_history` / `_submit_pick(upgrade_id)` and `LevelUpSession.pick(upgrade_id)` carry card numbers; `Arena.Effigy.source` defaults to the old `DamageSource.ABILITY`.
+4. **Arcane Focus lengthens Hex Snare and Bone Effigy** (`Arena._on_ability_cast` multiplies durations by the auto *damage* multiplier). Keep it (and say so on the card and in the Game Guide) or drop it.
+5. The lobby rebuilds its party signature and relabels every hero card every frame; only needed when something changes.
 
 ### Next (proposed, in rough priority)
-**The auto-fire redesign above comes first** (owner, 2026-10-10). Weapon evolutions (item 1 below) are now part of its step 2.
-
-**Code review follow-ups** (2026-10-10, see *Code review* above; bugs, comments and docs are done): split `arena.gd` (B1) before item 2's boss and enemy work, the other cleanups (B3-B6) alongside other work.
-
-Owner added the top three (2026-10-10, v0.20.0) to the plan after asking Claude what would make the game better:
-1. ~~**Weapon evolutions and synergies.**~~ Done in v0.23.0 (8 evolutions; see *Auto-fire redesign*, step 2). The original idea: a max-level auto weapon plus a specific relic or upgrade evolves into a stronger weapon (e.g. Orbiting Skulls + a relic), and certain pairs of upgrades unlock a new effect. Builds are mostly stacked stats today, so runs feel alike; evolutions give each run a goal ("I'm going for X") and something to compare with friends. Shown in the Game Guide; evolutions need new `AutoWeapons` entries (append-only ids).
-2. **More boss and enemy variety.** Two possible bosses per stage (picked at random), more attacks per boss with clear warnings, and an elite enemy or two per stage that changes how you move (chargers, enemies that leave hazards on the ground). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and enemy behaviours.
-3. **Easier joining.** Port forwarding is the biggest hurdle before friends can play. A small relay server with short join codes, or Steam invites through Steamworks ($100 fee); see Ideas for Later, *Join codes*.
-
-Also on the list:
-4. Co-op playtest of v0.24.0 (the first 4-player run, on v0.23.0, produced the seventh list): is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, the hero weapons, Watch demos, metal music, the run summary pages. Then tune numbers.
-5. ~~Working title~~ Named **Medieval Survival** (v0.24.0). From the release after v0.24.0 the files are `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip` (owner request). Friends on v0.24.0 update in place (their file keeps its old name); v0.23.0 and older must download once by hand.
-6. Meta/feel: hero portraits, more animation.
-7. Real art and audio files (§6): the loader that prefers files, then the first batch (heroes, common enemies) and the music rendered from today's scores. New, longer music (60-120 s loops, `docs/AUDIO_BRIEF.md`) later.
+1. **Playtest** of v0.25.0 with friends, then tune numbers.
+2. **More boss and enemy variety** (after open code item 1). Two possible bosses per stage, more attacks with clear warnings, an elite enemy or two per stage that changes how you move (chargers, ground hazards). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and behaviours.
+3. **Easier joining.** Port forwarding is the biggest hurdle: a small relay server with short join codes, or Steam invites through Steamworks ($100 fee).
+4. **Real art and audio files** (§6): more sprites (common enemies next); new, longer music (60–120 s loops, `docs/AUDIO_BRIEF.md`).
+5. Meta/feel: hero portraits, more animation.
 
 ## 8. Open questions
 
-- ~~Working title?~~ Medieval Survival (v0.24.0).
-- Hero names (Kael, Mortimer, Morwen, Vesper): picked by the owner from Claude's suggestions; confirm with friends.
-- ~~Do the four character abilities feel distinct and balanced?~~ Abilities become auto weapons in the redesign (§7).
-- Auto-fire redesign: do the targeting rules feel fair, is the HP bar too forgiving or too harsh, do heroes still feel different with perks instead of abilities?
+- Hero names: picked by the owner from Claude's suggestions; confirm with friends.
+- Auto-fire: do the targeting rules feel fair, is the HP bar too forgiving or too harsh, do heroes still feel different with perks?
 - Enemy roster and boss designs beyond the first set (one boss per stage so far).
-- Weapon, auto-weapon, and relic lists; synergies beyond the 8 evolutions (v0.23.0).
-- Shop economy: rebalanced in v0.12.0 and again in v0.22.1 (fewer coins, pricier relics); needs a playtest.
+- Synergies beyond the 8 evolutions; more weapons and relics.
+- Shop economy: needs a playtest since v0.22.1's cuts.
 
 ## 9. Ideas for Later
 
-- ~~**More auto weapons** to refill the pickup pool~~ Done in v0.23.0 (11 weapons). More are always possible.
-- **Cursed shrines** (offered with the v0.17.0 events, not picked): walk up to one for a gamble, e.g. more damage but faster enemies until the stage ends, or a free heal.
-- **Risky bounties / team quests** (the quest options not picked in v0.17.0): quests with a cost or curse for a bigger reward, or one shared team quest chosen by vote.
-- **Clients asking for a pause** ("Request pause" shown to the host), if friends miss being able to pause.
-- **Intense bullet density throughout:** possibly switch from readable patterns to hardcore shmup density across the whole game.
-- **Support hero:** a character whose ability or passive heals teammates or revives them faster (`CharacterStats.revive_speed` is already in place; owner idea, v0.15.0).
-- **Join codes / no port forwarding at all:** a small relay or matchmaking server (short codes like `KQ7F`), or Steam invites via Steamworks ($100 app fee). Revisit if port forwarding becomes a hurdle or near release.
+### After 1.0 (owner's list, 2026-10-11)
+- **Announcer voices:** a Halo-style announcer (e.g. "Game over"), and an arena announcer for evolutions, the Grave Robber, game over and other big moments.
+- **More and better metal music** (the owner listed it twice; `Tracks.SOUNDTRACKS`).
+- **AI-generated art and music** to replace the text sprites and synth scores (§6).
+- **Tags on the Playtest Checklist**, e.g. to filter questions by topic.
+- **More heroes:** Priest, Knight, Joker, Executioner, Barbarian, Wizard, Butcher, Minotaur. They'd join the unlock chain (§4 Meta).
+
+### Other ideas
+- **Cursed shrines** (offered with the v0.17.0 events, not picked): a gamble, e.g. more damage but faster enemies until the stage ends, or a free heal.
+- **Risky bounties / team quests** (not picked in v0.17.0): quests with a cost for a bigger reward, or one shared team quest chosen by vote.
+- **Clients asking for a pause** ("Request pause" shown to the host), if friends miss pausing.
+- **Intense bullet density throughout:** hardcore shmup density instead of readable patterns.
+- **Support hero** that heals teammates or revives faster (`CharacterStats.revive_speed` exists; owner idea, v0.15.0).
+- **Join codes / no port forwarding** (see Next 3).

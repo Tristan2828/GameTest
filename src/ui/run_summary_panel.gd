@@ -77,6 +77,8 @@ var bosses_enabled: bool = true
 var local_record_rank: int = -1
 ## Embers this PC's player earned (-1 = not counted, e.g. test runs).
 var local_embers: int = -1
+## The hero this run unlocked on this PC (HeroUnlocks), or -1.
+var local_unlock: int = -1
 
 var _stage_in_run: int = 1
 var _stage_count: int = 1
@@ -479,6 +481,14 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 		embers.tooltip_text = "Spend them at the Ember Shrine on the title menu"
 		embers.mouse_filter = Control.MOUSE_FILTER_PASS
 		notes.append(embers)
+	if player.is_local() and Characters.is_valid_id(local_unlock):
+		var hero := Characters.get_character(local_unlock)
+		var unlocked := _label("NEW HERO: %s THE %s!" % [hero.hero_name.to_upper(), hero.display_name.to_upper()], 9,
+			VICTORY_COLOR, true)
+		unlocked.tooltip_text = "Pick them in the lobby"
+		unlocked.mouse_filter = Control.MOUSE_FILTER_PASS
+		_pulse(unlocked)
+		notes.append(unlocked)
 	var awards := stats.awards_for(player.peer_id)
 	if not awards.is_empty():
 		notes.append(_label("* " + " * ".join(awards) + " *", 9, AWARD_COLOR, true))

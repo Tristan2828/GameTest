@@ -9,10 +9,15 @@ extends Node
 ##   4. start the new exe and quit. The next start deletes the ".old" file.
 ## Only in the exported game: never from the editor, tests or automated runs.
 ## If anything fails, the menu offers the release page in the browser instead.
+## Playtest 8 ("the update button doesn't work for some people"): the check falls
+## back to the release page's redirect when GitHub's API refuses (60 checks an
+## hour per internet connection, shared by a household), a failed check shows a
+## retry, and the folder is checked before downloading (running the exe straight
+## from the zip, or from a folder Windows won't let it write to).
 
 signal changed
 
-enum State { OFF, CHECKING, UP_TO_DATE, AVAILABLE, DOWNLOADING, INSTALLING, FAILED, CHECK_FAILED }
+enum State { OFF, CHECKING, UP_TO_DATE, AVAILABLE, DOWNLOADING, INSTALLING, FAILED, CHECK_FAILED, RESTART_NEEDED }
 
 const DOWNLOAD_PATH: String = "user://update/latest.zip"
 const OLD_SUFFIX: String = ".old"
@@ -58,12 +63,24 @@ func check() -> void:
 	_request(ReleaseInfo.LATEST_URL, "", _on_checked)
 
 
+## What the menu's update button does in the current state.
+func press() -> void:
+	if state == State.CHECK_FAILED:
+		check()
+	else:
+		update()
+
+
 ## Downloads and installs the newer version (then restarts the game).
 func update() -> void:
 	if state != State.AVAILABLE and state != State.FAILED:
 		return
 	if latest == null or latest.zip_url.is_empty():
 		_fail("The new release has no Windows download yet.")
+		return
+	var problem := install_problem(OS.get_executable_path())
+	if not problem.is_empty():
+		_fail(problem)
 		return
 	DirAccess.make_dir_recursive_absolute(DOWNLOAD_PATH.get_base_dir())
 	_set_state(State.DOWNLOADING)
@@ -82,26 +99,47 @@ func _process(_delta: float) -> void:
 		changed.emit()  # Progress bar.
 
 
-func _request(url: String, save_to: String, done: Callable) -> void:
+## `follow_redirects` off reads a redirect's Location header instead (the fallback check).
+func _request(url: String, save_to: String, done: Callable, follow_redirects: bool = true) -> void:
 	if _http != null:
 		_http.queue_free()
 	_http = HTTPRequest.new()
 	_http.download_file = save_to
 	_http.timeout = 0.0 if not save_to.is_empty() else 15.0
+	_http.use_threads = not save_to.is_empty()  # Downloads aren't capped by the frame rate.
+	_http.max_redirects = 8 if follow_redirects else 0
 	add_child(_http)
 	_http.request_completed.connect(done, CONNECT_ONE_SHOT)
-	# GitHub's API requires a User-Agent.
-	var err := _http.request(url, PackedStringArray(["User-Agent: MedievalSurvival-updater", "Accept: application/vnd.github+json"]))
+	# GitHub's API requires a User-Agent. Downloads ask for the file itself.
+	var accept := "Accept: application/octet-stream" if not save_to.is_empty() else "Accept: application/vnd.github+json"
+	var err := _http.request(url, PackedStringArray(["User-Agent: MedievalSurvival-updater", accept]))
 	if err != OK:
 		done.call(HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray())
 
 
 func _on_checked(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+		# The API refused (often its hourly limit) or is down: ask the release page.
+		_request(ReleaseInfo.LATEST_PAGE_URL, "", _on_checked_page, false)
+		return
+	_found(ReleaseInfo.parse(body.get_string_from_utf8()))
+
+
+## The fallback check: github.com/<repo>/releases/latest redirects to the newest tag.
+func _on_checked_page(result: int, code: int, headers: PackedStringArray, _body: PackedByteArray) -> void:
+	var location := ""
+	for header: String in headers:
+		if header.to_lower().begins_with("location:"):
+			location = header.substr(9).strip_edges()
+	if result != HTTPRequest.RESULT_SUCCESS or code < 300 or code >= 400 or location.is_empty():
 		error = "Couldn't reach GitHub to check for updates."
 		_set_state(State.CHECK_FAILED)
 		return
-	latest = ReleaseInfo.parse(body.get_string_from_utf8())
+	_found(ReleaseInfo.from_tag_url(location))
+
+
+func _found(info: ReleaseInfo) -> void:
+	latest = info
 	if latest == null:
 		error = "Couldn't read the latest release."
 		_set_state(State.CHECK_FAILED)
@@ -123,8 +161,29 @@ func _on_downloaded(result: int, code: int, _headers: PackedStringArray, _body: 
 	if not problem.is_empty():
 		_fail(problem)
 		return
-	OS.create_process(OS.get_executable_path(), [])
+	if OS.create_process(OS.get_executable_path(), []) < 0:
+		# Installed, but Windows (or an antivirus) didn't let it start the new one.
+		error = "Updated to %s! Close the game and start it again." % latest.version
+		_set_state(State.RESTART_NEEDED)
+		return
 	get_tree().quit()
+
+
+## Why updating in place can't work from where this exe is, or "" if it can.
+## Checked before downloading, so a friend learns what to do straight away.
+static func install_problem(exe_path: String) -> String:
+	var path := exe_path.replace("\\", "/").to_lower()
+	# Opening the zip in Explorer and double-clicking the exe runs a temporary
+	# copy: an update would land there and be gone next time.
+	if path.contains("/appdata/local/temp/") or path.contains("/temp1_") or path.contains(".zip/"):
+		return "The game is running from inside the zip. Unzip it into a folder first."
+	var probe := exe_path + ".write_test"
+	var file := FileAccess.open(probe, FileAccess.WRITE)
+	if file == null:
+		return "Windows won't let the game change its folder. Move it somewhere like Documents."
+	file.close()
+	DirAccess.remove_absolute(probe)
+	return ""
 
 
 ## Swaps the exe from the zip in for `exe_path`. Returns "" or what went wrong
@@ -153,6 +212,9 @@ static func _install(zip_path: String, exe_path: String) -> String:
 	var old_path := exe_path + OLD_SUFFIX
 	if FileAccess.file_exists(old_path):
 		DirAccess.remove_absolute(old_path)
+	if FileAccess.file_exists(old_path):
+		# Still locked (the previous version hasn't fully closed): another name.
+		old_path = "%s%s%d" % [exe_path, OLD_SUFFIX, Time.get_ticks_msec()]
 	if DirAccess.rename_absolute(exe_path, old_path) != OK:
 		DirAccess.remove_absolute(new_path)
 		return "Windows didn't let the game replace itself."
@@ -162,11 +224,14 @@ static func _install(zip_path: String, exe_path: String) -> String:
 	return ""
 
 
-## The previous exe (renamed during an update) and the downloaded zip.
+## The previous exe(s) (renamed during an update) and the downloaded zip.
 func _delete_leftovers() -> void:
-	var old_path := OS.get_executable_path() + OLD_SUFFIX
-	if FileAccess.file_exists(old_path):
-		DirAccess.remove_absolute(old_path)  # May fail while the old game is still closing; next time then.
+	var exe_path := OS.get_executable_path()
+	var exe_name := exe_path.get_file()
+	for file: String in DirAccess.get_files_at(exe_path.get_base_dir()):
+		if file.begins_with(exe_name + OLD_SUFFIX) or file == exe_name + NEW_SUFFIX:
+			# May fail while the old game is still closing; next time then.
+			DirAccess.remove_absolute(exe_path.get_base_dir().path_join(file))
 	if FileAccess.file_exists(DOWNLOAD_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(DOWNLOAD_PATH))
 

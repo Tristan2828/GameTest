@@ -9,10 +9,16 @@ var _saved_name: String = ""
 
 func before_each() -> void:
 	_saved_name = Settings.player_name
+	# Every hero open (picking a locked one does nothing; see test_hero_unlocks).
+	HeroUnlocks.path = "user://test_party_unlocks.cfg"
+	for id: int in Characters.ALL.size() - 1:
+		HeroUnlocks.record_win(id)
 
 
 func after_each() -> void:
 	Settings.player_name = _saved_name
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(HeroUnlocks.path))
+	HeroUnlocks.path = HeroUnlocks.PATH
 
 
 func test_names_are_trimmed_capped_and_drawable() -> void:
@@ -57,6 +63,22 @@ func test_party_shows_one_card_per_player_and_opens_the_picker() -> void:
 	await wait_process_frames(1)
 	var portraits: Array = lobby._party.find_children("*", "CharacterPortrait", true, false)
 	assert_eq((portraits[0] as CharacterPortrait).character_id, Characters.Id.NECROMANCER)
+
+
+func test_locked_heroes_cant_be_picked() -> void:
+	HeroUnlocks.path = "user://test_party_unlocks_none.cfg"
+	HeroUnlocks.ignore_autopilot = true
+	Net.start_solo()
+	var lobby: Lobby = LOBBY_SCENE.instantiate()
+	add_child_autofree(lobby)
+	await wait_process_frames(1)
+	var vesper: Button = lobby._cards[Characters.Id.NECROMANCER]
+	assert_true(vesper.disabled, "locked")
+	assert_string_contains((vesper.get_node("Lines/Perk") as Label).text, "Win a run as")
+	lobby._choose_locally(Characters.Id.NECROMANCER)
+	assert_eq(lobby._state.characters[1], Characters.Id.WANDERER, "still Kael")
+	assert_false(lobby._cards[Characters.Id.WANDERER].disabled)
+	HeroUnlocks.ignore_autopilot = false
 
 
 func test_party_grows_with_the_lobby() -> void:

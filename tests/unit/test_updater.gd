@@ -115,3 +115,33 @@ func test_install_takes_the_renamed_exe_into_an_old_file_name() -> void:
 	packer.close()
 	assert_eq(Updater._install(zip_path, exe), "")
 	assert_eq(FileAccess.get_file_as_bytes(exe).size(), new_bytes.size(), "new game under the old name")
+
+
+## Playtest 8: when GitHub's API refuses, the check reads the release page's
+## redirect instead and guesses the zip's name the way release.ps1 names it.
+func test_release_from_the_tag_page_link() -> void:
+	var info := ReleaseInfo.from_tag_url("https://github.com/Tristan2828/GameTest/releases/tag/v0.25.0")
+	assert_eq(info.version, "0.25.0")
+	assert_eq(info.zip_url, "https://github.com/Tristan2828/medieval-survival/releases/download/v0.25.0/MedievalSurvival-0.25.0-windows.zip")
+	var old := ReleaseInfo.from_tag_url("https://github.com/Tristan2828/GameTest/releases/tag/v0.24.0")
+	assert_string_ends_with(old.zip_url, "/v0.24.0/GameTest-0.24.0-windows.zip")
+	assert_null(ReleaseInfo.from_tag_url("https://evil.example/Tristan2828/GameTest/releases/tag/v9.0.0"))
+	assert_null(ReleaseInfo.from_tag_url("https://github.com/Tristan2828/GameTest/releases"))
+
+
+func test_install_problem_spots_an_exe_run_from_the_zip() -> void:
+	assert_string_contains(Updater.install_problem(
+		"C:\\Users\\Ana\\AppData\\Local\\Temp\\Temp1_MedievalSurvival-0.24.0-windows.zip\\MedievalSurvival.exe"), "zip")
+	DirAccess.make_dir_recursive_absolute(WORK_DIR)
+	assert_eq(Updater.install_problem(ProjectSettings.globalize_path(WORK_DIR.path_join("GameTest.exe"))), "",
+		"a normal, writable folder is fine")
+
+
+## Playtest 8: the repo was renamed; GitHub's API now gives links under the new
+## name, which the updater must accept (and still the old one).
+func test_parse_accepts_the_renamed_repo() -> void:
+	var renamed := SAMPLE_RELEASE.replace("Tristan2828/GameTest/", "Tristan2828/medieval-survival/")
+	assert_string_starts_with(ReleaseInfo.parse(renamed).zip_url,
+		"https://github.com/Tristan2828/medieval-survival/releases/download/")
+	assert_true(ReleaseInfo.is_trusted("https://github.com/Tristan2828/GameTest/releases/download/v1/x.zip"))
+	assert_false(ReleaseInfo.is_trusted("https://github.com/someone-else/medieval-survival/releases/download/v1/x.zip"))

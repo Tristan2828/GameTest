@@ -87,6 +87,8 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Host: set every tick (the enemy pool, and the peers to tell).
 var _enemies: EnemyManager = null
 var _peers: Array[int] = []
+## The last _draw() drew events (so one more is needed once they're gone).
+var _drew_events: bool = false
 
 
 ## One event (the same fields on every peer; clients copy them from snapshots).
@@ -409,11 +411,14 @@ func _send_snapshot(peers: Array[int]) -> void:
 # --- Drawing -------------------------------------------------------------------
 
 func _process(_delta: float) -> void:
-	if not _events.is_empty():
+	# One more redraw after the last event goes, or its last frame stays on
+	# screen (playtest 8: an opened chest that was the last event stayed drawn).
+	if not _events.is_empty() or _drew_events:
 		queue_redraw()
 
 
 func _draw() -> void:
+	_drew_events = not _events.is_empty()
 	var now := Time.get_ticks_msec() / 1000.0
 	for event: MapEvent in _events:
 		match event.kind:

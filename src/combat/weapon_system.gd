@@ -259,7 +259,9 @@ func send_full_state(peer_id: int) -> void:
 func _draw() -> void:
 	var view := PixelArt.visible_rect(self)
 	var now := Time.get_ticks_msec()
-	var flame_glow := PixelArt.disc_texture(8.0, Color(1.0, 0.45, 0.15, 0.22))
+	# Muted (playtest 8): a faint glow and dim, see-through flames, so a trail
+	# doesn't drown out enemy bullets on the floor.
+	var flame_glow := PixelArt.disc_texture(8.0, Color(0.9, 0.35, 0.12, 0.055))
 	for flame: Flame in _flames:
 		if not view.has_point(flame.position):
 			continue
@@ -268,7 +270,7 @@ func _draw() -> void:
 		draw_texture_rect(flame_glow, Rect2(flame.position - glow_size / 2.0, glow_size), false, Color(1, 1, 1, fade))
 		var frame := "flame" if (now / 120 + int(flame.position.x)) % 2 == 0 else "flame_1"
 		PixelArt.draw(self, frame, flame.position + Vector2(0, -2), Color.WHITE, false, false, 1.0,
-			Color(1, 1, 1, 0.3 + 0.7 * fade))
+			Color(0.8, 0.62, 0.55, 0.15 + 0.4 * fade))
 	for spear: Spear in _spears:
 		if spear.struck or not view.has_point(spear.position):
 			continue

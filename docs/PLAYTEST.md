@@ -1,7 +1,7 @@
-# Playtest Review (v0.24.0)
+# Playtest Review (v0.25.0)
 
 Most of the game was built between playtests: you've played M1 and M2, a solo run, co-op runs of v0.13 and v0.14 and a 4-player run of v0.23.0, but each new version adds things nobody has played yet.
-Automated tests prove it *works* (396 unit tests, plus online host+client runs).
+Automated tests prove it *works* (unit tests, plus online host+client runs).
 Only you can judge whether it is *fun, fair, and readable*. This document is your checklist.
 
 You don't need to do it all at once. Each section stands alone. Tick boxes as you go, jot notes,
@@ -21,13 +21,12 @@ $g = "C:\Repos\GameTest\builds\windows\MedievalSurvival.exe"
 & $g -- --solo --start-stage=2 --start-at=230      # Marsh boss (Mire Hag)
 & $g -- --solo --start-stage=3 --start-at=230      # Cathedral boss (Ashen Bishop)
 & $g -- --solo --start-stage=2                     # A full stage 2 from the start
-& $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (tests the flow, not balance)
+& $g -- --solo --stage-seconds=30 --weak-bosses    # Speed-run all 3 stages + shops (flow and quests, not balance)
 & $g -- --solo --give-weapons                      # Start with 5 random auto weapons at level 3
-& $g -- --solo --character=1                       # Skip choosing: 0 Wanderer, 1 Gravekeeper, 2 Witch, 3 Necromancer
+& $g -- --solo --character=1                       # Skip choosing (ignores unlocks): 0 Kael, 1 Mortimer, 2 Morwen, 3 Vesper
 & $g -- --solo --run-config=single_stage=true,stage=3,bonus_levels=5   # Custom game without the lobby pages
 & $g -- --solo --run-config=soundtrack=1           # Metal soundtrack (2 = metal boss fights only, 3 = shuffle)
-& $g -- --solo --start-at=65                        # Map events: the first Grave Robber pops up at 1:10
-& $g -- --solo --stage-seconds=30 --weak-bosses    # Reach the shop fast to pick a quest
+& $g -- --solo --start-at=65                       # Map events: the first Grave Robber pops up at 1:10
 ```
 
 Flags combine. `--start-at` and `--start-stage` skip level-ups, so jumped-to fights are **harder** than in a real run.
@@ -40,9 +39,9 @@ For balance judgments, prefer real runs.
 | Session | Time | What |
 |---|---|---|
 | **A. Bosses** | ~15 min | Fight each boss with the `--start-at=230` shortcuts. Focus: can you read and dodge the patterns? |
-| **B. Full solo run** | ~20 min | One real run start to finish with your favourite character. Focus: pacing, difficulty curve, shop, weapons. |
+| **B. Full solo run** | ~20 min | One real run start to finish. Focus: pacing, difficulty curve, shop, weapons. |
 | **C. Characters** | ~15 min | 5 minutes of stage 1 with each of the 4 heroes. Focus: do they feel different and fair? |
-| **D. Full co-op run** | ~20 min | Real run with a friend over the internet. Focus: everything networked, plus fun together. |
+| **D. Full co-op run** | ~20 min | Real run with friends over the internet. Focus: everything networked, plus fun together. |
 
 Session D is the most valuable if you only have time for one.
 
@@ -52,7 +51,17 @@ Session D is the most valuable if you only have time for one.
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
 
-### 3.0n Your seventh list, after the 4-player run (v0.24.0, check these first)
+### 3.0o Your eighth list (v0.25.0, check these first)
+- [ ] Heroes unlock now: a fresh PC has only Kael. Win a full run as Kael to unlock Mortimer, then Morwen, then Vesper. Locked heroes are dark in the picker and say what unlocks them. Does it feel rewarding, or too slow?
+  - *Tune: `HeroUnlocks.run_counts` in `src/progression/hero_unlocks.gd` (what counts as a win).*
+- [ ] After a win, does the run summary show "NEW HERO: ..." on your card, and is the hero open in the lobby next time?
+- [ ] Update button: does it work for everyone now (the repo rename broke it)? If it can't check, it says so and offers Check again.
+- [ ] Hellfire Trail: muted enough? Still easy to see where it burns?
+  - *Tune: the flame colors in `WeaponSystem._draw` (`src/combat/weapon_system.gd`).*
+- [ ] An opened chest disappears right away now, for the host too.
+- [ ] New hero sprites (drawn as image files now). Do they read well in a crowd and fit the game?
+
+### 3.0n Your seventh list, after the 4-player run (v0.24.0)
 - [ ] Boss fights: when the boss arrives the old horde crumbles away and the boss brings its own (12 enemies, +6 per extra player). After that the horde trickles in at 25% (was 40%) and stops growing, with at most 65 / 90 / 115 / 140 regular enemies alive (1-4 players). Can you get to the boss now? Still enough horde?
   - *Tune: `BOSS_FIGHT_SPAWN_RATE`, `BOSS_FIGHT_MAX_ALIVE`, `BOSS_FIGHT_MAX_ALIVE_PER_PLAYER`, `BOSS_ESCORT`, `BOSS_ESCORT_PER_EXTRA_PLAYER` in `src/arena/arena.gd`.*
 - [ ] Ritual circle: fills 50% faster for each extra player inside (two players 10 s, four 6 s), with "x1.5" / "x2" over the circle. Right speed?
@@ -68,11 +77,11 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Party page: each card shows the hero's weapon (icon + name) and their perk's name, but not the perk's description. Right amount of info?
 - [ ] No controls line at the bottom of the screen during play (the host still sees the invite line online). Miss it?
 - [ ] Title menu: **Join Game** opens a small window to paste the invite (Paste button, or it's filled in for you if the clipboard has one). Clearer?
-- [ ] The game is called **Medieval Survival** now (title screen, window, the exe's details). From the next release the exe and zip are called MedievalSurvival too (friends on v0.24.0 update in place; older versions download once by hand).
+- [ ] The game is called **Medieval Survival** now (title screen, window, the exe's details, and from v0.25.0 the exe and zip). Everyone on v0.24.0 or older downloads v0.25.0 once by hand; does updating work from there on?
 - [ ] Difficulty page: the preset you're on is lit, a **Custom** chip lights when the sliders match no preset, a line lists what differs from Normal, and those sliders turn gold with Normal's value beside them. Reopening the page no longer jumps to Easy. Clear?
 - [ ] Code review fixes: while you're downed, coins and power-ups wait for someone standing (XP gems still come to you); Bone Cleaver throws at the nearest enemy; a friend who joins mid-run keeps their Ember boosts; an altar with nothing left to give says so (10 coins). Anything odd?
 
-### 3.0k Auto-fire redesign, step 1 (v0.22.0, check these first)
+### 3.0k Auto-fire redesign, step 1 (v0.22.0)
 - [ ] You only move now: every main weapon fires by itself. Does it feel good, or do you miss aiming? Is the game more about dodging, like you wanted?
 - [ ] Targeting: Kael's bolts hit the closest enemy, Morwen's lightning and Vesper's spears pick a random enemy near you, Mortimer's scythes fly the way you last moved **and** behind you. Does each rule feel fair and readable?
   - *Tune: `src/player/auto_aim.gd` (rules and reach); the back throw is `SCYTHE_BACK_THROW` in `src/combat/main_weapons.gd`.*
@@ -83,10 +92,9 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Healing: Heart pickup 30% of max HP, every level-up 5%, a finished ritual 25%, full HP each stage, Ghoul Blood (upgrade, +0.4 HP/s) and Bloodstone (relic, +1 HP/s). Too much healing, too little?
   - *Tune: `HEART_HEAL_SHARE` in `src/progression/power_ups.gd`, `LEVEL_UP_HEAL_SHARE` / `RITUAL_HEAL_SHARE` in `src/arena/arena.gd`.*
 - [ ] No more ability button. Grave Blast, Hex Snare and Bone Effigy are auto weapons anyone can find on altars and in chests; they go off by themselves (Grave Blast when enemies get close, the other two at the biggest crowd near you). Do they feel useful? Dash is gone.
-  - *Tune: `src/combat/weapons/grave_blast.tres`, `hex_snare.tres`, `bone_effigy.tres`; crowd rules in `src/combat/auto_weapons.gd`.*
+  - *Tune: `src/combat/weapons/grave_blast.tres`, `hex_snare.tres`, `bone_effigy.tres`; crowd rules and `BLAST_WAKE_FACTOR` / `BLAST_HEAL_SHARE` in `src/combat/auto_weapons.gd`.*
 - [ ] Hero perks instead of abilities: Kael moves 10% faster, Mortimer regenerates 0.5 HP/s, Morwen +10% crit chance, Vesper's kills burst for 8 damage. Do heroes still feel different enough?
 - [ ] The mouse cursor hides while you play and comes back for level-up cards, the shop and the pause menu. Any moment it's missing when you need it?
-- [ ] Watch demos: the weapon part, then the hero steps out of a fan of bullets ("dodge!"). Clear?
 - [ ] What used to boost abilities now boosts auto weapons: Cracked Hourglass (recharge faster), Arcane Focus and Holy Water (more damage; they also make Hex Snare and Bone Effigy last longer), and the Ember Shrine's Focus. Noticeable?
 
 ### 3.0m Build rework: weapons and passives on level-up cards (v0.23.0)
@@ -104,7 +112,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
   - *Tune: `START_REROLLS` in `src/progression/cards.gd`, `CARD_REROLL_PRICE` in `src/progression/shop_session.gd`.*
 - [ ] Altars now give the weapon shown (or a level of it), else a level of a weapon you carry. Still worth walking to?
 
-### 3.0l Balance pass: upgrades, pickups, events (v0.22.0, Claude, measured with the autopilot only)
+### 3.0l Balance pass: upgrades, pickups, events (v0.22.1, Claude, measured with the autopilot only)
 - [ ] Sharpened Edge is now a share of your hero's own damage for **all** your weapons (+20% per level since v0.23.0; Cursed Skull +30%) instead of a flat +4, which was worth +40% to Kael but +13% to Mortimer. Does every hero still feel their damage grow? Is it still the pick you always want?
   - *Tune: `amount` in `src/progression/upgrades/sharpened_bolts.tres`, `src/progression/relics/cursed_skull.tres` (stat 36 = share of starting damage).*
 - [ ] Auto weapons hit much harder (Holy Aura, Orbiting Skulls, Hellfire, Seeking Bolts, Grave Blast and Bone Effigy got 30-80% more damage, the first three also more size) and grow x1.5 / x2.25 stronger in stages 2 and 3 (v0.23.0; with 5 weapon levels). Before, all of them together did under 5% of the damage. Now worth finding? Is any one of them still useless, or too strong?
@@ -128,120 +136,11 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] **My boosts: Off** and **Refund all** work? Host: Custom Game > **Ember boosts Off** turns everyone's off (the lobby summary says "no Ember boosts")?
 - [ ] Co-op: a friend's boosts work for them (e.g. Swiftness makes only them faster, with no rubber-banding)?
 
-### 3.0h Hero names, Watch demos, quieter floors (v0.20.0, your sixth list)
-- [ ] Heroes have names: Kael (Wanderer), Mortimer (Gravekeeper), Morwen (Hexblade Witch), Vesper (Necromancer). Do they fit? Want different ones?
-- [ ] In Choose Hero, press **Watch** under a hero: a looping demo shows their main weapon, then a dodge. Does it explain the hero well? Anything missing or confusing?
-- [ ] The demo's **Pick** button picks that hero; Back / Esc / B closes it. Works with a gamepad?
-- [ ] Floor decorations (tombstones, bones, skull piles, reeds, pews) are now about half a monster's size and faded into the floor. Still distracting, or now too hard to see?
-  - *Tune: names in `src/player/characters/*.tres` (`hero_name`); the demo in `src/lobby/hero_demo.gd` (timing constants at the top); props in `src/arena/floor_baker.gd` (`PROP_OPACITY`, `PROP_BRIGHTNESS`) and the prop sprites in `src/art/pixel_art.gd`.*
-
-### 3.0g Every hero has their own main weapon (v0.19.0)
-- [ ] Gravekeeper: the **Reaper's Scythe** flies out the way you face (and behind you since v0.22.0) and comes back to you. Fun? Does a slow tank with a short-range weapon feel strong enough?
-- [ ] Hexblade Witch: **Chain Lightning** strikes a random enemy near you and jumps on. Satisfying?
-- [ ] Necromancer: **Bone Spears** rise in a row toward a random nearby enemy after a short warning. Satisfying, or does the delay feel laggy?
-- [ ] Wanderer: still the Bolt Gun. Does the Wanderer feel boring next to the others?
-- [ ] Each hero's own weapon upgrades are their main weapon's levels 2-6 since v0.23.0 (see 3.0m): Twin Scythes, Long Reach, Heavy Blade, Grim Harvest / Forked Lightning, Long Arc, Conductor, Split Bolt / Longer Row, Wide Spikes, Quick Rise, Splinters. Any that feel useless or too strong?
-- [ ] Online: your scythe / lightning / spears show up instantly for you, and your friends see them too.
-- [ ] Altars, chests and level-up cards offer 11 weapons since v0.23.0 (Storm Lantern, Bone Cleaver and Grave Spikes are auto versions of the heroes' weapons, plus Spirit Daggers). Enough variety?
-  - *Tune: `src/player/characters/*.tres` (fire_interval, bullet_damage, projectile_count, weapon_reach / weapon_radius / weapon_duration), `src/combat/main_weapons.gd`, upgrades in `src/progression/upgrades/*.tres`.*
-
-### 3.0f Fixes and improvements from your fifth list (v0.18.0)
-- [ ] Title menu: type **Your name**. It shows on your lobby card, over your hero for friends, on their edge arrows, in "Waiting for..." lines and on the run summary. Friends see it too?
-- [ ] Title menu: **Exit Game** closes the game.
-- [ ] Lobby: the main page shows the whole party (one card per player, hero walking on the spot, ready state). Your card (or **Choose Hero**) opens the hero picker; picking goes straight back. Works with mouse and gamepad?
-- [ ] Run summary: the **Weapons** page no longer runs off the screen (it scrolls: wheel or Up / Down) and the tabs stay at the bottom. Esc / B goes back to Overview.
-- [ ] Run summary, beefed up: letters drop in, confetti (victory) or embers (defeat), the run's bosses as trophies (slain / the one that got you / not reached), team score, a crown on the MVP's card, a **Highlights** page. Exciting enough? Anything you'd add?
-- [ ] Solo: no "3, 2, 1" after a level-up or the shop (co-op still has it).
-- [ ] Host pause is gone: the host's Esc menu no longer freezes friends (solo still pauses). No more desyncs?
-- [ ] Shooting an enemy that's standing on top of you hits it now.
-- [ ] Champion chests open when you touch them (bigger pickup radius). Any chest that still won't open?
-- [ ] Minimap: each thing has its own shape (you = big diamond, teammates = small diamonds, downed teammate = blinking "+", boss = skull, altar = sword, champion = crown, ritual = ring, thief = coin, chest = chest). Easy to tell apart at a glance?
-- [ ] Edge arrows only point to map events and downed teammates now. Do you miss the arrows to healthy teammates?
-- [ ] Title menu: "Compendium" is now **Game Guide**. Clear?
-- [ ] **Balance:** stages 2 and 3 are much tougher (enemy HP x4 / x9, bosses x4.5 / x12, more enemies from the start, late level-ups cost more). Stage 2 should feel a bit harder than stage 1 and stage 3 like a real final test. Too much? Too little?
-  - *Tune: `CHEST_RADIUS` in `src/arena/map_events.gd`, `ALTAR_PICKUP_RADIUS` in `src/combat/weapon_system.gd`, `PlayerNames.MAX_LENGTH`; stage scaling: `ENEMY_HP_BY_DEPTH`, `BOSS_HP_BY_DEPTH`, `SPAWN_RATE_BY_DEPTH`, `RAMP_HEAD_START_BY_DEPTH` in `src/arena/arena.gd`; late levels: `LATE_LEVEL`, `LATE_XP_SQUARED` in `src/progression/team_progress.gd`.*
-
-### 3.0e Map events, quests, weapons, pickups (v0.17.0, your fourth list)
-- [ ] Champion lair: a dark crowned statue on a red ring somewhere on the map. It wakes when you get close. Fun to hunt down? Too tough or too easy?
-- [ ] Champion's chest: the first player to touch it gets an auto weapon (or a level). Worth the detour?
-- [ ] Ritual circle: standing in it calls waves; when the gold ring is full everyone inside heals and XP gems drop. Is 15 s the right length? Too dangerous or too safe?
-- [ ] Grave Robber: runs away dropping coins; catch it within 20 s. Catchable with every hero? Fun to chase?
-- [ ] Edge arrows (with an icon) and blinking minimap squares point to events. Easy to follow without cluttering the screen?
-- [ ] Toasts under the timer ("The Ghoul Champion awakens!") readable, not spammy?
-- [ ] Quests: in the shop, pick 1 of 3 for the next stage. Clear what to do (HUD line under your weapons)? Rewards worth it? Any quest that's too hard or too easy?
-- [ ] New weapons: Chain Lightning, Reaper's Scythe, Hellfire Trail, Bone Spears. Each one useful and visible? Any too strong?
-- [ ] Pickups: Heart, Soul Magnet, Holy Bomb, Frost Hourglass. Rare enough to be exciting, common enough to matter?
-- [ ] Frost Hourglass freezes enemy bullets in the air (they still hurt). Readable, or confusing?
-  - *Tune: event numbers at the top of `src/arena/map_events.gd` (wake radius, ritual length, thief time, pop-up times) and `src/arena/arena.gd` (champion / thief coins, ritual XP share, wave size); champions in `src/enemies/types/*_champion.tres`; quests in `src/progression/quests.gd` (targets, rewards); weapons in `src/combat/weapons/*.tres`; pickups in `src/progression/power_ups.gd` (drop chance, cooldown, bomb damage, freeze time).*
-
-### 3.0c In-game feedback (v0.16.0)
-- [ ] "Send feedback" from the title menu and from the pause menu (Esc / Start). The message (with your name and the game info) arrives in Discord #feedback?
-- [ ] "Include screenshot" during a game: the picture in Discord shows the game, not the menu?
-- [ ] Typing in the boxes doesn't move your character or trigger other keys (R, F1, Esc)?
-
-### 3.0d Upgrades from v0.16.0 (now passives, v0.23.0)
-- [ ] The 12 passives (Game Guide > Passives). Do they show up and feel worth picking?
-- [ ] Keen Edge: gold sparks on critical hits, visible but not too noisy?
-- [ ] Corpse Blast: green bursts where your kills die. Too strong with a crowd, or too weak? Still smooth with lots of kills in co-op?
-- [ ] Ricochet and Hunting Bolts (Kael's Bolt Gun levels): bolts bounce / curve toward enemies. Fun, and does it look right on a client?
-- [ ] Trade-offs are in the shop now (Cursed Skull, Iron Boots): tempting, or never worth it?
-- [ ] With 12 passives and 11 weapons on the cards, do you find a build you like, or does it feel too random?
-  - *Tune: `src/progression/upgrades/*.tres` (amount, max_stacks); crit / boss / wounded math in `src/combat/hit_bonus.gd`; burst size `KILL_BURST_RADIUS` in `src/arena/arena.gd`; `RICOCHET_RANGE` / `HOMING_RANGE` in `src/combat/projectile_manager.gd`.*
-
-### 3.0b Changes from your second co-op list (v0.15.0, check these first)
-- [ ] Difficulty: level-ups are cheaper again (between v0.13 and v0.14) and two upgrades got stronger (both are passives with levels since v0.23.0). Can you beat stage 1 now? Too easy?
-  - *Tune: `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; upgrade `.tres` files.*
-- [ ] Co-op revives: at 0 HP you're downed in a circle; a teammate standing in it brings you back in 4 s with half your HP. Is 4 s right? Is the circle easy to find and stand in?
-  - *Tune: `RADIUS`, `SECONDS`, `HP_SHARE`, `DRAIN_PER_SECOND` in `src/player/revive.gd`.*
-- [ ] While you're down, your screen follows a teammate after a moment (Space / A switches who). Better than watching your body? Did the arrow back to your own body help?
-- [ ] Teammates' arrows pulse with a green "+" when they're down, and "Red is down!" / "Reviving Red... 40%" shows near the bottom. Noticeable in a fight?
-- [ ] Mourner's Bell relic (co-op only): revive twice as fast. Worth buying?
-- [ ] Run summary: a star next to the best player's number in each stat (fewest for Damage taken / Downed). Clear?
-- [ ] Run summary: icons for weapons, upgrades and relics under "Build" (hover for names). Can you tell the icons apart?
-- [ ] Run summary: Weapons page (button at the bottom): damage, share, DPS and kills per weapon. Numbers believable? Anything else you want there?
-- [ ] Upgrade and relic icons on the level-up and shop cards. Do they help?
-- [ ] Game Guide: Upgrades and Relics tabs show the icons; Pickups explains downed and revives. Anything out of date?
-- [ ] Records (title menu): your best runs per hero on this PC, with a score. Shows after a real run? Does the score feel fair (kills, damage, bosses, victory, difficulty)?
-- [ ] Custom Game: Soundtrack (Classic / Metal / Metal boss fights / Shuffle). Do the metal tracks fit? Which stage track is best or worst?
-
-### 3.0a Changes from the first co-op playtest (v0.14.0)
-- [ ] Level-up pacing: about half as many level-ups (a 2-player team: ~14 in stage 1 instead of ~30). Does the flow feel better? Is the difficulty still right with fewer upgrades? *(Too hard: retuned in v0.15.0, see 3.0b.)*
-  - *Tune: `BASE_XP` / `XP_PER_LEVEL` in `src/progression/team_progress.gd`.*
-- [ ] After you pick, your card stays lit (gold border, others dimmed) with "You chose X. Waiting for ...". Clear?
-- [ ] Level pips on each card (filled = levels you have, blinking gold = this pick, hollow = left to max). Readable?
-- [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop (co-op only since v0.18.0). Long enough? Too long?
-  - *Tune: `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`.*
-- [ ] Weapon icons with level pips under the HP bar (HUD), on the run-end cards, and floating over altars. Can you tell them apart?
-- [ ] Arrows at the screen edge point to downed teammates (pulsing, with a "+") and map events; healthy teammates are on the minimap (since v0.18.0). Helpful? Distracting?
-- [ ] Lobby: party cards show each player's color, and in the hero picker small color squares show who picked which hero.
-- [ ] Victory / Run over: "Return to character select" button (host). Works with gamepad?
-- [ ] New boss arrival sound (impact + bell + horn). Audible and dramatic enough?
-- [ ] Performance: the slowdown for 10-20 s after a boss appears (2 players) should be gone. Still any stutter? Who had it, host or friend?
-- [ ] Title screen: "(latest version)" next to the version, or "Version X is out!" + Update now when a newer release exists. Does updating work (download, restart into the new version)? Windows or antivirus warnings?
-- [ ] Title menu: Game Guide pages (Heroes, Weapons, Passives, Evolutions, Relics, Pickups, Events, Enemies, Bosses). Useful? Anything missing or wrong?
-- [ ] Lobby: Difficulty page (sliders + Easy / Normal / Hard). Do the settings feel like they do what they say? Is Hard hard?
-- [ ] Lobby: Custom Game page. Try a single stage on the Bone Marsh or Cathedral, no boss, a short wave, starting level-ups, Full arsenal. Does the run end in Victory as expected?
-- [ ] Friends see the host's settings (summary line in the lobby; pages are read-only for them).
-- [ ] Title menu: this Playtest Checklist. Ticks are remembered after restarting the game? "Copy what's left" works?
-
-### 3.0 Changes from your first playtest (v0.12.0)
-- [ ] Gems: easy to spot now? Three tiers distinguishable?
-- [ ] Minimap: helpful? Did you notice the red edge warning near walls?
-- [ ] Text: shop, level-up cards, lobby, HUD all readable now?
-- [ ] Shop: about one relic per shop now? Too stingy? (*Tune: coin_chance in enemy `.tres`, relic `price`, `BOSS_BOUNTY` in `src/arena/arena.gd`*)
-- [ ] Grave Blast / Hex Snare / Bone Effigy (auto weapons since v0.22.0) each feel good and different? Is the hex sigil and the effigy's lure ring readable? (*Tune: `src/combat/weapons/*.tres`*)
-- [ ] Version shown on the title screen.
-
 ### 3.1 Moment-to-moment feel
 - [ ] Does movement still feel instant and smooth (it did in M1/M2)?
 - [ ] Your main weapon (fires by itself): does it feel good? Too weak or strong early on?
-- [ ] **New:** screen shake (hurt, Grave Blast, boss death). Too much, too little, or annoying? *(Can be turned off in Settings)*
-- [ ] **New:** hit sparks, death puffs, red flash when hurt. Helpful or noisy?
-- [ ] **New:** music. Menu/shop theme, one track per stage, boss theme. Does each fit its stage? Gets repetitive (loops are 14–27 s)? Too loud vs effects? *(Music volume in Settings)*
-  - *Tune: scores are text in `src/audio/tracks.gd` (tempo, chords, melody, drums).*
-- [ ] **New:** sound effects (synthesized, now with filtering/echo). Any sound too loud, grating, or missing?
-  - Attacks, hits, enemy deaths, gems, coins, level-up, bomb, boss roar, victory/defeat jingles.
-  - *Tune: `src/autoload/sfx.gd` (each sound is one line) and the `Sfx.play(...)` volumes.*
+- [ ] Screen shake (hurt, Grave Blast, boss death). Too much, too little, or annoying? *(Can be turned off in Settings)*
+- [ ] Hit sparks, death puffs, red flash when hurt. Helpful or noisy?
 
 ### 3.2 Bullet patterns and dodging (the core pillar)
 - [ ] Are enemy bullets easy to **see** against each floor (Crypt purple, Marsh green, Cathedral red)?
@@ -250,6 +149,7 @@ Each item has a **question** and, where relevant, **where to tune it** (so Claud
 - [ ] Plague Spitters (stage 2): slow 8-bullet rings. Readable?
 - [ ] Fallen Paladins (stage 3): aimed lines of 5 bullets. Readable?
 - [ ] Online (session D): does dodging feel fair as the *client*? (Enemy bullets are shifted forward by your ping.)
+- [ ] Frost Hourglass freezes enemy bullets in the air (they still hurt). Readable, or confusing?
   - *Tune: patterns in `src/combat/shot_patterns.gd`; who fires them in `src/enemies/types/*.tres`.*
 
 ### 3.3 Bosses
@@ -272,11 +172,14 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Pack surges (a clump from one direction every 35–50 s). Exciting or cheap?
 - [ ] Did you ever feel bored? Overwhelmed? When?
 - [ ] Total run length (~17–20 min including shops). Right?
-  - *Tune: `WAVE_DURATION`, `SPAWN_RATE_BY_DEPTH`, `ENEMY_HP_BY_DEPTH`, `BOSS_HP_BY_DEPTH`, `DAMAGE_BY_DEPTH` in `src/arena/arena.gd`;
-    spawn rate in `src/arena/spawn_director.gd`; enemy mixes in `src/stages/*.tres`.*
+- [ ] Lobby: Difficulty page (sliders + Easy / Normal / Hard). Do the settings feel like they do what they say? Is Hard hard?
+- [ ] Lobby: Custom Game page. Try a single stage on the Bone Marsh or Cathedral, no boss, a short wave, starting level-ups, Full arsenal. Does the run end in Victory as expected?
+  - *Tune: `WAVE_DURATION`, `SPAWN_RATE_BY_DEPTH`, `ENEMY_HP_BY_DEPTH`, `BOSS_HP_BY_DEPTH`, `DAMAGE_BY_DEPTH`, `RAMP_HEAD_START_BY_DEPTH` in `src/arena/arena.gd`;
+    spawn rate in `src/arena/spawn_director.gd`; enemy mixes in `src/stages/*.tres`; late levels: `LATE_LEVEL`, `LATE_XP_SQUARED` in `src/progression/team_progress.gd`.*
 
-### 3.5 Characters (lobby)
+### 3.5 Heroes (lobby)
 - [ ] Lobby: easy to pick and ready up (mouse **and** gamepad)?
+- [ ] Lobby: the main page shows the whole party (one card per player, hero walking on the spot, ready state). Your card (or **Choose Hero**) opens the hero picker; picking goes straight back. Works with mouse and gamepad?
 
 | Character | Feels distinct? | Too strong / weak? | Perk noticeable? |
 |---|---|---|---|
@@ -285,23 +188,34 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 | Morwen the Hexblade Witch (fast, 70 HP, Chain Lightning, +10% crit) | | | |
 | Vesper the Necromancer (90 HP, Bone Spears, kills burst) | | | |
 
+- [ ] Heroes have names: Kael (Wanderer), Mortimer (Gravekeeper), Morwen (Hexblade Witch), Vesper (Necromancer). Do they fit? Want different ones?
+- [ ] In Choose Hero, press **Watch** under a hero: a looping demo shows their main weapon, then a dodge. Does it explain the hero well? Anything missing or confusing?
+- [ ] The demo's **Pick** button picks that hero; Back / Esc / B closes it. Works with a gamepad?
 - [ ] Gravekeeper's scythe range (short). Fun or frustrating?
+- [ ] Necromancer: **Bone Spears** rise in a row toward a random nearby enemy after a short warning. Satisfying, or does the delay feel laggy?
+- [ ] Wanderer: still the Bolt Gun. Does the Wanderer feel boring next to the others?
 - [ ] Witch with 70 HP. Too fragile?
-  - *Tune: `src/player/characters/*.tres`.*
+- [ ] Online: your scythe / lightning / spears show up instantly for you, and your friends see them too.
+  - *Tune: `src/player/characters/*.tres` (max_hp, fire_interval, bullet_damage, weapon_reach / weapon_radius / weapon_duration, `hero_name`), `src/combat/main_weapons.gd`; the demo in `src/lobby/hero_demo.gd`.*
 
-### 3.6 Level-ups and upgrades
-- [ ] How often do level-ups pause the game? Too often in co-op? (Rebalanced in v0.14.0, see 3.0a.)
+### 3.6 Level-ups and passives
+- [ ] How often do level-ups pause the game? Too often in co-op?
 - [ ] Level-up cards show level pips and your real stat before -> after (e.g. "Damage 13 -> 16"). Useful, and are the numbers right after a few picks and relics?
-- [ ] Run over / Victory screen: headline (what killed you, which stage), run totals, a card per player with stats, build and co-op awards. Readable? Any stat you miss?
 - [ ] Are the 12 passives and the main weapon levels meaningfully different? Any always/never picked?
+- [ ] With 12 passives and 11 weapons on the cards, do you find a build you like, or does it feel too random?
+- [ ] Keen Edge: gold sparks on critical hits, visible but not too noisy?
+- [ ] Corpse Blast: green bursts where your kills die. Too strong with a crowd, or too weak? Still smooth with lots of kills in co-op?
+- [ ] Ricochet and Hunting Bolts (Kael's Bolt Gun levels): bolts bounce / curve toward enemies. Fun, and does it look right on a client?
 - [ ] 30-second countdown after the first pick: right length?
-  - *Tune: XP curve in `src/progression/team_progress.gd`; upgrades in `src/progression/upgrades/*.tres`.*
+- [ ] "3, 2, 1" countdown (with beeps) after everyone picks and after the shop (co-op only since v0.18.0). Long enough? Too long?
+  - *Tune: XP curve `BASE_XP` / `XP_PER_LEVEL` / `TEAM_COST_PER_EXTRA_PLAYER` in `src/progression/team_progress.gd`; passives in `src/progression/upgrades/*.tres`; crit / boss / wounded math in `src/combat/hit_bonus.gd`; `KILL_BURST_RADIUS` and `RESUME_COUNTDOWN_SECONDS` in `src/arena/arena.gd`; `RICOCHET_RANGE` / `HOMING_RANGE` in `src/combat/projectile_manager.gd`.*
 
 ### 3.7 Coins, shop and relics
 - [ ] Coin income: could you afford 2–3 relics per shop? (Boss bounty 25 / 40 / 55 coins + drops and events.)
 - [ ] Relic prices (45–100), relic reroll (10, then +10 each) and card rerolls (15). Right?
 - [ ] Any relic clearly best / useless? (Cursed Skull, Iron Boots, Cracked Hourglass, Grave Lantern, Bone Charm,
       Hunter's Eye, Vampire Fang, Holy Water, Mourner's Bell, Bloodstone)
+- [ ] Trade-offs are in the shop now (Cursed Skull, Iron Boots): tempting, or never worth it?
 - [ ] Shop flow: clear what to do? 45 s countdown after first Ready OK?
   - *Tune: `src/progression/relics/*.tres`, `BOSS_BOUNTY` in `src/arena/arena.gd`, coin drop chances in enemy `.tres`.*
 
@@ -311,65 +225,89 @@ For each boss: Can you learn the pattern? Does phase 2 (below half HP) feel like
 - [ ] Do weapons make the screen too busy to read enemy bullets?
   - *Tune: `src/combat/weapons/*.tres`, `ALTAR_TIMES` in `src/combat/weapon_system.gd`.*
 
-### 3.9 Grave Blast (auto weapon)
-- [ ] Goes off by itself when enemies get close (every 10 s at level 1): clear radius big enough to save you? Damage noticeable?
-  - *Tune: `src/combat/weapons/grave_blast.tres`, `BLAST_WAKE_FACTOR` / `BLAST_HEAL_SHARE` in `src/combat/auto_weapons.gd`.*
+### 3.9 Map events, quests and pickups
+- [ ] Champion lair: a dark crowned statue on a red ring somewhere on the map. It wakes when you get close. Fun to hunt down? Too tough or too easy?
+- [ ] Champion's chest: the first player to touch it gets an auto weapon (or a level). Worth the detour?
+- [ ] Ritual circle: standing in it calls waves; when the gold ring is full everyone inside heals and XP gems drop. Is 15 s the right length? Too dangerous or too safe?
+- [ ] Grave Robber: runs away dropping coins; catch it within 20 s. Catchable with every hero? Fun to chase?
+- [ ] Toasts under the timer ("The Ghoul Champion awakens!") readable, not spammy?
+- [ ] Quests: in the shop, pick 1 of 3 for the next stage. Clear what to do (HUD line under your weapons)? Rewards worth it? Any quest that's too hard or too easy?
+- [ ] Pickups: Heart, Soul Magnet, Holy Bomb, Frost Hourglass. Rare enough to be exciting, common enough to matter?
+  - *Tune: event numbers at the top of `src/arena/map_events.gd` (wake radius, ritual length, thief time, pop-up times) and `src/arena/arena.gd` (champion / thief coins, ritual XP share, wave size); champions in `src/enemies/types/*_champion.tres`; quests in `src/progression/quests.gd` (targets, rewards); pickups in `src/progression/power_ups.gd` (drop chance, cooldown, bomb damage, freeze time).*
 
 ### 3.10 Co-op (session D)
+- [ ] Co-op revives: at 0 HP you're downed in a circle; a teammate standing in it brings you back in 4 s with half your HP. Is 4 s right? Is the circle easy to find and stand in?
+  - *Tune: `RADIUS`, `SECONDS`, `HP_SHARE`, `DRAIN_PER_SECOND` in `src/player/revive.gd`.*
 - [ ] Being downed: do revives happen often enough, or do you still end up waiting for the next stage?
+- [ ] While you're down, your screen follows a teammate after a moment (Space / A switches who). Better than watching your body? Did the arrow back to your own body help?
+- [ ] Teammates' arrows pulse with a green "+" when they're down, and "Red is down!" / "Reviving Red... 40%" shows near the bottom. Noticeable in a fight?
+- [ ] Mourner's Bell relic (co-op only): revive twice as fast. Worth buying?
+- [ ] Arrows at the screen edge point to downed teammates (pulsing, with a "+") and map events; healthy teammates are on the minimap (since v0.18.0). Helpful? Distracting?
+- [ ] Title menu: type **Your name**. It shows on your lobby card, over your hero for friends, on their edge arrows, in "Waiting for..." lines and on the run summary. Friends see it too?
+- [ ] Friends see the host's settings (summary line in the lobby; pages are read-only for them).
 - [ ] Shared XP + individual picks: does it feel good together?
 - [ ] Coins first-come-first-served: fair, or does one player hog them?
 - [ ] Any desync weirdness (rubber-banding, enemies jumping, bullets that hit you but didn't look like it)?
+- [ ] Performance: the slowdown for 10-20 s after a boss appears (2 players) should be gone. Still any stutter? Who had it, host or friend?
 - [ ] Ping shown on the client HUD: what was it?
 
 ### 3.11 Menus and UI
-- [ ] **New:** Esc / Start opens the pause menu (it used to instantly leave!). Solo actually pauses.
-- [ ] **New:** Settings (volume, fullscreen, screen shake). Do they work and stick after restarting?
-- [ ] **New:** End-of-run stats table. Interesting?
-- [ ] **New:** menu style (dark panels, gold focus ring for gamepad, crisp pixel text, crypt backdrop on the title screen). Readable? Fits the game?
+- [ ] Settings (volume, fullscreen, screen shake). Do they work and stick after restarting?
+- [ ] Menu style (dark panels, gold focus ring for gamepad, crisp pixel text, crypt backdrop on the title screen). Readable? Fits the game?
 - [ ] HUD readable at your screen size? Anything you look for and can't find?
+- [ ] Minimap: each thing has its own shape (you = big diamond, teammates = small diamonds, downed teammate = blinking "+", boss = skull, altar = sword, champion = crown, ritual = ring, thief = coin, chest = chest). Easy to tell apart at a glance?
+- [ ] Minimap: helpful? Did you notice the red edge warning near walls?
+- [ ] Run summary: Weapons page (button at the bottom): damage, share, DPS and kills per weapon. Numbers believable? Anything else you want there?
+- [ ] Records (title menu): your best runs per hero on this PC, with a score. Shows after a real run? Does the score feel fair (kills, damage, bosses, victory, difficulty)?
+- [ ] Title menu: Game Guide pages (Heroes, Weapons, Passives, Evolutions, Relics, Pickups, Events, Enemies, Bosses). Useful? Anything missing or wrong?
+- [ ] Title menu: this Playtest Checklist. Ticks are remembered after restarting the game? "Copy what's left" works?
+- [ ] "Send feedback" from the title menu and from the pause menu (Esc / Start). The message (with your name and the game info) arrives in Discord #feedback?
+- [ ] "Include screenshot" during a game: the picture in Discord shows the game, not the menu?
+- [ ] Typing in the boxes doesn't move your character or trigger other keys (R, F1, Esc)?
+- [ ] Title screen: "(latest version)" next to the version, or "Version X is out!" + Update now when a newer release exists. Does updating work (download, restart into the new version)? Windows or antivirus warnings?
 
-### 3.12 Looks
-- [ ] **New:** pixel-art sprites for every character, enemy and boss. Do they read well at a glance in a crowd?
+### 3.12 Looks and sound
+- [ ] Pixel-art sprites for every character, enemy and boss. Do they read well at a glance in a crowd?
 - [ ] Can you always tell the enemy types apart? The bosses?
 - [ ] Your character in your player color: easy to find yourself? Is the white hitbox dot clear?
-- [ ] **New:** animations (walk cycles, enemy attack poses when they fire, death squash-and-fade, spinning coins). Readable and satisfying, or distracting?
-- [ ] **Fixed:** sprites facing left used to be drawn off-center. Do enemies now get hit exactly where they look?
-- [ ] Any sprite you'd like redrawn (too small, wrong vibe, ugly)? *(Sprites are text grids in `src/art/pixel_art.gd`; easy to change.)*
-- [ ] **New:** pixel-art floors (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet) with props. Atmospheric? Too busy or too dark to read bullets?
+- [ ] Animations (walk cycles, enemy attack poses when they fire, death squash-and-fade, spinning coins). Readable and satisfying, or distracting?
+- [ ] Gems: easy to spot now? Three tiers distinguishable?
+- [ ] Floor decorations (tombstones, bones, skull piles, reeds, pews) are now about half a monster's size and faded into the floor. Still distracting, or now too hard to see?
+- [ ] Pixel-art floors (Crypt slabs, Marsh mud and puddles, Cathedral marble and carpet) with props. Atmospheric? Too busy or too dark to read bullets?
+- [ ] Any sprite you'd like redrawn (too small, wrong vibe, ugly)?
+  - *Tune: sprites in `src/art/pixel_art.gd` or `assets/art/<sprite>.png`; props in `src/arena/floor_baker.gd` (`PROP_OPACITY`, `PROP_BRIGHTNESS`).*
+- [ ] Music: menu/shop theme, one track per stage, boss theme. Does each fit its stage? Gets repetitive (loops are 10–27 s)? Too loud vs effects? *(Music volume in Settings)*
+- [ ] Custom Game: Soundtrack (Classic / Metal / Metal boss fights / Shuffle). Do the metal tracks fit? Which stage track is best or worst?
+- [ ] Sound effects: any sound too loud, grating, or missing? (Attacks, hits, enemy deaths, gems, coins, level-up, bomb, boss arrival, victory/defeat jingles.)
+- [ ] Boss arrival sound (impact + bell + horn). Audible and dramatic enough?
+  - *Tune: scores are text in `src/audio/tracks.gd` (the music files are rendered from them by `tools/render_music.gd`); sounds in `src/autoload/sfx.gd` (one line each).*
 
 ---
 
 ## 4. Decisions Claude made for you (revisit)
 
-All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In one place:
+All of these are recorded in `DESIGN.md`. In one place:
 
 - **Stage flow:** 4:00 horde then boss; when it arrives the horde is swept away and the boss brings an escort; then the horde comes back at 25% (capped); stage clear = boss dead.
-- **Run:** 3 stages, each harder; Victory after stage 3; the host returns everyone to character select (button, or R / Select).
+- **Run:** 3 stages, each harder; Victory after stage 3.
 - **Boss HP** scales with players (+75% each); regular enemies don't (more of them instead).
-- **Downed players** can be revived by a teammate (4 s in the circle, half HP back); otherwise they get up at the next stage.
-- **Coins** go to whoever picks them up; the boss bounty is paid to everyone.
+- **Revives:** 4 s in a 30 px circle, half HP back, slow drain, no bleed-out timer; otherwise you get up at the next stage.
 - **Shop:** 4 personal relic offers, 10-coin reroll (+10 each), card rerolls for 15, 45 s after first Ready.
-- **Relics** are one-of-a-kind per player; some have drawbacks.
-- **Passives and evolutions (v0.23.0):** the 12 passives and their numbers, the card weights, which passive each evolution needs.
-- **Map events (v0.17.0):** one champion lair and one ritual per stage at the start, then pop-ups (thief 1:10, ritual 2:20, thief 3:20); champions are recolored, crowned regular enemies (Ghoul / Plague / Paladin Champion); every reward number.
-- **Quests (v0.17.0):** the nine quests, their targets and rewards; a random offer if you don't pick.
-- **Weapons and pickups (v0.17.0):** the four new weapons' numbers; pickup drop chance (1% per kill, at most one per 18 s since v0.22.0) and odds.
+- **Auto-fire redesign:** the targeting details (reach, random picks), Mortimer's back throw, every HP and damage number, the healing amounts, the four perks, the three ability weapons' numbers and when they go off, the hidden cursor, the Watch demo's dodge part, Ghoul Blood and Bloodstone.
+- **Builds:** the 12 passives and their numbers, the card weights, which passive each evolution needs, Spirit Daggers.
+- **Map events and quests:** pop-up times, every reward number, champions as recolored crowned stage enemies, the nine quests.
 - **Altars:** at 1:20 and 2:40 (more in co-op, near different players), first touch takes it; nothing left to give = 10 coins.
-- **Auto-fire redesign (v0.22.0):** the targeting rules' details (reach, random picks), Mortimer's back throw, every HP and damage number, the healing amounts, the four perks, the three ability weapons' numbers and when they go off, Dash removed, the hidden cursor, the Watch demo's dodge part, and the Recovery upgrade and relic (Ghoul Blood, Bloodstone).
-- **Characters**, as listed in 3.5.
-- **Mid-run joiners** play the Wanderer.
-- **Seventh list (v0.24.0):** the boss fight numbers (escort size, 25% trickle, the caps), +50% ritual speed per extra player, the "YOU" marker's look, the icon art, which numbers the run summary shows and its Stages page, the Custom chip and gold changed values on the Difficulty page.
-- **Watch demos (sixth list):** a scripted mini-scene drawn in code (no video files): ~8 s loop, weapon for 4 s then a dodge through a bullet fan; Shamblers walk a bit faster than real ones, so the loop stays short.
-- **Sound and music** are synthesized from text (5 classic tracks, 4 metal ones); final audio direction later.
+- **Mid-run joiners** play Kael.
+- **Seventh list:** the boss fight numbers, no XP from the swept horde, +50% ritual speed per extra player, the "YOU" marker, the icon art, what the run summary shows, the Custom chip and gold values.
+- **Eighth list:** a won full run unlocks the next hero (single-stage custom games don't; easier difficulties do); a downed player still gets the unlock when the team wins; how muted Hellfire is.
 
 ---
 
 ## 5. Known limitations (not bugs)
-- All audio is synthesized (chiptune style); no recorded sounds or composed soundtrack.
-- Sprites and floors are drawn by Claude as text grids/code (little animation: bats, imps, walk bob); effects and UI are simple code drawing.
+- Sound effects and music are synthesized from text (the music now plays from files rendered from those scores); new audio is planned (`docs/AUDIO_BRIEF.md`).
+- Most sprites and all floors are drawn by Claude as text grids/code; the hero sprites are the first image files.
 - Enemy bullets already on screen aren't sent to a friend who joins mid-fight (new ones are).
-- Joining mid-run always gives the Wanderer.
+- Joining mid-run always gives Kael the Wanderer.
 - The autopilot used in automated tests dodges badly, so its balance numbers only compare stages and heroes; real difficulty needs humans.
 
 ---
@@ -379,7 +317,7 @@ All of these are recorded in `DESIGN.md` with "Revisit in the next playtest". In
 Paste something like this to Claude. Rough notes are fine:
 
 ```
-Session: B (full solo run, Gravekeeper)   Result: died in stage 3 at ~2:00
+Session: B (full solo run, Mortimer)   Result: died in stage 3 at ~2:00
 Felt great: ...
 Felt bad / unfair: ...
 Too easy / too hard: ...

@@ -14,7 +14,7 @@ config/name="Medieval Survival"
 ; Saves (settings, records, Embers) stay where they were before the game had a name.
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Godot/app_userdata/GameTest"
-config/version="0.24.0"
+config/version="0.25.0"
 run/main_scene="res://src/main/main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"

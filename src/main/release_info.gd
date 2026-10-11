@@ -4,10 +4,18 @@ extends RefCounted
 ## (https://api.github.com/repos/<repo>/releases/latest; no login needed), plus
 ## the version comparison the updater uses. Pure logic, so it's testable.
 
-const REPO: String = "Tristan2828/GameTest"
+## Renamed from Tristan2828/GameTest (GitHub redirects the old name). Versions up
+## to v0.24.0 only trusted links under the old name, and GitHub's API now answers
+## with the new one, so their updater found "no Windows download" (playtest 8).
+const REPO: String = "Tristan2828/medieval-survival"
+const OLD_REPO: String = "Tristan2828/GameTest"
 const LATEST_URL: String = "https://api.github.com/repos/" + REPO + "/releases/latest"
+## Fallback when the API refuses: this page redirects to the newest release's tag.
+const LATEST_PAGE_URL: String = "https://github.com/" + REPO + "/releases/latest"
+## The last release whose zip was named GameTest-<version>-windows.zip.
+const LAST_GAMETEST_ZIP: String = "0.24.0"
 ## Only download from GitHub (the API answers with these hosts).
-const TRUSTED_PREFIXES: Array[String] = ["https://github.com/" + REPO + "/"]
+const TRUSTED_PREFIXES: Array[String] = ["https://github.com/" + REPO + "/", "https://github.com/" + OLD_REPO + "/"]
 
 ## e.g. "0.15.0" (the tag without its "v").
 var version: String = ""
@@ -43,6 +51,24 @@ static func parse(json_text: String) -> ReleaseInfo:
 					and asset_name.ends_with("-windows.zip") and is_trusted(url):
 				info.zip_url = url
 				info.zip_size = int(asset.get("size", 0))
+	return info
+
+
+## The fallback: a release from its tag page link (".../releases/tag/v0.25.0").
+## The zip's link follows the naming release.ps1 uses (no size known).
+static func from_tag_url(url: String) -> ReleaseInfo:
+	var marker := "/releases/tag/"
+	if not is_trusted(url) or not url.contains(marker):
+		return null
+	var tag := url.get_slice(marker, 1).get_slice("?", 0).get_slice("#", 0).uri_decode()
+	var version := tag.trim_prefix("v")
+	if version.is_empty() or not version.replace(".", "").is_valid_int():
+		return null
+	var info := ReleaseInfo.new()
+	info.version = version
+	info.page_url = url
+	var prefix := "GameTest" if compare_versions(version, LAST_GAMETEST_ZIP) <= 0 else "MedievalSurvival"
+	info.zip_url = "https://github.com/%s/releases/download/%s/%s-%s-windows.zip" % [REPO, tag, prefix, version]
 	return info
 
 

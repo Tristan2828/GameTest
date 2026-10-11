@@ -66,18 +66,21 @@ func _init() -> void:
 
 
 ## Shows `character_id`'s demo from the start, in the player's `color`.
-func open(character_id: int, color: Color) -> void:
+## A locked hero (HeroUnlocks) can be watched but not picked.
+func open(character_id: int, color: Color, can_pick: bool = true) -> void:
 	_character_id = character_id
 	var stats := Characters.get_character(character_id)
 	_name_label.text = stats.hero_name
 	_class_label.text = "the %s     Perk - %s: %s" % [stats.display_name, stats.perk_name, stats.perk_description]
 	_weapon_label.text = "Main weapon - %s: %s" % [stats.main_weapon_name, Compendium.main_weapon_text(stats)]
 	_dodge_label.text = "Dodge: you only move. Your weapons fire by themselves."
-	_pick_button.text = "Pick %s" % stats.hero_name
+	_pick_button.text = "Pick %s" % stats.hero_name if can_pick else "Locked"
+	_pick_button.disabled = not can_pick
+	_pick_button.tooltip_text = "" if can_pick else HeroUnlocks.hint(character_id)
 	demo.color = color
 	demo.character_id = character_id
 	show()
-	_pick_button.grab_focus()
+	(_pick_button if can_pick else _back_button).grab_focus()
 
 
 func close() -> void:

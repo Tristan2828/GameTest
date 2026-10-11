@@ -1,6 +1,6 @@
 # Announces each published GitHub Release in Discord #builds.
 # Needs the repo secret DISCORD_BUILDS_WEBHOOK (the #builds webhook URL):
-#   gh secret set DISCORD_BUILDS_WEBHOOK --repo Tristan2828/GameTest
+#   gh secret set DISCORD_BUILDS_WEBHOOK --repo Tristan2828/medieval-survival
 # To re-send an announcement (or test the webhook), run this workflow by hand
 # from the Actions tab and enter an existing tag such as v0.12.0.
 name: Announce release in Discord

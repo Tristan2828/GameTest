@@ -91,7 +91,7 @@ func _ready() -> void:
 	updater = Updater.new()
 	add_child(updater)
 	updater.changed.connect(_refresh_update)
-	_update_button.pressed.connect(updater.update)
+	_update_button.pressed.connect(updater.press)
 	_page_button.pressed.connect(updater.open_release_page)
 	_refresh_update()
 
@@ -124,6 +124,15 @@ func _refresh_update() -> void:
 			_update_button.text = "Try again"
 			_update_button.visible = true
 			_page_button.visible = true
+		Updater.State.CHECK_FAILED:
+			# Quiet (grey): offline is normal. Before playtest 8 this showed nothing.
+			text = updater.error
+			color = Color(0.7, 0.68, 0.72)
+			_update_button.text = "Check again"
+			_update_button.visible = true
+			_page_button.visible = true
+		Updater.State.RESTART_NEEDED:
+			text = updater.error
 	_update_label.text = text
 	_update_label.add_theme_color_override("font_color", color)
 	_update_row.visible = not text.is_empty()
@@ -136,7 +145,7 @@ func _refresh_update() -> void:
 	# No starting a game mid-update (re-enabled if the update fails).
 	if updater.state == Updater.State.DOWNLOADING or updater.state == Updater.State.INSTALLING:
 		_set_buttons_enabled(false)
-	elif updater.state == Updater.State.FAILED:
+	elif updater.state == Updater.State.FAILED or updater.state == Updater.State.RESTART_NEEDED:
 		_set_buttons_enabled(true)
 
 

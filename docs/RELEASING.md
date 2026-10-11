@@ -1,7 +1,7 @@
 # Releasing playtest builds
 
 Builds are published as **GitHub Releases** on the public repo
-[Tristan2828/GameTest](https://github.com/Tristan2828/GameTest/releases) and announced
+[Tristan2828/medieval-survival](https://github.com/Tristan2828/medieval-survival/releases) and announced
 automatically in the playtest **Discord**. No bots: only Discord webhooks.
 
 ## Every release
@@ -18,10 +18,11 @@ automatically in the playtest **Discord**. No bots: only Discord webhooks.
    ```
 5. About a minute later, the release appears in Discord `#builds`.
 6. Players on an older version see "Version X is out!" with an **Update now** button on the
-   title screen (in every version after v0.14.0). It downloads the zip from this release, swaps the running exe
-   and restarts. So keep the asset name `MedievalSurvival-<version>-windows.zip` with
-   `MedievalSurvival.exe` at its root (`GameTest-...` / `GameTest.exe` until v0.24.0; the updater
-   accepts both names from v0.24.0 on, but v0.23.0 and older only find `GameTest-...`), and never publish a release with a lower version than the last one.
+   title screen. It downloads the zip from this release, swaps the running exe and restarts. So keep
+   the asset name `MedievalSurvival-<version>-windows.zip` with `MedievalSurvival.exe` at its root
+   (what `build.ps1` makes), and never publish a release with a lower version than the last one.
+   v0.24.0 and older can't update past the repo rename: friends on those download v0.25.0 once by hand
+   (say so in its release notes).
 
 `release.ps1` refuses to run unless you are on `main`, have no uncommitted changes, are pushed
 to GitHub, and the version's tag doesn't exist yet.
@@ -51,7 +52,7 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
 ## One-time setup (already done unless noted)
 
 - **`#builds` webhook secret:** in Discord, `#builds` gear -> Integrations -> Webhooks -> New Webhook -> Copy URL, then
-  `gh secret set DISCORD_BUILDS_WEBHOOK --repo Tristan2828/GameTest` and paste it.
+  `gh secret set DISCORD_BUILDS_WEBHOOK --repo Tristan2828/medieval-survival` and paste it.
   To replace a leaked or deleted webhook, make a new one and run the same command.
 - **`#dev-log` feed:** GitHub repo -> Settings -> Webhooks -> Add webhook:
   - Payload URL: the `#dev-log` webhook URL with `/github` added on the end

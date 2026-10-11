@@ -31,6 +31,9 @@ const HP_COLOR: Color = Color(0.95, 0.45, 0.5)
 const READY_COLOR: Color = Color(0.55, 0.95, 0.5)
 const CARD_BG: Color = Color(0.1, 0.08, 0.14)
 const HERO_NAME_COLOR: Color = Color(0.95, 0.78, 0.4)
+## A hero not unlocked yet (HeroUnlocks).
+const LOCKED_COLOR: Color = Color(0.75, 0.5, 0.5)
+const LOCKED_PORTRAIT_TINT: Color = Color(0.2, 0.18, 0.24)
 const WATCH_BUTTON_SIZE: Vector2 = Vector2(148, 20)
 
 var _state: LobbyState = LobbyState.new()
@@ -80,6 +83,8 @@ func _ready() -> void:
 		_cards[i].pressed.connect(func() -> void:
 			_choose_locally(i)
 			_close_picker())
+		if not HeroUnlocks.is_unlocked(i):
+			_show_locked(i)
 	_setup_demo()
 	_hero_button.pressed.connect(_open_picker)
 	_back_button.pressed.connect(_close_picker)
@@ -135,6 +140,19 @@ func _ready() -> void:
 			(page[1] as RunConfigScreen).close()
 
 
+## A hero this PC hasn't unlocked yet: a dark portrait and what unlocks it
+## instead of the perk. The card can still get focus (so a gamepad sees why),
+## it just can't be picked; its Watch demo still plays.
+func _show_locked(character: int) -> void:
+	var card := _cards[character]
+	card.disabled = true
+	card.tooltip_text = HeroUnlocks.hint(character)
+	(card.get_node("Portrait") as CharacterPortrait).modulate = LOCKED_PORTRAIT_TINT
+	var perk := card.get_node("Lines/Perk") as Label
+	perk.text = "Locked. %s." % HeroUnlocks.hint(character)
+	perk.add_theme_color_override("font_color", LOCKED_COLOR)
+
+
 ## The picker's Watch buttons (one under each hero card) and the demo popup.
 func _setup_demo() -> void:
 	var row := HBoxContainer.new()
@@ -164,7 +182,7 @@ func _setup_demo() -> void:
 ## The picker hides behind the popup, so a gamepad can't move focus onto it.
 func _open_demo(character: int) -> void:
 	_picker.hide()
-	_demo_popup.open(character, _color_for(multiplayer.get_unique_id()))
+	_demo_popup.open(character, _color_for(multiplayer.get_unique_id()), HeroUnlocks.is_unlocked(character))
 
 
 ## --screenshot-dir: each hero's demo, early and late in the loop.
@@ -413,6 +431,8 @@ func _color_for(peer_id: int) -> Color:
 
 
 func _choose_locally(character: int) -> void:
+	if not HeroUnlocks.is_unlocked(character):
+		return
 	if multiplayer.is_server():
 		_host_choose(multiplayer.get_unique_id(), character)
 	else:

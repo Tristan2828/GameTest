@@ -12,7 +12,7 @@ param([switch]$DryRun)
 
 $ErrorActionPreference = "Stop"
 $project = Split-Path -Parent $PSScriptRoot
-$repo = "Tristan2828/GameTest"
+$repo = "Tristan2828/medieval-survival"
 
 function Fail([string]$message) {
 	Write-Host "FAILED: $message" -ForegroundColor Red

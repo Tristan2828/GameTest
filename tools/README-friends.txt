@@ -8,8 +8,7 @@ Thanks for helping test!
    This stops Windows from warning about the game.
 
    Already extracted, or no Unblock box? Double-click MedievalSurvival.exe
-   anyway. (If you updated from the title screen, yours may still be called
-   GameTest.exe: it's the same game.)
+   anyway.
    If Windows says "Windows protected your PC", click "More info" then
    "Run anyway". It warns because the game is new and isn't signed by a big
    publisher, not because anything is wrong. You only have to do this once:
@@ -19,8 +18,9 @@ Thanks for helping test!
 2. Click "Join Game" on the title menu, paste the invite your host sent you
    (looks like 203.0.113.5:7777) and click Join.
 
-3. In the lobby, pick a hero (Kael, Mortimer, Morwen or Vesper; press Watch
-   to see what each one does) and press Ready. The host starts the run.
+3. In the lobby, pick a hero and press Ready. The host starts the run.
+   You start with Kael; win a full run to unlock the next hero (Mortimer,
+   then Morwen, then Vesper). Press Watch to see what each one does.
 
 Controls (keyboard, or a gamepad):
   Move   WASD / arrow keys / left stick. That's it: your weapons fire by
@@ -31,7 +31,7 @@ Controls (keyboard, or a gamepad):
 Can't connect? Check that the version in the bottom-right of the menu matches
 your host's, then let them know. They may need to open a port on their router.
 
-New versions: https://github.com/Tristan2828/GameTest/releases/latest
+New versions: https://github.com/Tristan2828/medieval-survival/releases/latest
 (they're also announced in the Discord #builds channel).
 Found a bug? Post it in Discord #bug-reports with your version number,
 or use "Send feedback" in the game.
