@@ -67,6 +67,11 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
   the clipboard instead. Anyone determined could dig the link out of the exe and post to that one channel: if that
   ever happens, delete the webhook in Discord, make a new one, update the file and release again.
 
+## Future automation
+
+Releases are manual on purpose for now. Planned next steps (CI tests on every PR, then building in CI
+on a version tag) are in `DESIGN.md` §9, "Release automation".
+
 ## Troubleshooting
 
 - **"Sending isn't set up in this build"** on the feedback screen: `feedback_webhook.txt` was missing or not a

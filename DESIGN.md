@@ -226,3 +226,7 @@ Everything else moved to §9 *After 1.0* (owner, 2026-10-11).
 - **Clients asking for a pause** ("Request pause" shown to the host), if friends miss pausing.
 - **Intense bullet density throughout:** hardcore shmup density instead of readable patterns.
 - **Support hero** that heals teammates or revives faster (`CharacterStats.revive_speed` exists; owner idea, v0.15.0).
+- **Release automation (decided 2026-10-09: releases stay manual for now).** Publishing stays a deliberate `pwsh tools/release.ps1` because every release reaches friends, and builds should be played by the owner first. Planned steps, in order:
+  1. **CI tests on every PR (do first):** a GitHub Actions job runs `tools/run_tests.ps1` (and maybe `tools/net_smoke_test.ps1`) so each PR shows pass/fail before merging. Needs Godot 4.7.2 headless on the runner. Free on a public repo.
+  2. **Build in CI on a version tag (later):** pushing a tag like `v0.26.0` makes GitHub build the Windows zip (Godot + 4.7.2 export templates on the runner), create the release, and trigger the existing Discord announcement, so releasing doesn't need the owner's PC. Worth it once the project is stable or releases get frequent.
+  - Not planned: auto-publishing on every merge, since untested builds would go straight to playtesters.
