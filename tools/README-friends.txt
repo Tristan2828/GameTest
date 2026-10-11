@@ -7,8 +7,9 @@ Thanks for helping test!
    (bottom of the General tab) > OK. Then extract it.
    This stops Windows from warning about the game.
 
-   Already extracted, or no Unblock box? Double-click GameTest.exe anyway
-   (the file keeps its old name for now so in-game updates keep working).
+   Already extracted, or no Unblock box? Double-click MedievalSurvival.exe
+   anyway. (If you updated from the title screen, yours may still be called
+   GameTest.exe: it's the same game.)
    If Windows says "Windows protected your PC", click "More info" then
    "Run anyway". It warns because the game is new and isn't signed by a big
    publisher, not because anything is wrong. You only have to do this once:

@@ -442,7 +442,7 @@ Owner added the top three (2026-10-10, v0.20.0) to the plan after asking Claude 
 
 Also on the list:
 4. Co-op playtest of v0.24.0 (the first 4-player run, on v0.23.0, produced the seventh list): is stage 1 beatable and stage 2–3 still a challenge, do revives feel good, the hero weapons, Watch demos, metal music, the run summary pages. Then tune numbers.
-5. ~~Working title~~ Named **Medieval Survival** (v0.24.0). Still to do: rename the exe / zip files in a release after v0.24.0 (the updater accepts both names from v0.24.0 on).
+5. ~~Working title~~ Named **Medieval Survival** (v0.24.0). From the release after v0.24.0 the files are `MedievalSurvival.exe` / `MedievalSurvival-<version>-windows.zip` (owner request). Friends on v0.24.0 update in place (their file keeps its old name); v0.23.0 and older must download once by hand.
 6. Meta/feel: hero portraits, more animation.
 7. Release prep later: real audio direction.
 
