@@ -70,6 +70,6 @@ func test_every_upgrade_relic_and_source_has_an_icon() -> void:
 
 
 func test_compact_numbers() -> void:
-	assert_eq(RunSummaryPanel.compact(950), "950")
-	assert_eq(RunSummaryPanel.compact(12345), "12.3k")
-	assert_eq(RunSummaryPanel.compact(2500000), "2.5M")
+	assert_eq(SummaryStyle.compact(950), "950")
+	assert_eq(SummaryStyle.compact(12345), "12.3k")
+	assert_eq(SummaryStyle.compact(2500000), "2.5M")

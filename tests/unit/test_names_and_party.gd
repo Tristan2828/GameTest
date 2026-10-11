@@ -102,7 +102,7 @@ func test_highlights_name_the_mvp_and_deadliest_weapon() -> void:
 	stats.set_source(1, DamageSource.MAIN_GUN, 3000, 40, 60)
 	stats.run_seconds = 120.0
 	var players: Array[Player] = []
-	var lines := RunSummaryPanel.highlights(stats, players, 1.0)
+	var lines := SummaryTeamPages.highlights(stats, players, 1.0)
 	var titles: Array = lines.map(func(line: Array) -> String: return line[1])
 	assert_has(titles, "MVP")
 	assert_has(titles, "Deadliest weapon")
@@ -117,6 +117,6 @@ func test_solo_highlights_show_your_score_not_an_mvp() -> void:
 	var stats := RunStats.new()
 	stats.add(1, RunStats.Stat.KILLS, 5)
 	var players: Array[Player] = []
-	var titles: Array = RunSummaryPanel.highlights(stats, players, 1.0).map(func(line: Array) -> String: return line[1])
+	var titles: Array = SummaryTeamPages.highlights(stats, players, 1.0).map(func(line: Array) -> String: return line[1])
 	assert_does_not_have(titles, "MVP")
 	assert_has(titles, "Score")

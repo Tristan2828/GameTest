@@ -344,7 +344,7 @@ func test_run_summary_passives_leave_out_filler_cards() -> void:
 	player.apply_card(passive)
 	player.apply_card(Cards.COIN_FILLER)
 	player.apply_card(Cards.HEAL_FILLER)
-	var icons := RunSummaryPanel.passive_icons(player)
+	var icons := SummaryPlayerCards.passive_icons(player)
 	assert_eq(icons.size(), 1, "Coin Pouch and Blood Draught aren't passives")
 	assert_eq(icons[0][1], Upgrades.get_upgrade(passive).title)
 	assert_eq(icons[0][2], 2, "its level")

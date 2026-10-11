@@ -39,13 +39,13 @@ func _add_entry(rank: int, entry: RunRecords.Entry) -> void:
 	text.add_theme_constant_override("separation", 2)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
-	top.add_child(label("%s pts" % RunSummaryPanel.compact(entry.score), 9, GOLD))
+	top.add_child(label("%s pts" % SummaryStyle.compact(entry.score), 9, GOLD))
 	top.add_child(label(entry.result_text(), 9, VICTORY_COLOR if entry.victory else NAME_COLOR))
 	top.add_child(label(stats.full_name(), 9, TEXT_COLOR))
 	text.add_child(top)
 	var team := "solo" if entry.players <= 1 else "%d players" % entry.players
 	text.add_child(label("%s   %d kills   %s damage   Lv %d   %s   %s   %s" % [
-		RunStats.format_time(entry.seconds), entry.kills, RunSummaryPanel.compact(entry.damage), entry.level, team,
+		RunStats.format_time(entry.seconds), entry.kills, SummaryStyle.compact(entry.damage), entry.level, team,
 		entry.difficulty, entry.date], 9, DIM_COLOR, true))
 	line.add_child(text)
 	add_row(line)
