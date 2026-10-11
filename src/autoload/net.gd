@@ -27,6 +27,8 @@ var boosts: Dictionary[int, PackedInt32Array] = {}
 
 ## The name list changed (someone joined, left or sent their name).
 signal names_changed
+## Host: a client's name and Ember boosts arrived (sent right after it connects).
+signal player_registered(peer_id: int)
 
 
 func _ready() -> void:
@@ -47,6 +49,11 @@ func name_of(peer_id: int, slot: int) -> String:
 ## Host: a player's Ember boost ranks (none if they never sent any).
 func boosts_of(peer_id: int) -> PackedInt32Array:
 	return boosts.get(peer_id, PackedInt32Array())
+
+
+## Host: true once this peer's name and boosts have arrived (always for the host).
+func is_registered(peer_id: int) -> bool:
+	return boosts.has(peer_id)
 
 
 ## This PC's boosts for the next run. Autopilot (test) runs play without them,
@@ -153,6 +160,7 @@ func _register_name(chosen: String, boost_ranks: PackedInt32Array) -> void:
 	boosts[multiplayer.get_remote_sender_id()] = Embers.clean_ranks(boost_ranks)
 	names[multiplayer.get_remote_sender_id()] = PlayerNames.sanitize(chosen)
 	_broadcast_names()
+	player_registered.emit(multiplayer.get_remote_sender_id())
 
 
 @rpc("authority", "call_remote", "reliable")

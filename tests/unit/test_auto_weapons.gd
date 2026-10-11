@@ -132,6 +132,7 @@ func test_maxed_weapon_altar_gives_coins_instead() -> void:
 	_weapons.tick_host(DELTA, 0.0, _players(), _enemies, no_peers)
 	assert_signal_not_emitted(_weapons, "card_earned", "every slot full and maxed")
 	assert_eq(_player.coins, WeaponSystem.MAXED_WEAPON_COINS)
+	assert_signal_emitted_with_parameters(_weapons, "altar_coins_given", [_player.peer_id, WeaponSystem.MAXED_WEAPON_COINS])
 
 
 func test_maxed_altar_weapon_levels_another_weapon_instead() -> void:

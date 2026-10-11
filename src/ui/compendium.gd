@@ -181,7 +181,7 @@ func _show_relics() -> void:
 
 func _show_pickups() -> void:
 	clear_list()
-	_entry("gem", "XP gems", "Dropped by every enemy. Walk near to pull them in. They fill the shared team bar; each level-up, everyone picks an upgrade.",
+	_entry("gem", "XP gems", "Dropped by every enemy. Walk near to pull them in. They fill the shared team bar; each level-up, everyone picks a card.",
 		"Small / medium / big crystals are worth more XP.")
 	_entry("coin", "Coins", "Some enemies drop coins. Whoever picks one up keeps it. Spend them in the shop between stages.",
 		"Beating a boss also pays everyone a bounty.")

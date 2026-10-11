@@ -459,7 +459,7 @@ func _player_card(player: Player, stats: RunStats, width: int, player_count: int
 	# Build: weapons (with level pips), passives (with their level) and relics.
 	lines.add_child(_divider())
 	lines.add_child(_build_section("Weapons", inner, [], WeaponIcons.weapon_entries(player)))
-	var passives := _upgrade_icons(player)
+	var passives := passive_icons(player)
 	if not passives.is_empty():
 		lines.add_child(_build_section("Passives", inner, passives))
 	var relics := _relic_icons(player)
@@ -556,11 +556,13 @@ func _score(stats: RunStats, peer_id: int) -> int:
 		stats.bosses_defeated, stats.victory, score_multiplier)
 
 
-## [icon, title, count] for each different upgrade, in the order first taken.
-func _upgrade_icons(player: Player) -> Array[Array]:
+## [icon, title, level] for each passive, in the order first taken (filler
+## cards like Blood Draught and Coin Pouch aren't passives).
+static func passive_icons(player: Player) -> Array[Array]:
 	var counts: Dictionary[int, int] = {}
 	for id: int in player.upgrade_ids:
-		counts[id] = counts.get(id, 0) + 1
+		if Upgrades.get_upgrade(id).passive:
+			counts[id] = counts.get(id, 0) + 1
 	var result: Array[Array] = []
 	for id: int in counts:
 		var upgrade := Upgrades.get_upgrade(id)

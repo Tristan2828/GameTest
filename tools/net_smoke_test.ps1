@@ -1,13 +1,13 @@
 # Online smoke test: starts a headless host and a headless client on this PC, both
-# on autopilot (moving, dashing, shooting enemies), then prints their reports.
+# on autopilot (moving while their weapons fire by themselves), then prints their reports.
 #
 # Passes when:
 #   - the client connected,
 #   - the host credited damage to the client's peer id (client input -> host sim works),
 #   - neither process logged a script error.
 #
-# Usage:  pwsh tools/net_smoke_test.ps1 [-Port 7810] [-Seconds 6] [-ClientCharacter 0-3]
-# The client plays the Wanderer by default: the Gravekeeper's short-range shotgun
+# Usage:  pwsh tools/net_smoke_test.ps1 [-Port 7810] [-Seconds 12] [-ClientCharacter 0-3]
+# The client plays the Wanderer by default: the Gravekeeper's short-range scythe
 # often hits nothing in a short run. -ClientCharacter -1 lets autopilot pick at random.
 # Set $env:GODOT to override the Godot console executable path.
 

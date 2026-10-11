@@ -22,28 +22,38 @@ var status: String = ""
 
 var _port: int = 0
 var _upnp: UPNP = null
-var _upnp_thread: Thread = null
+## Counts start() / stop() calls, so a UPnP answer from an earlier session is
+## recognised (it comes back on a background thread, maybe after leaving).
+var _session: int = 0
+## UPnP threads still running, by the session that started them.
+var _upnp_threads: Dictionary[int, Thread] = {}
 var _ip_request: HTTPRequest = null
+## True between start() and stop().
+var _hosting: bool = false
 
 
 func start(port: int) -> void:
 	stop()
 	_port = port
+	_hosting = true
 	_set_status("Router: checking for automatic port forwarding...")
 	_ip_request = HTTPRequest.new()
 	_ip_request.timeout = 5.0
 	add_child(_ip_request)
 	_ip_request.request_completed.connect(_on_public_ip_response)
 	_ip_request.request(PUBLIC_IP_URL)
-	_upnp_thread = Thread.new()
-	_upnp_thread.start(_open_port_with_upnp.bind(port))
+	_session += 1
+	var thread := Thread.new()
+	_upnp_threads[_session] = thread
+	thread.start(_open_port_with_upnp.bind(port, _session))
 
 
-## Closes the router port (if we opened it) and forgets the invite.
+## Closes the router port (if we opened it) and forgets the invite. Doesn't wait
+## for a UPnP search still running: its answer is dropped (and its port closed)
+## when it arrives.
 func stop() -> void:
-	if _upnp_thread != null:
-		_upnp_thread.wait_to_finish()
-		_upnp_thread = null
+	_session += 1
+	_hosting = false
 	if _upnp != null:
 		_upnp.delete_port_mapping(_port, "UDP")
 		_upnp = null
@@ -64,6 +74,10 @@ func copy_to_clipboard() -> bool:
 
 func _exit_tree() -> void:
 	stop()
+	# Quitting: wait for any search still running and close what it opened.
+	for session: int in _upnp_threads.keys():
+		_close_stale(_upnp_threads[session].wait_to_finish())
+	_upnp_threads.clear()
 
 
 func _on_public_ip_response(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -77,7 +91,9 @@ func _on_public_ip_response(result: int, response_code: int, _headers: PackedStr
 
 
 ## Runs on a background thread: UPnP discovery can take a couple of seconds.
-func _open_port_with_upnp(port: int) -> void:
+## Returns [UPNP or null, external IP, port]; the main thread collects it in
+## _on_upnp_finished.
+func _open_port_with_upnp(port: int, session: int) -> Array:
 	var upnp := UPNP.new()
 	var opened := false
 	var external_ip := ""
@@ -85,13 +101,21 @@ func _open_port_with_upnp(port: int) -> void:
 			and upnp.get_device_count() > 0 and upnp.get_gateway().is_valid_gateway():
 		opened = upnp.add_port_mapping(port, port, MAPPING_DESCRIPTION, "UDP", 0) == UPNP.UPNP_RESULT_SUCCESS
 		external_ip = upnp.query_external_address()
-	_on_upnp_finished.call_deferred(upnp if opened else null, external_ip)
+	_on_upnp_finished.call_deferred(session)
+	return [upnp if opened else null, external_ip, port]
 
 
-func _on_upnp_finished(upnp: UPNP, external_ip: String) -> void:
-	if _upnp_thread != null:
-		_upnp_thread.wait_to_finish()
-		_upnp_thread = null
+func _on_upnp_finished(session: int) -> void:
+	var thread: Thread = _upnp_threads.get(session)
+	if thread == null:
+		return
+	_upnp_threads.erase(session)
+	var result: Array = thread.wait_to_finish()
+	if session != _session:
+		_close_stale(result)  # We stopped hosting (or started again) meanwhile.
+		return
+	var upnp: UPNP = result[0]
+	var external_ip: String = result[1]
 	_upnp = upnp
 	if upnp != null:
 		_set_status("Router: port %d opened automatically (UPnP)." % _port)
@@ -99,6 +123,16 @@ func _on_upnp_finished(upnp: UPNP, external_ip: String) -> void:
 		_set_status("Router: couldn't open the port automatically. Forward UDP %d to %s in your router." % [_port, local_ip()])
 	if address.is_empty() and external_ip.is_valid_ip_address():
 		_set_address(external_ip)
+
+
+## A finished search from a session that's over: close the port it opened
+## (unless we're hosting on that port again: the mapping is ours now).
+func _close_stale(result: Variant) -> void:
+	if not (result is Array) or (result as Array).size() != 3 or not (result[0] is UPNP):
+		return
+	var port: int = result[2]
+	if not (_hosting and port == _port):
+		(result[0] as UPNP).delete_port_mapping(port, "UDP")
 
 
 func _set_address(ip: String) -> void:

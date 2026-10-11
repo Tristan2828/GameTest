@@ -4,8 +4,10 @@ extends Node2D
 ## A stage is WAVE_DURATION of horde, then the boss arrives; killing it clears the stage.
 ##
 ## Every physics tick (while the run is being played) runs in a fixed order:
-## players -> spawning -> enemies -> contact damage -> bullets -> hits -> gems -> phase check.
-## Level-ups pause all of that (phase LEVEL_UP) until LevelUpController is done.
+## players -> spawning (+ effigies) -> enemies -> boss -> weapons + map events ->
+## contact damage -> revives -> quests -> weapon effects -> bullets -> hits (+ Corpse
+## Blast) -> enemy bullets -> gems -> phase check.
+## Level-ups (LEVEL_UP), the "3, 2, 1" (COUNTDOWN) and the shop pause all of that.
 ## The host then sends snapshots to every client that has finished loading.
 
 signal restart_requested
@@ -103,6 +105,8 @@ const RITUAL_WAVE_SIZE: int = 2
 const RITUAL_WAVE_DISTANCE: float = 200.0
 ## A relic quest pays this instead when the player already owns every relic.
 const QUEST_COINS_WHEN_NO_RELIC: int = 40
+## Host: how long a new peer's player waits for their name and boosts to arrive.
+const JOIN_WAIT_SECONDS: float = 3.0
 ## In --autopilot test mode, the host restarts by itself this long after a stage ends.
 const AUTOPILOT_RESTART_DELAY: float = 2.0
 
@@ -131,6 +135,8 @@ var _boss_banner_left: float = 0.0
 var _resume_left: float = 0.0
 ## Host: peers whose arena has loaded, so they can receive snapshots and shots.
 var _ready_peers: Dictionary[int, bool] = {}
+## Host: peers who connected but whose name and boosts haven't arrived yet.
+var _pending_joins: Dictionary[int, bool] = {}
 var _tick: int = 0
 var _director: SpawnDirector = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -270,7 +276,9 @@ func _ready() -> void:
 		_events.coin_dropped.connect(func(at: Vector2) -> void: _coins.spawn_host(at, 1))
 		_weapons.seeker_fired.connect(_fire_seeker)
 		_weapons.ability_cast.connect(_on_ability_cast)
-		multiplayer.peer_connected.connect(_add_player)
+		_weapons.altar_coins_given.connect(_on_altar_coins_given)
+		multiplayer.peer_connected.connect(_on_peer_joined)
+		Net.player_registered.connect(_finish_join)
 		multiplayer.peer_disconnected.connect(_remove_player)
 		_add_player(1)
 		var peers: Array[int] = []
@@ -279,7 +287,7 @@ func _ready() -> void:
 		peers.sort_custom(func(a: int, b: int) -> bool:
 			return _lobby_rank(a) < _lobby_rank(b))
 		for peer_id: int in peers:
-			_add_player(peer_id)
+			_on_peer_joined(peer_id)
 	else:
 		_notify_ready.rpc_id(1)
 
@@ -581,7 +589,25 @@ func _alive_player_positions() -> Array[Vector2]:
 	return positions
 
 
+## Host: a peer is here. Their player spawns once their name and Ember boosts
+## have arrived (a client sends them right after connecting), so a friend who
+## joins mid-run keeps their boosts; after JOIN_WAIT_SECONDS it spawns anyway.
+func _on_peer_joined(peer_id: int) -> void:
+	if Net.is_registered(peer_id):
+		_add_player(peer_id)
+		return
+	_pending_joins[peer_id] = true
+	get_tree().create_timer(JOIN_WAIT_SECONDS).timeout.connect(_finish_join.bind(peer_id))
+
+
+func _finish_join(peer_id: int) -> void:
+	if _pending_joins.erase(peer_id) and multiplayer.get_peers().has(peer_id):
+		_add_player(peer_id)
+
+
 func _add_player(peer_id: int) -> void:
+	if _player_by_id(peer_id) != null:
+		return
 	var boosts := Net.boosts_of(peer_id) if _config.ember_boosts else PackedInt32Array()
 	_player_spawner.spawn({"peer_id": peer_id, "slot": _free_slot(), "character": RunSetup.character_for(peer_id),
 		"hp_bonus": _config.hp_bonus, "boosts": boosts})
@@ -606,6 +632,7 @@ func _lobby_rank(peer_id: int) -> int:
 
 func _remove_player(peer_id: int) -> void:
 	_ready_peers.erase(peer_id)
+	_pending_joins.erase(peer_id)
 	_level_up.host_remove_player(peer_id)
 	_shop.host_remove_player(peer_id)
 	_quests.remove(peer_id)
@@ -981,9 +1008,7 @@ func _end_stage(phase: Phase) -> void:
 	print("Stage ended: %s at %.1fs" % [Phase.keys()[phase], _elapsed])
 
 
-## Host: nothing is left behind when a stage is won. Gems still on the ground
-## go to the team bar (level-ups wait for the next stage), loose coins are split
-## evenly, and everyone gets the boss bounty.
+## Host, when the run ends: the final numbers go to everyone (the run summary).
 func _broadcast_run_stats(victory: bool) -> void:
 	_run_stats.victory = victory
 	_run_stats.stage_reached = _stage
@@ -1069,6 +1094,9 @@ func _earn_embers() -> int:
 	return amount
 
 
+## Host: nothing is left behind when a stage is won. Gems still on the ground
+## go to the team bar (level-ups wait for the next stage), loose coins are split
+## evenly, and everyone gets the boss bounty.
 func _settle_stage_rewards() -> void:
 	var levels := _team.add_xp(_gems.total_value())
 	if levels > 0:
@@ -1138,7 +1166,8 @@ func _spawn_boss() -> void:
 	var escort := BOSS_ESCORT + BOSS_ESCORT_PER_EXTRA_PLAYER * (players - 1)
 	for i: int in escort:
 		var type_id := _director.pick_type(_elapsed)
-		var offset := Vector2.from_angle(TAU * i / escort + _rng.randf_range(-0.2, 0.2)) 			* _rng.randf_range(BOSS_ESCORT_RADIUS.x, BOSS_ESCORT_RADIUS.y)
+		var offset := Vector2.from_angle(TAU * i / escort + _rng.randf_range(-0.2, 0.2)) \
+			* _rng.randf_range(BOSS_ESCORT_RADIUS.x, BOSS_ESCORT_RADIUS.y)
 		_enemies.spawn(type_id, (at + offset).clamp(BOUNDS.position, BOUNDS.end), _scaled_hp(type_id))
 	print("Boss spawned with %d HP at %.1fs (%d enemies swept, %d escorts)" % [hit_points, _elapsed, swept, escort])
 	if not LaunchOptions.screenshot_dir.is_empty():
@@ -1412,6 +1441,15 @@ func _on_chest_opened(peer_id: int, at: Vector2) -> void:
 		"" if level <= 1 else " Lv %d" % level])
 
 
+## Host: an altar had nothing left for this player; it paid coins instead.
+func _on_altar_coins_given(peer_id: int, amount: int) -> void:
+	var player := _player_by_id(peer_id)
+	if player == null:
+		return
+	_run_stats.add(peer_id, RunStats.Stat.COINS_EARNED, amount)
+	_events.announce("%s took the altar: nothing left to learn, %d coins!" % [player.display_name(), amount])
+
+
 ## Host: evolve a weapon (from a chest or a boss) and tell the team.
 func _grant_evolution(player: Player, card: int) -> void:
 	var before := Cards.title(Cards.MAIN_LEVEL if card == Cards.MAIN_EVOLUTION else Cards.weapon(
@@ -1641,14 +1679,19 @@ func _ready_peer_list() -> Array[int]:
 
 func _tick_gems(delta: float, is_host: bool) -> void:
 	var positions: Dictionary[int, Vector2] = {}
+	var standing: Dictionary[int, Vector2] = {}
 	var radii: Dictionary[int, float] = {}
-	# Ghosts collect too.
 	for player: Player in _player_nodes():
 		positions[player.peer_id] = player.world_position()
 		radii[player.peer_id] = player.stats.pickup_radius
+		if not player.is_downed():
+			standing[player.peer_id] = player.world_position()
+	# Downed players still pull in XP gems (the XP is shared anyway), but coins
+	# and power-ups only go to standing players: a downed one would waste a
+	# Heart, set off a Holy Bomb at their body or pocket coins lying down.
 	_gems.tick(delta, positions, radii, is_host)
-	_coins.tick(delta, positions, radii, is_host)
-	_power_ups.tick(delta, positions, radii, is_host)
+	_coins.tick(delta, standing, radii, is_host)
+	_power_ups.tick(delta, standing, radii, is_host)
 
 
 # --- Shots -------------------------------------------------------------------
@@ -2028,8 +2071,7 @@ func _revive_notice(local: Player) -> String:
 		if _is_spectating():
 			var watching := local.spectate_target
 			var who := "yourself" if watching == null or watching == local else watching.display_name()
-			text += "
-Watching %s.   Space / A: switch view" % who
+			text += "\nWatching %s.   Space / A / RB: switch view" % who
 		return text
 	var names := PackedStringArray()
 	for player: Player in _player_nodes():

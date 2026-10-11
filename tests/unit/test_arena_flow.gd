@@ -148,6 +148,18 @@ func test_downed_players_still_pull_in_nearby_gems() -> void:
 	assert_eq(_arena._team.xp, 3)
 
 
+func test_downed_players_leave_coins_and_power_ups_alone() -> void:
+	var player := _local_player()
+	player.health.take_bullet(9999, 0.0)
+	_arena._coins.spawn_host(player.state.position + Vector2(10, 0), 5)
+	_arena._power_ups.spawn_host(player.state.position + Vector2(-10, 0), PowerUps.Kind.HEART)
+	for i: int in 30:
+		_arena._tick_gems(1.0 / 60.0, true)
+	assert_eq(_arena._coins.count(), 1, "the coin waits for someone standing")
+	assert_eq(_arena._power_ups.count(), 1, "so does the Heart")
+	assert_eq(player.coins, 0)
+
+
 func test_stage_clear_opens_shop_then_next_stage() -> void:
 	_clear_current_stage()
 	await wait_seconds(Arena.STAGE_CLEAR_DELAY + 0.3)
@@ -323,3 +335,16 @@ func test_level_ups_heal_a_little() -> void:
 	player.health.hp = 10
 	_arena._on_gem_collected(TeamProgress.xp_to_next(1), 1)
 	assert_eq(player.health.hp, 10 + roundi(player.health.max_hp * Arena.LEVEL_UP_HEAL_SHARE))
+
+
+func test_run_summary_passives_leave_out_filler_cards() -> void:
+	var player := _local_player()
+	var passive: int = Upgrades.passive_ids()[0]
+	player.apply_card(passive)
+	player.apply_card(passive)
+	player.apply_card(Cards.COIN_FILLER)
+	player.apply_card(Cards.HEAL_FILLER)
+	var icons := RunSummaryPanel.passive_icons(player)
+	assert_eq(icons.size(), 1, "Coin Pouch and Blood Draught aren't passives")
+	assert_eq(icons[0][1], Upgrades.get_upgrade(passive).title)
+	assert_eq(icons[0][2], 2, "its level")
