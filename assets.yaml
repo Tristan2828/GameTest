@@ -1,0 +1,289 @@
+# GameTest asset manifest (gamekit). One entry per asset; check with `gamekit validate`.
+# Built from the code at v0.24.0: src/art/pixel_art.gd (197 sprites, grouped here by
+# asset with their animation frames), Sfx (28 sounds), Tracks.ALL (9 tracks), and the
+# visuals drawn by code today (floors, bullets, effects, UI). Sizes and frames match
+# what the game has now; entries marked "size inferred" are estimates.
+# Not listed: the unused "ghost" sprite (ghosts were replaced by revives in v0.15).
+# Particles, the minimap background, teammate arrows, level pips and the text font stay code-drawn (pixel_font is optional).
+# Field reference: gamekit's templates/assets.yaml.
+game: GameTest
+output: assets
+palette: palette.hex
+
+assets:
+  # --- Heroes (P/p = player color, recolored at runtime) ---
+  - {id: wanderer, kind: sprite, source: claude, status: todo, file: sprites/heroes/wanderer.png, size: [12, 14], frames: {idle: 1, walk: 2}}
+  - {id: gravekeeper, kind: sprite, source: claude, status: todo, file: sprites/heroes/gravekeeper.png, size: [14, 16], frames: {idle: 1, walk: 2}}
+  - {id: hexblade_witch, kind: sprite, source: claude, status: todo, file: sprites/heroes/hexblade_witch.png, size: [12, 16], frames: {idle: 1, walk: 2}}
+  - {id: necromancer, kind: sprite, source: claude, status: todo, file: sprites/heroes/necromancer.png, size: [12, 16], frames: {idle: 1, walk: 2}}
+
+  # --- Enemies (champions are tinted versions, not separate assets) ---
+  - {id: shambler, kind: sprite, source: claude, status: todo, file: sprites/enemies/shambler.png, size: [12, 12], frames: {idle: 1, walk: 2}}
+  - {id: bat, kind: sprite, source: claude, status: todo, file: sprites/enemies/bat.png, size: [14, 8], frames: {idle: 2}}
+  - {id: ghoul, kind: sprite, source: claude, status: todo, file: sprites/enemies/ghoul.png, size: [20, 20], frames: {idle: 1, walk: 2}}
+  - {id: cultist, kind: sprite, source: claude, status: todo, file: sprites/enemies/cultist.png, size: [12, 14], frames: {idle: 1, walk: 2, attack: 1}}
+  - {id: mire_crawler, kind: sprite, source: claude, status: todo, file: sprites/enemies/mire_crawler.png, size: [10, 8], frames: {idle: 1, walk: 2}}
+  - {id: plague_spitter, kind: sprite, source: claude, status: todo, file: sprites/enemies/plague_spitter.png, size: [12, 12], frames: {idle: 1, attack: 1}}
+  - {id: flame_imp, kind: sprite, source: claude, status: todo, file: sprites/enemies/flame_imp.png, size: [10, 10], frames: {idle: 2}}
+  - {id: fallen_paladin, kind: sprite, source: claude, status: todo, file: sprites/enemies/fallen_paladin.png, size: [18, 18], frames: {idle: 1, walk: 2, attack: 1}}
+  - {id: grave_robber, kind: sprite, source: claude, status: todo, file: sprites/enemies/grave_robber.png, size: [9, 11], frames: {idle: 1, walk: 2}}
+
+  # --- Bosses ---
+  - {id: bone_warden, kind: sprite, source: claude, status: todo, file: sprites/enemies/bone_warden.png, size: [24, 24], frames: {idle: 1, attack: 1}}
+  - {id: mire_hag, kind: sprite, source: claude, status: todo, file: sprites/enemies/mire_hag.png, size: [24, 24], frames: {idle: 1, attack: 1}}
+  - {id: ashen_bishop, kind: sprite, source: claude, status: todo, file: sprites/enemies/ashen_bishop.png, size: [24, 24], frames: {idle: 1, attack: 1}}
+
+  # --- Other units ---
+  # Necromancer ability
+  - {id: bone_effigy, kind: sprite, source: claude, status: todo, file: sprites/units/bone_effigy.png, size: [10, 14]}
+
+  # --- Pickups ---
+  - {id: gem, kind: sprite, source: claude, status: todo, file: sprites/pickups/gem.png, size: [7, 8]}
+  - {id: gem_mid, kind: sprite, source: claude, status: todo, file: sprites/pickups/gem_mid.png, size: [9, 11]}
+  - {id: gem_big, kind: sprite, source: claude, status: todo, file: sprites/pickups/gem_big.png, size: [11, 13]}
+  - {id: coin, kind: sprite, source: claude, status: todo, file: sprites/pickups/coin.png, size: [5, 5], frames: {idle: 2}}
+  - {id: coin_big, kind: sprite, source: claude, status: todo, file: sprites/pickups/coin_big.png, size: [7, 7], frames: {idle: 2}}
+  - {id: ember, kind: sprite, source: claude, status: todo, file: sprites/pickups/ember.png, size: [9, 12]}
+  - {id: pickup_heart, kind: sprite, source: claude, status: todo, file: sprites/pickups/pickup_heart.png, size: [9, 8]}
+  - {id: pickup_magnet, kind: sprite, source: claude, status: todo, file: sprites/pickups/pickup_magnet.png, size: [9, 9]}
+  - {id: pickup_bomb, kind: sprite, source: claude, status: todo, file: sprites/pickups/pickup_bomb.png, size: [9, 9]}
+  - {id: pickup_frost, kind: sprite, source: claude, status: todo, file: sprites/pickups/pickup_frost.png, size: [7, 9]}
+
+  # --- Props (baked into the floor) ---
+  - {id: skull, kind: sprite, source: claude, status: todo, file: sprites/props/skull.png, size: [6, 6]}
+  - {id: grave, kind: sprite, source: claude, status: todo, file: sprites/props/grave.png, size: [6, 6]}
+  - {id: grave_cross, kind: sprite, source: claude, status: todo, file: sprites/props/grave_cross.png, size: [5, 6]}
+  - {id: bones, kind: sprite, source: claude, status: todo, file: sprites/props/bones.png, size: [5, 5]}
+  - {id: skull_pile, kind: sprite, source: claude, status: todo, file: sprites/props/skull_pile.png, size: [7, 4]}
+  - {id: candle, kind: sprite, source: claude, status: todo, file: sprites/props/candle.png, size: [3, 5]}
+  - {id: reeds, kind: sprite, source: claude, status: todo, file: sprites/props/reeds.png, size: [5, 5]}
+  - {id: stump, kind: sprite, source: claude, status: todo, file: sprites/props/stump.png, size: [6, 4]}
+  - {id: pew, kind: sprite, source: claude, status: todo, file: sprites/props/pew.png, size: [14, 5]}
+  - {id: pillar_stump, kind: sprite, source: claude, status: todo, file: sprites/props/pillar_stump.png, size: [7, 6]}
+  - {id: candelabra, kind: sprite, source: claude, status: todo, file: sprites/props/candelabra.png, size: [7, 6]}
+  - {id: rubble, kind: sprite, source: claude, status: todo, file: sprites/props/rubble.png, size: [5, 3]}
+
+  # --- Map events and weapon effects ---
+  - {id: chest, kind: sprite, source: claude, status: todo, file: sprites/effects/chest.png, size: [11, 9]}
+  - {id: crown, kind: sprite, source: claude, status: todo, file: sprites/effects/crown.png, size: [7, 5]}
+  - {id: scythe, kind: sprite, source: claude, status: todo, file: sprites/effects/scythe.png, size: [9, 9]}
+  - {id: flame, kind: sprite, source: claude, status: todo, file: sprites/effects/flame.png, size: [5, 6], frames: {idle: 2}}
+  - {id: bone_spear, kind: sprite, source: claude, status: todo, file: sprites/effects/bone_spear.png, size: [5, 13]}
+  - {id: cleaver, kind: sprite, source: claude, status: todo, file: sprites/effects/cleaver.png, size: [9, 9]}
+  - {id: dagger, kind: sprite, source: claude, status: todo, file: sprites/effects/dagger.png, size: [11, 5]}
+  - {id: dagger_diag, kind: sprite, source: claude, status: todo, file: sprites/effects/dagger_diag.png, size: [9, 9]}
+
+  # --- Minimap markers ---
+  - {id: mm_altar, kind: ui, source: claude, status: todo, file: ui/minimap/mm_altar.png, size: [5, 5]}
+  - {id: mm_boss, kind: ui, source: claude, status: todo, file: ui/minimap/mm_boss.png, size: [7, 6]}
+  - {id: mm_champion, kind: ui, source: claude, status: todo, file: ui/minimap/mm_champion.png, size: [5, 3]}
+  - {id: mm_chest, kind: ui, source: claude, status: todo, file: ui/minimap/mm_chest.png, size: [5, 4]}
+  - {id: mm_coin, kind: ui, source: claude, status: todo, file: ui/minimap/mm_coin.png, size: [5, 5]}
+  - {id: mm_downed, kind: ui, source: claude, status: todo, file: ui/minimap/mm_downed.png, size: [5, 5]}
+  - {id: mm_ritual, kind: ui, source: claude, status: todo, file: ui/minimap/mm_ritual.png, size: [5, 5]}
+  - {id: mm_teammate, kind: ui, source: claude, status: todo, file: ui/minimap/mm_teammate.png, size: [3, 3]}
+  - {id: mm_you, kind: ui, source: claude, status: todo, file: ui/minimap/mm_you.png, size: [5, 5]}
+
+  # --- Icons: weapons, abilities, events ---
+  - {id: icon_ability, kind: icon, source: claude, status: todo, file: icons/icon_ability.png, size: [9, 9]}
+  - {id: icon_bone_cathedral, kind: icon, source: claude, status: todo, file: icons/icon_bone_cathedral.png, size: [9, 9]}
+  - {id: icon_bone_cleaver, kind: icon, source: claude, status: todo, file: icons/icon_bone_cleaver.png, size: [9, 9]}
+  - {id: icon_bone_spears, kind: icon, source: claude, status: todo, file: icons/icon_bone_spears.png, size: [9, 9]}
+  - {id: icon_chain_lightning, kind: icon, source: claude, status: todo, file: icons/icon_chain_lightning.png, size: [9, 9]}
+  - {id: icon_death_spiral, kind: icon, source: claude, status: todo, file: icons/icon_death_spiral.png, size: [9, 9]}
+  - {id: icon_grave_spikes, kind: icon, source: claude, status: todo, file: icons/icon_grave_spikes.png, size: [9, 9]}
+  - {id: icon_harvester, kind: icon, source: claude, status: todo, file: icons/icon_harvester.png, size: [9, 9]}
+  - {id: icon_hellfire_trail, kind: icon, source: claude, status: todo, file: icons/icon_hellfire_trail.png, size: [9, 9]}
+  - {id: icon_holy_aura, kind: icon, source: claude, status: todo, file: icons/icon_holy_aura.png, size: [9, 9]}
+  - {id: icon_inferno_path, kind: icon, source: claude, status: todo, file: icons/icon_inferno_path.png, size: [9, 9]}
+  - {id: icon_main_gun, kind: icon, source: claude, status: todo, file: icons/icon_main_gun.png, size: [9, 9]}
+  - {id: icon_orbiting_skulls, kind: icon, source: claude, status: todo, file: icons/icon_orbiting_skulls.png, size: [9, 9]}
+  - {id: icon_quest, kind: icon, source: claude, status: todo, file: icons/icon_quest.png, size: [9, 9]}
+  - {id: icon_reapers_scythe, kind: icon, source: claude, status: todo, file: icons/icon_reapers_scythe.png, size: [9, 9]}
+  - {id: icon_ritual, kind: icon, source: claude, status: todo, file: icons/icon_ritual.png, size: [9, 9]}
+  - {id: icon_sanctuary, kind: icon, source: claude, status: todo, file: icons/icon_sanctuary.png, size: [9, 9]}
+  - {id: icon_seeking_bolts, kind: icon, source: claude, status: todo, file: icons/icon_seeking_bolts.png, size: [9, 9]}
+  - {id: icon_soul_barrage, kind: icon, source: claude, status: todo, file: icons/icon_soul_barrage.png, size: [9, 9]}
+  - {id: icon_spirit_daggers, kind: icon, source: claude, status: todo, file: icons/icon_spirit_daggers.png, size: [9, 9]}
+  - {id: icon_storm_bolter, kind: icon, source: claude, status: todo, file: icons/icon_storm_bolter.png, size: [9, 9]}
+  - {id: icon_storm_lantern, kind: icon, source: claude, status: todo, file: icons/icon_storm_lantern.png, size: [9, 9]}
+  - {id: icon_tempest, kind: icon, source: claude, status: todo, file: icons/icon_tempest.png, size: [9, 9]}
+  - {id: star, kind: icon, source: claude, status: todo, file: icons/star.png, size: [7, 7]}
+
+  # --- Icons: upgrades ---
+  - {id: up_afterimage, kind: icon, source: claude, status: todo, file: icons/upgrades/up_afterimage.png, size: [9, 9]}
+  - {id: up_arcane_focus, kind: icon, source: claude, status: todo, file: icons/upgrades/up_arcane_focus.png, size: [9, 9]}
+  - {id: up_blood_draught, kind: icon, source: claude, status: todo, file: icons/upgrades/up_blood_draught.png, size: [9, 9]}
+  - {id: up_conductor, kind: icon, source: claude, status: todo, file: icons/upgrades/up_conductor.png, size: [9, 9]}
+  - {id: up_corpse_blast, kind: icon, source: claude, status: todo, file: icons/upgrades/up_corpse_blast.png, size: [9, 9]}
+  - {id: up_deep_hex, kind: icon, source: claude, status: todo, file: icons/upgrades/up_deep_hex.png, size: [9, 9]}
+  - {id: up_executioner, kind: icon, source: claude, status: todo, file: icons/upgrades/up_executioner.png, size: [9, 9]}
+  - {id: up_extra_bolt, kind: icon, source: claude, status: todo, file: icons/upgrades/up_extra_bolt.png, size: [9, 9]}
+  - {id: up_fleet_foot, kind: icon, source: claude, status: todo, file: icons/upgrades/up_fleet_foot.png, size: [9, 9]}
+  - {id: up_forked_lightning, kind: icon, source: claude, status: todo, file: icons/upgrades/up_forked_lightning.png, size: [9, 9]}
+  - {id: up_ghoul_blood, kind: icon, source: claude, status: todo, file: icons/upgrades/up_ghoul_blood.png, size: [9, 9]}
+  - {id: up_giant_slayer, kind: icon, source: claude, status: todo, file: icons/upgrades/up_giant_slayer.png, size: [9, 9]}
+  - {id: up_glass_cannon, kind: icon, source: claude, status: todo, file: icons/upgrades/up_glass_cannon.png, size: [9, 9]}
+  - {id: up_grave_magnet, kind: icon, source: claude, status: todo, file: icons/upgrades/up_grave_magnet.png, size: [9, 9]}
+  - {id: up_grim_harvest, kind: icon, source: claude, status: todo, file: icons/upgrades/up_grim_harvest.png, size: [9, 9]}
+  - {id: up_hallowed_blast, kind: icon, source: claude, status: todo, file: icons/upgrades/up_hallowed_blast.png, size: [9, 9]}
+  - {id: up_heart_container, kind: icon, source: claude, status: todo, file: icons/upgrades/up_heart_container.png, size: [9, 9]}
+  - {id: up_heavy_blade, kind: icon, source: claude, status: todo, file: icons/upgrades/up_heavy_blade.png, size: [9, 9]}
+  - {id: up_hunting_bolts, kind: icon, source: claude, status: todo, file: icons/upgrades/up_hunting_bolts.png, size: [9, 9]}
+  - {id: up_keen_edge, kind: icon, source: claude, status: todo, file: icons/upgrades/up_keen_edge.png, size: [9, 9]}
+  - {id: up_long_arc, kind: icon, source: claude, status: todo, file: icons/upgrades/up_long_arc.png, size: [9, 9]}
+  - {id: up_long_reach, kind: icon, source: claude, status: todo, file: icons/upgrades/up_long_reach.png, size: [9, 9]}
+  - {id: up_long_shot, kind: icon, source: claude, status: todo, file: icons/upgrades/up_long_shot.png, size: [9, 9]}
+  - {id: up_longer_row, kind: icon, source: claude, status: todo, file: icons/upgrades/up_longer_row.png, size: [9, 9]}
+  - {id: up_ossuary, kind: icon, source: claude, status: todo, file: icons/upgrades/up_ossuary.png, size: [9, 9]}
+  - {id: up_piercing_bolts, kind: icon, source: claude, status: todo, file: icons/upgrades/up_piercing_bolts.png, size: [9, 9]}
+  - {id: up_quick_hands, kind: icon, source: claude, status: todo, file: icons/upgrades/up_quick_hands.png, size: [9, 9]}
+  - {id: up_quick_rise, kind: icon, source: claude, status: todo, file: icons/upgrades/up_quick_rise.png, size: [9, 9]}
+  - {id: up_reckless_haste, kind: icon, source: claude, status: todo, file: icons/upgrades/up_reckless_haste.png, size: [9, 9]}
+  - {id: up_ricochet, kind: icon, source: claude, status: todo, file: icons/upgrades/up_ricochet.png, size: [9, 9]}
+  - {id: up_shadow_step, kind: icon, source: claude, status: todo, file: icons/upgrades/up_shadow_step.png, size: [9, 9]}
+  - {id: up_sharpened_bolts, kind: icon, source: claude, status: todo, file: icons/upgrades/up_sharpened_bolts.png, size: [9, 9]}
+  - {id: up_splinters, kind: icon, source: claude, status: todo, file: icons/upgrades/up_splinters.png, size: [9, 9]}
+  - {id: up_split_bolt, kind: icon, source: claude, status: todo, file: icons/upgrades/up_split_bolt.png, size: [9, 9]}
+  - {id: up_steady_nerves, kind: icon, source: claude, status: todo, file: icons/upgrades/up_steady_nerves.png, size: [9, 9]}
+  - {id: up_swift_bolts, kind: icon, source: claude, status: todo, file: icons/upgrades/up_swift_bolts.png, size: [9, 9]}
+  - {id: up_twin_scythes, kind: icon, source: claude, status: todo, file: icons/upgrades/up_twin_scythes.png, size: [9, 9]}
+  - {id: up_wide_spikes, kind: icon, source: claude, status: todo, file: icons/upgrades/up_wide_spikes.png, size: [9, 9]}
+
+  # --- Icons: relics ---
+  - {id: rel_bloodstone, kind: icon, source: claude, status: todo, file: icons/relics/rel_bloodstone.png, size: [9, 9]}
+  - {id: rel_bone_charm, kind: icon, source: claude, status: todo, file: icons/relics/rel_bone_charm.png, size: [9, 9]}
+  - {id: rel_cursed_skull, kind: icon, source: claude, status: todo, file: icons/relics/rel_cursed_skull.png, size: [9, 9]}
+  - {id: rel_grave_lantern, kind: icon, source: claude, status: todo, file: icons/relics/rel_grave_lantern.png, size: [9, 9]}
+  - {id: rel_holy_water, kind: icon, source: claude, status: todo, file: icons/relics/rel_holy_water.png, size: [9, 9]}
+  - {id: rel_hourglass, kind: icon, source: claude, status: todo, file: icons/relics/rel_hourglass.png, size: [9, 9]}
+  - {id: rel_hunters_eye, kind: icon, source: claude, status: todo, file: icons/relics/rel_hunters_eye.png, size: [9, 9]}
+  - {id: rel_iron_boots, kind: icon, source: claude, status: todo, file: icons/relics/rel_iron_boots.png, size: [9, 9]}
+  - {id: rel_mourners_bell, kind: icon, source: claude, status: todo, file: icons/relics/rel_mourners_bell.png, size: [9, 9]}
+  - {id: rel_vampire_fang, kind: icon, source: claude, status: todo, file: icons/relics/rel_vampire_fang.png, size: [9, 9]}
+
+  # --- Icons: large versions (run summary, Game Guide) ---
+  - {id: coin_big_lg, kind: icon, source: claude, status: todo, file: icons/large/coin_big_lg.png, size: [16, 16]}
+  - {id: icon_bone_cathedral_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_bone_cathedral_lg.png, size: [16, 16]}
+  - {id: icon_bone_cleaver_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_bone_cleaver_lg.png, size: [16, 16]}
+  - {id: icon_bone_spears_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_bone_spears_lg.png, size: [16, 16]}
+  - {id: icon_chain_lightning_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_chain_lightning_lg.png, size: [16, 16]}
+  - {id: icon_death_spiral_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_death_spiral_lg.png, size: [16, 16]}
+  - {id: icon_grave_spikes_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_grave_spikes_lg.png, size: [16, 16]}
+  - {id: icon_harvester_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_harvester_lg.png, size: [16, 16]}
+  - {id: icon_hellfire_trail_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_hellfire_trail_lg.png, size: [16, 16]}
+  - {id: icon_holy_aura_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_holy_aura_lg.png, size: [16, 16]}
+  - {id: icon_inferno_path_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_inferno_path_lg.png, size: [16, 16]}
+  - {id: icon_main_gun_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_main_gun_lg.png, size: [16, 16]}
+  - {id: icon_orbiting_skulls_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_orbiting_skulls_lg.png, size: [16, 16]}
+  - {id: icon_reapers_scythe_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_reapers_scythe_lg.png, size: [16, 16]}
+  - {id: icon_sanctuary_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_sanctuary_lg.png, size: [16, 16]}
+  - {id: icon_seeking_bolts_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_seeking_bolts_lg.png, size: [16, 16]}
+  - {id: icon_soul_barrage_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_soul_barrage_lg.png, size: [16, 16]}
+  - {id: icon_spirit_daggers_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_spirit_daggers_lg.png, size: [16, 16]}
+  - {id: icon_storm_bolter_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_storm_bolter_lg.png, size: [16, 16]}
+  - {id: icon_storm_lantern_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_storm_lantern_lg.png, size: [16, 16]}
+  - {id: icon_tempest_lg, kind: icon, source: claude, status: todo, file: icons/large/icon_tempest_lg.png, size: [16, 16]}
+  - {id: up_arcane_focus_lg, kind: icon, source: claude, status: todo, file: icons/large/up_arcane_focus_lg.png, size: [16, 16]}
+  - {id: up_blood_draught_lg, kind: icon, source: claude, status: todo, file: icons/large/up_blood_draught_lg.png, size: [16, 16]}
+  - {id: up_corpse_blast_lg, kind: icon, source: claude, status: todo, file: icons/large/up_corpse_blast_lg.png, size: [16, 16]}
+  - {id: up_deep_hex_lg, kind: icon, source: claude, status: todo, file: icons/large/up_deep_hex_lg.png, size: [16, 16]}
+  - {id: up_executioner_lg, kind: icon, source: claude, status: todo, file: icons/large/up_executioner_lg.png, size: [16, 16]}
+  - {id: up_fleet_foot_lg, kind: icon, source: claude, status: todo, file: icons/large/up_fleet_foot_lg.png, size: [16, 16]}
+  - {id: up_ghoul_blood_lg, kind: icon, source: claude, status: todo, file: icons/large/up_ghoul_blood_lg.png, size: [16, 16]}
+  - {id: up_giant_slayer_lg, kind: icon, source: claude, status: todo, file: icons/large/up_giant_slayer_lg.png, size: [16, 16]}
+  - {id: up_grave_magnet_lg, kind: icon, source: claude, status: todo, file: icons/large/up_grave_magnet_lg.png, size: [16, 16]}
+  - {id: up_hallowed_blast_lg, kind: icon, source: claude, status: todo, file: icons/large/up_hallowed_blast_lg.png, size: [16, 16]}
+  - {id: up_heart_container_lg, kind: icon, source: claude, status: todo, file: icons/large/up_heart_container_lg.png, size: [16, 16]}
+  - {id: up_keen_edge_lg, kind: icon, source: claude, status: todo, file: icons/large/up_keen_edge_lg.png, size: [16, 16]}
+  - {id: up_ossuary_lg, kind: icon, source: claude, status: todo, file: icons/large/up_ossuary_lg.png, size: [16, 16]}
+  - {id: up_quick_hands_lg, kind: icon, source: claude, status: todo, file: icons/large/up_quick_hands_lg.png, size: [16, 16]}
+  - {id: up_sharpened_bolts_lg, kind: icon, source: claude, status: todo, file: icons/large/up_sharpened_bolts_lg.png, size: [16, 16]}
+  - {id: up_steady_nerves_lg, kind: icon, source: claude, status: todo, file: icons/large/up_steady_nerves_lg.png, size: [16, 16]}
+
+  # --- Drawn by code today: floors (FloorBaker), one 16x16 tileset per stage incl. walls ---
+  # Crypt; drawn by code today; size inferred
+  - {id: floor_crypt, kind: tileset, source: claude, status: todo, file: tilesets/floor_crypt.png, size: [16, 16]}
+  # Bone Marsh: ground, water, reeds; drawn by code today; size inferred
+  - {id: floor_bone_marsh, kind: tileset, source: claude, status: todo, file: tilesets/floor_bone_marsh.png, size: [16, 16]}
+  # Burning Cathedral: tiles, carpet aisles; drawn by code today; size inferred
+  - {id: floor_burning_cathedral, kind: tileset, source: claude, status: todo, file: tilesets/floor_burning_cathedral.png, size: [16, 16]}
+
+  # --- Drawn by code today: combat ---
+  # Player bolt (ProjectileManager disc); drawn by code today; size inferred
+  - {id: bullet_player, kind: sprite, source: claude, status: todo, file: sprites/effects/bullet_player.png, size: [6, 6]}
+  # Enemy bullet; the frozen look is a tint; drawn by code today; size inferred
+  - {id: bullet_enemy, kind: sprite, source: claude, status: todo, file: sprites/effects/bullet_enemy.png, size: [6, 6]}
+  # Holy Bomb / Grave Blast ring (BombBlast); drawn by code today; size inferred
+  - {id: bomb_ring, kind: sprite, source: claude, status: todo, file: sprites/effects/bomb_ring.png, size: [64, 64], frames: {idle: 4}}
+  # Holy Aura weapon ring (WeaponSystem); drawn by code today; size inferred
+  - {id: holy_aura, kind: sprite, source: claude, status: todo, file: sprites/effects/holy_aura.png, size: [48, 48], frames: {idle: 2}}
+  # Chain Lightning segment, stretched between targets; drawn by code today; size inferred
+  - {id: lightning, kind: sprite, source: claude, status: todo, file: sprites/effects/lightning.png, size: [32, 8], frames: {idle: 2}}
+  # Hexblade ability marker (AbilityMarker); drawn by code today; size inferred
+  - {id: hex_snare, kind: sprite, source: claude, status: todo, file: sprites/effects/hex_snare.png, size: [48, 48], frames: {idle: 2}}
+  # Under players and enemies; drawn by code today; size inferred
+  - {id: shadow, kind: sprite, source: claude, status: todo, file: sprites/effects/shadow.png, size: [12, 4]}
+  # Downed player's revive ring (Player); drawn by code today; size inferred
+  - {id: revive_circle, kind: sprite, source: claude, status: todo, file: sprites/effects/revive_circle.png, size: [32, 32]}
+  # Champion lair / ritual circle ground ring (MapEvents); drawn by code today; size inferred
+  - {id: event_ring, kind: sprite, source: claude, status: todo, file: sprites/effects/event_ring.png, size: [64, 64]}
+
+  # --- Drawn by code today: UI (theme panels are 9-slice images) ---
+  # 9-slice frame for the HealthBar and XpBar; drawn by code today; size inferred
+  - {id: bar_frame, kind: ui, source: claude, status: todo, file: ui/bar_frame.png, size: [16, 8]}
+  # Stretched; HealthBar; drawn by code today; size inferred
+  - {id: health_fill, kind: ui, source: claude, status: todo, file: ui/health_fill.png, size: [4, 4]}
+  # Stretched; XpBar; drawn by code today; size inferred
+  - {id: xp_fill, kind: ui, source: claude, status: todo, file: ui/xp_fill.png, size: [4, 4]}
+  # 9-slice panel for game_theme.tres; drawn by code today; size inferred
+  - {id: ui_panel, kind: ui, source: claude, status: todo, file: ui/ui_panel.png, size: [16, 16]}
+  # 9-slice button; drawn by code today; size inferred
+  - {id: ui_button, kind: ui, source: claude, status: todo, file: ui/ui_button.png, size: [16, 16]}
+  # 9-slice hovered / focused button; drawn by code today; size inferred
+  - {id: ui_button_focus, kind: ui, source: claude, status: todo, file: ui/ui_button_focus.png, size: [16, 16]}
+  # Menu cursor (GameCursor; hidden during play); drawn by code today; size inferred
+  - {id: cursor, kind: ui, source: claude, status: todo, file: ui/cursor.png, size: [16, 16]}
+  # PixelFont glyphs as an image font (or a .ttf); optional, the text font works today
+  - {id: pixel_font, kind: font, source: claude, status: todo, file: ui/pixel_font.png}
+
+  # --- Sound effects (synthesized by Sfx today) ---
+  - {id: sfx_ability_ready, kind: sfx, source: sfxr, status: todo, file: sfx/ability_ready.wav, replaces: ability_ready}
+  - {id: sfx_bomb, kind: sfx, source: sfxr, status: todo, file: sfx/bomb.wav, replaces: bomb}
+  - {id: sfx_boss, kind: sfx, source: sfxr, status: todo, file: sfx/boss.wav, replaces: boss}
+  - {id: sfx_chest, kind: sfx, source: sfxr, status: todo, file: sfx/chest.wav, replaces: chest}
+  - {id: sfx_coin, kind: sfx, source: sfxr, status: todo, file: sfx/coin.wav, replaces: coin}
+  - {id: sfx_countdown, kind: sfx, source: sfxr, status: todo, file: sfx/countdown.wav, replaces: countdown}
+  - {id: sfx_countdown_go, kind: sfx, source: sfxr, status: todo, file: sfx/countdown_go.wav, replaces: countdown_go}
+  - {id: sfx_dash, kind: sfx, source: sfxr, status: todo, file: sfx/dash.wav, replaces: dash}
+  - {id: sfx_death, kind: sfx, source: sfxr, status: todo, file: sfx/death.wav, replaces: death}
+  - {id: sfx_defeat, kind: sfx, source: sfxr, status: todo, file: sfx/defeat.wav, replaces: defeat}
+  - {id: sfx_downed, kind: sfx, source: sfxr, status: todo, file: sfx/downed.wav, replaces: downed}
+  - {id: sfx_effigy, kind: sfx, source: sfxr, status: todo, file: sfx/effigy.wav, replaces: effigy}
+  - {id: sfx_enemy_shot, kind: sfx, source: sfxr, status: todo, file: sfx/enemy_shot.wav, replaces: enemy_shot}
+  - {id: sfx_event, kind: sfx, source: sfxr, status: todo, file: sfx/event.wav, replaces: event}
+  - {id: sfx_gem, kind: sfx, source: sfxr, status: todo, file: sfx/gem.wav, replaces: gem}
+  - {id: sfx_hex, kind: sfx, source: sfxr, status: todo, file: sfx/hex.wav, replaces: hex}
+  - {id: sfx_hit, kind: sfx, source: sfxr, status: todo, file: sfx/hit.wav, replaces: hit}
+  - {id: sfx_hurt, kind: sfx, source: sfxr, status: todo, file: sfx/hurt.wav, replaces: hurt}
+  - {id: sfx_level_up, kind: sfx, source: sfxr, status: todo, file: sfx/level_up.wav, replaces: level_up}
+  - {id: sfx_pickup, kind: sfx, source: sfxr, status: todo, file: sfx/pickup.wav, replaces: pickup}
+  - {id: sfx_quest, kind: sfx, source: sfxr, status: todo, file: sfx/quest.wav, replaces: quest}
+  - {id: sfx_revive, kind: sfx, source: sfxr, status: todo, file: sfx/revive.wav, replaces: revive}
+  - {id: sfx_scythe, kind: sfx, source: sfxr, status: todo, file: sfx/scythe.wav, replaces: scythe}
+  - {id: sfx_shoot, kind: sfx, source: sfxr, status: todo, file: sfx/shoot.wav, replaces: shoot}
+  - {id: sfx_spear, kind: sfx, source: sfxr, status: todo, file: sfx/spear.wav, replaces: spear}
+  - {id: sfx_ui, kind: sfx, source: sfxr, status: todo, file: sfx/ui.wav, replaces: ui}
+  - {id: sfx_victory, kind: sfx, source: sfxr, status: todo, file: sfx/victory.wav, replaces: victory}
+  - {id: sfx_zap, kind: sfx, source: sfxr, status: todo, file: sfx/zap.wav, replaces: zap}
+
+  # --- Music (text scores in Tracks; rendered from the same scores) ---
+  - {id: music_menu, kind: music, source: synth, status: todo, file: music/menu.ogg, replaces: menu}
+  - {id: music_crypt, kind: music, source: synth, status: todo, file: music/crypt.ogg, replaces: crypt}
+  - {id: music_marsh, kind: music, source: synth, status: todo, file: music/marsh.ogg, replaces: marsh}
+  - {id: music_cathedral, kind: music, source: synth, status: todo, file: music/cathedral.ogg, replaces: cathedral}
+  - {id: music_boss, kind: music, source: synth, status: todo, file: music/boss.ogg, replaces: boss}
+  - {id: music_metal_crypt, kind: music, source: synth, status: todo, file: music/metal_crypt.ogg, replaces: metal_crypt}
+  - {id: music_metal_marsh, kind: music, source: synth, status: todo, file: music/metal_marsh.ogg, replaces: metal_marsh}
+  - {id: music_metal_cathedral, kind: music, source: synth, status: todo, file: music/metal_cathedral.ogg, replaces: metal_cathedral}
+  - {id: music_metal_boss, kind: music, source: synth, status: todo, file: music/metal_boss.ogg, replaces: metal_boss}

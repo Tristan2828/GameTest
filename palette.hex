@@ -1,0 +1,45 @@
+; GameTest palette, exported from PALETTE in src/art/pixel_art.gd.
+; The name after each color is its drawing key in text sprites.
+; P / p are recolored per player at runtime (slot color and a darker shade);
+; magenta here is only a placeholder so sprites using them render and check.
+17121c k
+453d4f K
+f2ede0 w
+ffd959 e
+cc4545 r
+80242e R
+8fa87a s
+5e7552 S
+d6ccad b
+8f8773 B
+8557a8 u
+4f306b U
+eb802b o
+99451a O
+ffd966 y
+ad4273 m
+6b244a M
+8f99b2 l
+545c73 L
+547340 n
+364a29 N
+7aa36b h
+4c6b45 H
+bdc752 a
+7a852e A
+80f28c v
+3d9e57 V
+66ccff t
+2e7ab2 T
+d9a340 g
+211c29 x
+edc7a1 f
+b88c6b F
+807a8c q
+575261 G
+6b4529 c
+452917 C
+c780ff i
+753db8 I
+ff00ff P
+a300a3 p

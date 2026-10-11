@@ -55,6 +55,7 @@ Folders are grouped by feature. Each scene (`.tscn`) sits next to its script.
 - `src/core/`: engine-agnostic helpers (`SpatialGrid`).
 - `tests/unit/`: GUT tests (`test_*.gd`, extend `GutTest`).
 - `tools/`: `run_tests.ps1`, `net_smoke_test.ps1`, `build.ps1`, `README-friends.txt`.
+- `assets.yaml` + `palette.hex`: the plan for moving art and audio to real files (PNG / WAV / OGG), kept with the [gamekit](https://github.com/Tristan2828/gamekit) plugin (`/gamekit:assets-status`, `/gamekit:art-draw`...). One entry per asset with size, frames, source, status and license; `palette.hex` is `PixelArt.PALETTE` (P/p are magenta placeholders for the per-player recolor). Finished files go in `assets/`, text sprites for them in `art/<id>.yaml`. The game still uses the text sprites and synth until the switch is done; regenerate or extend the manifest when adding sprites, sounds or tracks.
 
 ## Code conventions
 - Gameplay simulation that must match across peers goes in **pure static functions or RefCounted classes** (e.g. `PlayerMotor`, `ShotPatterns`, `BossBrain`) so it's deterministic and unit-testable. Nodes call into it.
