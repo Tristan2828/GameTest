@@ -222,12 +222,12 @@ assets:
   - {id: sfx_ui, kind: sfx, source: sfxr, status: todo, file: audio/sfx/ui.wav, replaces: ui}
 
   # --- Music: classic soundtrack, then metal (Tracks.ALL; menu is classic only) ---
-  - {id: music_menu, kind: music, source: synth, status: todo, file: audio/music/menu.ogg, replaces: menu}
-  - {id: music_crypt, kind: music, source: synth, status: todo, file: audio/music/crypt.ogg, replaces: crypt}
-  - {id: music_marsh, kind: music, source: synth, status: todo, file: audio/music/marsh.ogg, replaces: marsh}
-  - {id: music_cathedral, kind: music, source: synth, status: todo, file: audio/music/cathedral.ogg, replaces: cathedral}
-  - {id: music_boss, kind: music, source: synth, status: todo, file: audio/music/boss.ogg, replaces: boss}
-  - {id: music_metal_crypt, kind: music, source: synth, status: todo, file: audio/music/metal_crypt.ogg, replaces: metal_crypt}
-  - {id: music_metal_marsh, kind: music, source: synth, status: todo, file: audio/music/metal_marsh.ogg, replaces: metal_marsh}
-  - {id: music_metal_cathedral, kind: music, source: synth, status: todo, file: audio/music/metal_cathedral.ogg, replaces: metal_cathedral}
-  - {id: music_metal_boss, kind: music, source: synth, status: todo, file: audio/music/metal_boss.ogg, replaces: metal_boss}
+  - {id: music_menu, kind: music, source: synth, status: draft, file: audio/music/menu.ogg, replaces: menu}
+  - {id: music_crypt, kind: music, source: synth, status: draft, file: audio/music/crypt.ogg, replaces: crypt}
+  - {id: music_marsh, kind: music, source: synth, status: draft, file: audio/music/marsh.ogg, replaces: marsh}
+  - {id: music_cathedral, kind: music, source: synth, status: draft, file: audio/music/cathedral.ogg, replaces: cathedral}
+  - {id: music_boss, kind: music, source: synth, status: draft, file: audio/music/boss.ogg, replaces: boss}
+  - {id: music_metal_crypt, kind: music, source: synth, status: draft, file: audio/music/metal_crypt.ogg, replaces: metal_crypt}
+  - {id: music_metal_marsh, kind: music, source: synth, status: draft, file: audio/music/metal_marsh.ogg, replaces: metal_marsh}
+  - {id: music_metal_cathedral, kind: music, source: synth, status: draft, file: audio/music/metal_cathedral.ogg, replaces: metal_cathedral}
+  - {id: music_metal_boss, kind: music, source: synth, status: draft, file: audio/music/metal_boss.ogg, replaces: metal_boss}

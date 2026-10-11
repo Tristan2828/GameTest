@@ -7,6 +7,10 @@ extends RefCounted
 ## "P" and "p" are recolored per player (their slot color and a darker shade),
 ## so every character works in every player color.
 ##
+## Finished art files replace these text sprites one at a time: a sprite with a
+## file `assets/art/<sprite>.png` uses the file (docs/ART_BRIEF.md). In a file,
+## pure magenta #FF00FF and dark magenta #800080 are the player colors.
+##
 ## Most sprites are left/right symmetric; keep them that way when editing.
 
 const PALETTE: Dictionary[String, Color] = {
@@ -2672,30 +2676,65 @@ const SPRITES: Dictionary[String, Array] = {
 
 const TINT_CHAR: String = "P"
 const TINT_SHADE_CHAR: String = "p"
+## Where finished art files live: <sprite>.png, one file per animation frame.
+const ART_DIR: String = "res://assets/art/"
+## The player colors in art files (the text sprites use "P" / "p").
+const FILE_TINT: Color = Color8(255, 0, 255)
+const FILE_TINT_SHADE: Color = Color8(128, 0, 128)
 
 static var _cache: Dictionary[String, ImageTexture] = {}
 static var _disc_cache: Dictionary[String, ImageTexture] = {}
+## Art files looked up so far: sprite -> its image, or null when it has no file.
+static var _files: Dictionary[String, Variant] = {}
 
 
 static func has_sprite(sprite: String) -> bool:
-	return SPRITES.has(sprite)
+	return SPRITES.has(sprite) or file_image(sprite) != null
+
+
+## The sprite's art file as an image, or null if it doesn't have one (it then
+## uses its text rows). Looked up once per sprite.
+static func file_image(sprite: String) -> Image:
+	if _files.has(sprite):
+		return _files[sprite]
+	var image: Image = null
+	var path := ART_DIR + sprite + ".png"
+	if ResourceLoader.exists(path):
+		var tex := load(path) as Texture2D
+		if tex != null:
+			image = tex.get_image()
+			if image.is_compressed():
+				image.decompress()
+			image.convert(Image.FORMAT_RGBA8)
+	_files[sprite] = image
+	return image
+
+
+## Uses `image` as the sprite's art file (null: back to its text rows). For tests
+## and tools; the game finds files by itself.
+static func set_file_image(sprite: String, image: Image) -> void:
+	_files[sprite] = image
+	_cache.clear()
 
 
 ## The big (16x16) version of an icon, "<icon>_lg", if there is one; else the
 ## icon itself. Level-up cards, the shop and the Game Guide show these.
 static func big_icon(icon: String) -> String:
-	return icon + "_lg" if SPRITES.has(icon + "_lg") else icon
+	return icon + "_lg" if has_sprite(icon + "_lg") else icon
 
 
 ## "<sprite>_walk_1" / "_walk_2" while moving, else the sprite itself.
 ## `phase` is any steadily increasing number (e.g. walking time).
 static func walk_frame(sprite: String, moving: bool, phase: float) -> String:
-	if not moving or not SPRITES.has(sprite + "_walk_1"):
+	if not moving or not has_sprite(sprite + "_walk_1"):
 		return sprite
 	return sprite + ("_walk_1" if int(phase) % 2 == 0 else "_walk_2")
 
 
 static func size_of(sprite: String) -> Vector2i:
+	var file := file_image(sprite)
+	if file != null:
+		return file.get_size()
 	var rows: Array = SPRITES[sprite]
 	return Vector2i(String(rows[0]).length(), rows.size())
 
@@ -2706,6 +2745,11 @@ static func texture(sprite: String, tint: Color = Color.WHITE, flash: bool = fal
 	var key := "%s|%s|%s" % [sprite, tint.to_html(), flash]
 	if _cache.has(key):
 		return _cache[key]
+	var file := file_image(sprite)
+	if file != null:
+		var from_file := ImageTexture.create_from_image(_recolor_file(file, tint, flash))
+		_cache[key] = from_file
+		return from_file
 	var rows: Array = SPRITES[sprite]
 	var image := Image.create(String(rows[0]).length(), rows.size(), false, Image.FORMAT_RGBA8)
 	var shade := tint.darkened(0.35)
@@ -2726,6 +2770,26 @@ static func texture(sprite: String, tint: Color = Color.WHITE, flash: bool = fal
 	var built := ImageTexture.create_from_image(image)
 	_cache[key] = built
 	return built
+
+
+## An art file with its magenta player colors tinted (and everything white for a hit flash).
+static func _recolor_file(source: Image, tint: Color, flash: bool) -> Image:
+	var image := source.duplicate() as Image
+	var shade := tint.darkened(0.35)
+	for y: int in image.get_height():
+		for x: int in image.get_width():
+			var color := image.get_pixel(x, y)
+			if color.a == 0.0:
+				continue
+			var opaque := Color(color, 1.0)
+			if opaque.is_equal_approx(FILE_TINT):
+				color = Color(tint, color.a)
+			elif opaque.is_equal_approx(FILE_TINT_SHADE):
+				color = Color(shade, color.a)
+			if flash:
+				color = Color(Color.WHITE, color.a)
+			image.set_pixel(x, y, color)
+	return image
 
 
 ## A filled circle (with an optional inner circle on top) baked into a small

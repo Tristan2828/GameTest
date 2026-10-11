@@ -2,13 +2,17 @@ extends Node
 ## Sound effects (reach it anywhere as `Sfx`): `Sfx.play(&"coin")`.
 ##
 ## Every sound is designed here with the Synth (waveforms, filters, layering,
-## echo), so there are no audio files to manage and each sound is a few lines
-## of text. To use a recorded sound instead, load it into `_streams`.
+## echo). A finished sound file `assets/audio/sfx/<name>.wav` replaces its synth
+## sound (docs/AUDIO_BRIEF.md), so files can arrive a few at a time.
 
 const VOICES: int = 16
 const BUS: StringName = &"SFX"
+## Where finished sound files live: <name>.wav.
+const SFX_DIR: String = "res://assets/audio/sfx/"
 
-var _streams: Dictionary[StringName, AudioStreamWAV] = {}
+var _streams: Dictionary[StringName, AudioStream] = {}
+## Sounds that come from a file instead of the synth.
+var _from_file: Dictionary[StringName, bool] = {}
 ## Minimum seconds between two plays of the same sound (keeps hordes listenable).
 var _min_gap: Dictionary[StringName, float] = {
 	&"shoot": 0.06, &"hit": 0.04, &"death": 0.03, &"gem": 0.03, &"enemy_shot": 0.08, &"ui": 0.04,
@@ -28,11 +32,12 @@ func _ready() -> void:
 		add_child(voice)
 		_voices.append(voice)
 	_build_sounds()
+	_load_files()
 
 
 ## Plays a sound. `volume_db` adjusts loudness; pitch gets a little random variety.
 func play(sound: StringName, volume_db: float = 0.0, pitch: float = 1.0) -> void:
-	var stream: AudioStreamWAV = _streams.get(sound)
+	var stream: AudioStream = _streams.get(sound)
 	if stream == null:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
@@ -51,10 +56,26 @@ func has_sound(sound: StringName) -> bool:
 	return _streams.has(sound)
 
 
-## The raw samples of a sound (for tests and tools).
+## True when the sound plays from a file instead of the synth.
+func is_from_file(sound: StringName) -> bool:
+	return _from_file.has(sound)
+
+
+## The raw samples of a synth sound (for tests and tools; 0 for a file).
 func samples_of(sound: StringName) -> int:
-	var stream: AudioStreamWAV = _streams.get(sound)
-	return stream.data.size() / 2 if stream != null else 0
+	var stream := _streams.get(sound) as AudioStreamWAV
+	return stream.data.size() / 2 if stream != null and not is_from_file(sound) else 0
+
+
+## Swaps in finished sound files for the synth sounds that have one.
+func _load_files() -> void:
+	for sound: StringName in _streams.keys():
+		var path := SFX_DIR + String(sound) + ".wav"
+		if ResourceLoader.exists(path):
+			var stream := load(path) as AudioStream
+			if stream != null:
+				_streams[sound] = stream
+				_from_file[sound] = true
 
 
 func _build_sounds() -> void:
