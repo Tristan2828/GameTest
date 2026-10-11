@@ -9,6 +9,9 @@
 game: GameTest
 output: assets
 palette: palette.hex
+music:                  # `gamekit music render` runs this Godot script to turn Tracks into WAVs
+  godot_project: .
+  render_script: tools/render_music.gd
 
 assets:
   # --- Heroes (P/p = player color, recolored at runtime) ---
