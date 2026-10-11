@@ -193,12 +193,10 @@ None left.
 
 Done after v0.25.0: the dead code, unused sounds and sprites and pre-card names are gone, and the game stops its audio before quitting (`Main.quit_game`), so the online smoke test no longer fails on "resources still in use at exit". Arcane Focus and Holy Water keep lengthening Hex Snare and Bone Effigy (owner), and their cards now say so. Left as is: the lobby's per-frame label refresh (cheap) and `ArenaAbilities.Effigy.source`'s default (always overwritten). `src/arena/arena.gd` was split from ~2300 to ~1500 lines: map event and power-up rewards (`ArenaRewards`), quests (`ArenaQuests`), Grave Blast / Hex Snare / Bone Effigy and Corpse Blast (`ArenaAbilities`), the `[balance]` lines and stage rows (`BalanceLog`) and the HUD / minimap feed (`ArenaHudFeed`) are child nodes of the arena with their own RPCs; nothing in the game changed. `src/ui/run_summary_panel.gd` was split the same way (~1100 to ~400 lines): `SummaryPlayerCards` (Overview, Weapons), `SummaryTeamPages` (Stages, Highlights), `SummaryStyle` (colors, widgets), `SummaryBanner`, `BossTrophy`, `SummaryParticles`.
 
-### Next (proposed, in rough priority)
+### Next
 1. **Playtest** of v0.25.0 with friends, then tune numbers.
-2. **More boss and enemy variety** (`arena.gd` is split, so it can start). Two possible bosses per stage, more attacks with clear warnings, an elite enemy or two per stage that changes how you move (chargers, ground hazards). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and behaviours.
-3. **Easier joining: parked (owner, 2026-10-11).** Direct IP invites stay. No Steam and no paid server; if hosting ever happens, noray join codes on the owner's home lab is the plan. Options, costs and the plan: `docs/EASIER_JOINING.md`.
-4. **Real art and audio files** (§6): more sprites (common enemies next); new, longer music (60–120 s loops, `docs/AUDIO_BRIEF.md`).
-5. Meta/feel: hero portraits, more animation.
+
+Everything else moved to §9 *After 1.0* (owner, 2026-10-11).
 
 ## 8. Open questions
 
@@ -211,6 +209,10 @@ Done after v0.25.0: the dead code, unused sounds and sprites and pre-card names 
 ## 9. Ideas for Later
 
 ### After 1.0 (owner's list, 2026-10-11)
+- **More boss and enemy variety:** two possible bosses per stage, more attacks with clear warnings, an elite enemy or two per stage that changes how you move (chargers, ground hazards). Mostly `StageDef` / `BossStep` data plus a few new shot patterns and behaviours.
+- **Easier joining (parked):** direct IP invites stay. No Steam and no paid server; if hosting ever happens, noray join codes on the owner's home lab is the plan. Options, costs and the plan: `docs/EASIER_JOINING.md`.
+- **Real art and audio files** (§6): more sprites (common enemies next); new, longer music (60–120 s loops, `docs/AUDIO_BRIEF.md`).
+- **Meta/feel:** hero portraits, more animation.
 - **Announcer voices:** a Halo-style announcer (e.g. "Game over"), and an arena announcer for evolutions, the Grave Robber, game over and other big moments.
 - **More and better metal music** (the owner listed it twice; `Tracks.SOUNDTRACKS`).
 - **AI-generated art and music** to replace the text sprites and synth scores (§6).
@@ -223,4 +225,3 @@ Done after v0.25.0: the dead code, unused sounds and sprites and pre-card names 
 - **Clients asking for a pause** ("Request pause" shown to the host), if friends miss pausing.
 - **Intense bullet density throughout:** hardcore shmup density instead of readable patterns.
 - **Support hero** that heals teammates or revives faster (`CharacterStats.revive_speed` exists; owner idea, v0.15.0).
-- **Join codes / no port forwarding** (parked, see Next 3 and `docs/EASIER_JOINING.md`).
