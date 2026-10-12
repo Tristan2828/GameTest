@@ -86,6 +86,7 @@ assets:
   - {id: icon_storm_lantern, kind: icon, source: claude, status: todo, file: art/icon_storm_lantern.png, size: [9, 9]}
   - {id: icon_tempest, kind: icon, source: claude, status: todo, file: art/icon_tempest.png, size: [9, 9]}
   - {id: rel_bloodstone, kind: icon, source: claude, status: todo, file: art/rel_bloodstone.png, size: [9, 9]}
+  - {id: rel_bloodstone_lg, kind: icon, source: pack, status: draft, file: art/rel_bloodstone_lg.png, size: [16, 16], license: {name: "free for use (download page description, per owner 2026-10-12)", author: "16x16 RPG Item Pack author (not named; template-art/16x16 RPG Item Pack)"}, notes: 'Item__42, red-gem ring; new big icon'}
   - {id: rel_bone_charm, kind: icon, source: claude, status: todo, file: art/rel_bone_charm.png, size: [9, 9]}
   - {id: rel_cursed_skull, kind: icon, source: claude, status: todo, file: art/rel_cursed_skull.png, size: [9, 9]}
   - {id: rel_grave_lantern, kind: icon, source: claude, status: todo, file: art/rel_grave_lantern.png, size: [9, 9]}
@@ -93,6 +94,7 @@ assets:
   - {id: rel_hourglass, kind: icon, source: claude, status: todo, file: art/rel_hourglass.png, size: [9, 9]}
   - {id: rel_hunters_eye, kind: icon, source: claude, status: todo, file: art/rel_hunters_eye.png, size: [9, 9]}
   - {id: rel_iron_boots, kind: icon, source: claude, status: todo, file: art/rel_iron_boots.png, size: [9, 9]}
+  - {id: rel_iron_boots_lg, kind: icon, source: pack, status: draft, file: art/rel_iron_boots_lg.png, size: [16, 16], license: {name: "free for use (download page description, per owner 2026-10-12)", author: "16x16 RPG Item Pack author (not named; template-art/16x16 RPG Item Pack)"}, notes: 'Item__49, iron boots; new big icon'}
   - {id: rel_mourners_bell, kind: icon, source: claude, status: todo, file: art/rel_mourners_bell.png, size: [9, 9]}
   - {id: rel_vampire_fang, kind: icon, source: claude, status: todo, file: art/rel_vampire_fang.png, size: [9, 9]}
   - {id: up_arcane_focus, kind: icon, source: claude, status: todo, file: art/up_arcane_focus.png, size: [9, 9]}
@@ -155,7 +157,7 @@ assets:
   - {id: up_corpse_blast_lg, kind: icon, source: claude, status: todo, file: art/up_corpse_blast_lg.png, size: [16, 16]}
   - {id: up_deep_hex_lg, kind: icon, source: claude, status: todo, file: art/up_deep_hex_lg.png, size: [16, 16]}
   - {id: up_executioner_lg, kind: icon, source: claude, status: todo, file: art/up_executioner_lg.png, size: [16, 16]}
-  - {id: up_fleet_foot_lg, kind: icon, source: claude, status: todo, file: art/up_fleet_foot_lg.png, size: [16, 16]}
+  - {id: up_fleet_foot_lg, kind: icon, source: pack, status: draft, file: art/up_fleet_foot_lg.png, size: [16, 16], license: {name: "free for use (download page description, per owner 2026-10-12)", author: "16x16 RPG Item Pack author (not named; template-art/16x16 RPG Item Pack)"}, notes: 'Item__50, golden boots'}
   - {id: up_ghoul_blood_lg, kind: icon, source: claude, status: todo, file: art/up_ghoul_blood_lg.png, size: [16, 16]}
   - {id: up_giant_slayer_lg, kind: icon, source: claude, status: todo, file: art/up_giant_slayer_lg.png, size: [16, 16]}
   - {id: up_grave_magnet_lg, kind: icon, source: claude, status: todo, file: art/up_grave_magnet_lg.png, size: [16, 16]}
@@ -163,7 +165,7 @@ assets:
   - {id: up_heart_container_lg, kind: icon, source: claude, status: todo, file: art/up_heart_container_lg.png, size: [16, 16]}
   - {id: up_keen_edge_lg, kind: icon, source: claude, status: todo, file: art/up_keen_edge_lg.png, size: [16, 16]}
   - {id: up_ossuary_lg, kind: icon, source: claude, status: todo, file: art/up_ossuary_lg.png, size: [16, 16]}
-  - {id: up_quick_hands_lg, kind: icon, source: claude, status: todo, file: art/up_quick_hands_lg.png, size: [16, 16]}
+  - {id: up_quick_hands_lg, kind: icon, source: pack, status: draft, file: art/up_quick_hands_lg.png, size: [16, 16], license: {name: "free for use (download page description, per owner 2026-10-12)", author: "16x16 RPG Item Pack author (not named; template-art/16x16 RPG Item Pack)"}, notes: 'Item__60, leather glove'}
   - {id: up_sharpened_bolts_lg, kind: icon, source: claude, status: todo, file: art/up_sharpened_bolts_lg.png, size: [16, 16]}
   - {id: up_steady_nerves_lg, kind: icon, source: claude, status: todo, file: art/up_steady_nerves_lg.png, size: [16, 16]}
 
