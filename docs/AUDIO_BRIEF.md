@@ -12,6 +12,12 @@
 - **Mono is fine for SFX.** Stereo for music.
 - You can deliver a few files at a time: any ID without a file keeps its current synth sound.
 
+## Decisions so far (owner, by ear, 2026-10-12)
+- **Files in the game:** the 9 music tracks (rendered from today's scores) and 7 sound effects from [Kenney](https://kenney.nl/assets)'s free CC0 audio packs (Impact, Interface, Digital, Sci-fi, RPG, UI, Casino, Music Jingles): `hit`, `scythe`, `zap`, `enemy_shot`, `pickup`, `revive`, `ui`. Sources per file are in `assets.yaml`.
+- **The owner prefers the synth** for `death`, `spear`, `gem`, `hurt`, `bomb`, `hex`, `effigy`, `chest`, `level_up`, `quest`, `victory` (round 1) and `event`, `boss`, `downed`, `defeat` (two rounds of Kenney picks lost to the synth). Don't replace these again unless the owner asks or a clearly different kind of sound comes along (e.g. a commissioned set).
+- `shoot`, `coin`, `countdown`, `countdown_go` stay synth (exact pitched tones).
+- **How choices were made:** for each sound, 2-3 candidates loudness-matched to the synth sound, sent as a numbered zip with the old sound as `_old`, the owner answers by number and letter. The old sound wins often: it was tuned to the game. This is the gamekit `sfx-make` skill's "choose by ear" step.
+
 ## Music: 2 soundtracks
 
 The player picks a soundtrack in the custom game settings: Classic, Metal, Metal boss fights only, or Shuffle (classic or metal picked per stage). That means **every stage and boss track needs a classic version and a metal version in the same role**. The menu track exists only as a classic version; the game never plays a metal menu track.

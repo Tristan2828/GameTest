@@ -97,7 +97,9 @@ Each icon should be readable at 9x9. Many of them also have a **16x16 `_lg` vers
 ## Big icons (16x16, `_lg`)
 These exist today: the 4 main weapons, the 4 main evolutions, all 11 auto weapons and the 4 auto evolutions (same IDs as above plus `_lg`; Grave Blast / Hex Snare / Bone Effigy are `up_hallowed_blast_lg`, `up_deep_hex_lg`, `up_ossuary_lg`), plus `up_sharpened_bolts_lg`, `up_quick_hands_lg`, `up_fleet_foot_lg`, `up_heart_container_lg`, `up_grave_magnet_lg`, `up_steady_nerves_lg`, `up_arcane_focus_lg`, `up_keen_edge_lg`, `up_corpse_blast_lg`, `up_giant_slayer_lg`, `up_executioner_lg`, `up_ghoul_blood_lg`, `up_blood_draught_lg`, `coin_big_lg`.
 
-**Optional:** the 16 main weapon level-ups and the 10 relics have no `_lg` version yet, so their cards show the small icon scaled up. New `_lg` versions are welcome (just add the file; the game picks it up automatically).
+Relics with one so far: `rel_iron_boots_lg`, `rel_bloodstone_lg` (pack files, shown in the shop).
+
+**Optional:** the 16 main weapon level-ups and the other 8 relics have no `_lg` version yet, so their cards show the small icon scaled up. New `_lg` versions are welcome (just add the file; the game picks it up automatically).
 
 ## Minimap markers (tiny shapes, recolored by the game)
 Draw these in **pure magenta `#FF00FF` only**; the game tints them and adds the dark outline itself.
@@ -120,6 +122,11 @@ Draw these in **pure magenta `#FF00FF` only**; the game tints them and adds the 
 | `skull`, `grave`, `grave_cross`, `bones`, `skull_pile`, `candle` | 6x6, 6x6, 5x6, 5x5, 7x4, 3x5 | The Crypt |
 | `reeds`, `stump` | 5x5, 6x4 | The Bone Marsh |
 | `pew`, `pillar_stump`, `candelabra`, `rubble` | 14x5, 7x6, 7x6, 5x3 | The Burning Cathedral |
+
+## Files so far, and third-party packs
+- **Heroes:** the 4 hero files (`assets/art/`, drawn by Claude from `art/<id>.yaml`) are an upgrade on the old text sprites but **not final** (owner, 2026-10-12): replace them freely.
+- **Pack icons:** `up_fleet_foot_lg`, `up_quick_hands_lg`, `rel_iron_boots_lg`, `rel_bloodstone_lg` come from the *16x16 RPG Item Pack* in `template-art/`. Its license is recorded as the owner reported it ("free for use" on the download page); the pack names no author.
+- **`template-art/`:** packs the owner downloaded as references and possible sources. Except for the RPG Item Pack above, **their licenses are not confirmed**: ask the owner (and record the answer in `assets.yaml`) before putting any of their pixels into `assets/`, because this repo is public.
 
 ## Not needed
 - Icons of retired upgrades: `up_afterimage`, `up_shadow_step`, `up_glass_cannon`, `up_long_shot`, `up_reckless_haste`, `up_swift_bolts`.
