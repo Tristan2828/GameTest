@@ -149,8 +149,8 @@ Each has its own floor, enemy mix, champion, boss and music (data-driven `StageD
 ### Where things stand (2026-10-11)
 - **Released:** v0.25.0 (the Playtest 8 changes below and the first art/audio files). It is the first with `MedievalSurvival` file names and the first after the repo rename: **v0.24.0 and older can't update to it** (their updater only trusts links under the old repo name), so friends download it once by hand; later versions update in place.
 - **Played by humans:** M1 and M2 online with a friend; a solo v0.11 run; two-player co-op runs of v0.13 and v0.14; a full 4-player run of v0.23.0 ("It was a fun time!").
-- **Playtest build:** v0.25.1 (v0.25.0 plus the code cleanup below and the Arcane Focus / Holy Water card text).
-- **Not yet played:** v0.24.0, v0.25.0 and v0.25.1 (checklist 3.0n / 3.0o / 3.0p in `docs/PLAYTEST.md`), and whatever the 4-player run didn't get to from v0.22–v0.23. Balance numbers since v0.18.0 come from the solo invincible autopilot (it picks cards at random and dodges badly), so they compare stages and heroes, not real difficulty.
+- **Playtest build:** v0.25.2 (v0.25.1 plus 7 recorded sound effects and 4 pack icons, §6).
+- **Not yet played:** v0.24.0 through v0.25.2 (checklist 3.0n–3.0q in `docs/PLAYTEST.md`), and whatever the 4-player run didn't get to from v0.22–v0.23. Balance numbers since v0.18.0 come from the solo invincible autopilot (it picks cards at random and dodges badly), so they compare stages and heroes, not real difficulty.
 - Logs: `%APPDATA%\Godot\app_userdata\GameTest\logs\godot.log` (newest run; older runs are timestamped). The host logs downs and boss kills.
 
 ### Releases
@@ -174,6 +174,7 @@ Details: `docs/releases/v<version>.md` and the git history. "Claude's call" item
 - **v0.22.0 / v0.22.1:** auto-fire redesign step 1 and a balance pass (below).
 - **v0.23.0:** auto-fire redesign step 2 (below).
 - **v0.24.0 (playtest 7, after the 4-player run):** boss sweep + escort and a capped boss-fight horde; rituals fill faster together; knife-shaped Spirit Daggers; a "YOU" marker during the countdown; 16x16 card icons; cards that fit their text; changing your pick; left trigger picks; run summary rebuild (fixed-width cards, difficulty chip, Stages page); Join Game dialog; Difficulty page Custom chip; the name Medieval Survival. Claude's calls: the boss-fight numbers, no XP from the swept horde, +50% ritual speed per player, the marker and icon art, the run summary's contents.
+- **v0.25.2:** the first recorded sound effects (7 of 26 from Kenney's CC0 packs, picked by ear by the owner; the synth stays for the rest) and pack icons for Fleet Foot, Quick Hands, Iron Boots and Bloodstone; the shop shows a relic's big icon.
 
 ### Auto-fire redesign (owner decision, 2026-10-10)
 **Why:** aiming and dodging fought over the same hands: the game became either "aim well" or "dodge well", and builds couldn't take over aiming the way they do in Vampire Survivors. New direction: a close Vampire Survivors-style game with our own flavor (dark fantasy, co-op, real bullet patterns, stages + bosses + shop). The owner chose to finish both steps before the next playtest.

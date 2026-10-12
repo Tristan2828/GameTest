@@ -1,4 +1,4 @@
-# Playtest Review (v0.25.0)
+# Playtest Review (v0.25.2)
 
 Most of the game was built between playtests: you've played M1 and M2, a solo run, co-op runs of v0.13 and v0.14 and a 4-player run of v0.23.0, but each new version adds things nobody has played yet.
 Automated tests prove it *works* (unit tests, plus online host+client runs).
@@ -50,6 +50,12 @@ Session D is the most valuable if you only have time for one.
 ## 3. Checklists
 
 Each item has a **question** and, where relevant, **where to tune it** (so Claude can act fast on your answer).
+
+### 3.0q v0.25.2 (new sounds and icons, then 3.0p, 3.0o and 3.0n)
+- [ ] Seven sounds are real recordings now: hitting enemies, Mortimer's scythe, Morwen's lightning, enemy shots, grabbing a power-up or new weapon, a revive or finished ritual, and menu clicks. Do they fit the game, and does any stand out as too loud or too quiet next to the rest?
+  - *Tune: swap or drop a file in `assets/audio/sfx/` (delete it and the old synth sound comes back); choices and sources in `assets.yaml`.*
+- [ ] New icons for Fleet Foot, Quick Hands, Iron Boots and Bloodstone (on level-up cards and in the shop). Do they read as what they are next to the drawn ones?
+  - *Edit: `assets/art/<icon>_lg.png`; delete one to get the old drawn icon back.*
 
 ### 3.0p v0.25.1 (behind-the-scenes cleanup, then 3.0o and 3.0n)
 - [ ] Everything should play exactly like v0.25.0 (a lot of code moved). Do these still work and show for everyone: chests, rituals, champions and the Grave Robber, quests, power-ups, Grave Blast / Hex Snare / Bone Effigy, Corpse Blast?
