@@ -134,8 +134,9 @@ func refresh(coins: int, owned: Array[int], is_ready: bool, status: String, rero
 		var owned_it := owned.has(_offers[i])
 		var affordable := coins >= relic.price
 		(button.get_node("Lines/Title") as Label).text = relic.title
-		if _icons[i].sprite != relic.icon:
-			_icons[i].sprite = relic.icon
+		var icon := PixelArt.big_icon(relic.icon)
+		if _icons[i].sprite != icon:
+			_icons[i].sprite = icon
 			_icons[i].queue_redraw()
 		(button.get_node("Lines/Description") as Label).text = relic.description
 		var price := button.get_node("Lines/Price") as Label
