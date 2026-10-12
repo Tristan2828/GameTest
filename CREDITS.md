@@ -7,7 +7,7 @@
 - **16x16 RPG Item Pack author (not named; template-art/16x16 RPG Item Pack)**, free for use (download page description, per owner 2026-10-12): rel_bloodstone_lg, rel_iron_boots_lg, up_fleet_foot_lg, up_quick_hands_lg
 - **Kenney (www.kenney.nl)**, CC0 1.0 ([source](https://kenney.nl/assets/digital-audio)): sfx_pickup
 - **Kenney (www.kenney.nl)**, CC0 1.0 ([source](https://kenney.nl/assets/impact-sounds)): sfx_hit
-- **Kenney (www.kenney.nl)**, CC0 1.0 ([source](https://kenney.nl/assets/interface-sounds)): sfx_revive
+- **Kenney (www.kenney.nl)**, CC0 1.0 ([source](https://kenney.nl/assets/interface-sounds)): sfx_revive, sfx_ui
 - **Kenney (www.kenney.nl)**, CC0 1.0 ([source](https://kenney.nl/assets/rpg-audio)): sfx_scythe
 - **Kenney (www.kenney.nl)**, CC0 1.0 ([source](https://kenney.nl/assets/sci-fi-sounds)): sfx_enemy_shot, sfx_zap
 

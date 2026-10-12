@@ -212,15 +212,15 @@ assets:
   - {id: sfx_chest, kind: sfx, source: sfxr, status: todo, file: audio/sfx/chest.wav, replaces: chest, notes: 'owner keeps the synth sound (2026-10-12)'}
   - {id: sfx_level_up, kind: sfx, source: sfxr, status: todo, file: audio/sfx/level_up.wav, replaces: level_up, notes: 'owner keeps the synth sound (2026-10-12)'}
   - {id: sfx_quest, kind: sfx, source: sfxr, status: todo, file: audio/sfx/quest.wav, replaces: quest, notes: 'owner keeps the synth sound (2026-10-12)'}
-  - {id: sfx_event, kind: sfx, source: sfxr, status: todo, file: audio/sfx/event.wav, replaces: event, notes: 'neither the synth nor the first Kenney pick fit (2026-10-12); synth until a new pick'}
-  - {id: sfx_boss, kind: sfx, source: sfxr, status: todo, file: audio/sfx/boss.wav, replaces: boss, notes: 'neither the synth nor the first Kenney pick fit (2026-10-12); synth until a new pick'}
-  - {id: sfx_downed, kind: sfx, source: sfxr, status: todo, file: audio/sfx/downed.wav, replaces: downed, notes: 'neither the synth nor the first Kenney pick fit (2026-10-12); synth until a new pick'}
+  - {id: sfx_event, kind: sfx, source: sfxr, status: todo, file: audio/sfx/event.wav, replaces: event, notes: 'owner keeps the synth sound after two rounds of Kenney picks (2026-10-12)'}
+  - {id: sfx_boss, kind: sfx, source: sfxr, status: todo, file: audio/sfx/boss.wav, replaces: boss, notes: 'owner keeps the synth sound after two rounds of Kenney picks (2026-10-12)'}
+  - {id: sfx_downed, kind: sfx, source: sfxr, status: todo, file: audio/sfx/downed.wav, replaces: downed, notes: 'owner keeps the synth sound after two rounds of Kenney picks (2026-10-12)'}
   - {id: sfx_revive, kind: sfx, source: library, status: done, file: audio/sfx/revive.wav, replaces: revive, license: {name: CC0 1.0, author: Kenney (www.kenney.nl), url: 'https://kenney.nl/assets/interface-sounds'}, notes: 'Kenney interface-sounds: confirmation_004; loudness matched to the synth sound'}
   - {id: sfx_countdown, kind: sfx, source: sfxr, status: todo, file: audio/sfx/countdown.wav, replaces: countdown}
   - {id: sfx_countdown_go, kind: sfx, source: sfxr, status: todo, file: audio/sfx/countdown_go.wav, replaces: countdown_go}
   - {id: sfx_victory, kind: sfx, source: sfxr, status: todo, file: audio/sfx/victory.wav, replaces: victory, notes: 'owner keeps the synth sound (2026-10-12)'}
-  - {id: sfx_defeat, kind: sfx, source: sfxr, status: todo, file: audio/sfx/defeat.wav, replaces: defeat, notes: 'neither the synth nor the first Kenney pick fit (2026-10-12); synth until a new pick'}
-  - {id: sfx_ui, kind: sfx, source: sfxr, status: todo, file: audio/sfx/ui.wav, replaces: ui, notes: 'neither the synth nor the first Kenney pick fit (2026-10-12); synth until a new pick'}
+  - {id: sfx_defeat, kind: sfx, source: sfxr, status: todo, file: audio/sfx/defeat.wav, replaces: defeat, notes: 'owner keeps the synth sound after two rounds of Kenney picks (2026-10-12)'}
+  - {id: sfx_ui, kind: sfx, source: library, status: done, file: audio/sfx/ui.wav, replaces: ui, license: {name: CC0 1.0, author: Kenney (www.kenney.nl), url: 'https://kenney.nl/assets/interface-sounds'}, notes: 'Kenney interface-sounds: select_002 (second round pick); loudness matched to the synth sound'}
 
   # --- Music: classic soundtrack, then metal (Tracks.ALL; menu is classic only) ---
   - {id: music_menu, kind: music, source: synth, status: draft, file: audio/music/menu.ogg, replaces: menu}
