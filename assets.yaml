@@ -8,6 +8,7 @@ game: Medieval Survival
 output: assets
 palette: palette.hex
 frame_files: true       # one PNG per frame, named like the game's sprites: ghoul.png, ghoul_walk_1.png, ghoul_attack.png
+code_art: src/art/pixel_art.gd   # the game's own text sprites: the asset page shows them until a file replaces them
 audio:                  # house levels from docs/AUDIO_BRIEF.md
   sfx_peak_db: -3
   music_lufs: -16
