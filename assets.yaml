@@ -9,6 +9,10 @@ output: assets
 palette: palette.hex
 frame_files: true       # one PNG per frame, named like the game's sprites: ghoul.png, ghoul_walk_1.png, ghoul_attack.png
 code_art: src/art/pixel_art.gd   # the game's own text sprites: the asset page shows them until a file replaces them
+sprites:                # the game's sprite rules (docs/ART_BRIEF.md), used when a picture becomes a sprite
+  prompt: "chunky, chibi proportions, oversized head, big glowing eyes, dark fantasy, front-facing, left-right symmetrical, strong simple silhouette, few details, thick near-black outline, muted desaturated colors"
+  outline: "#17121C"    # 1 px near-black outline around every creature
+  reserved_colors: ["#FF00FF", "#800080"]  # player colors: the game recolors them, so never snap to them
 audio:                  # house levels from docs/AUDIO_BRIEF.md
   sfx_peak_db: -3
   music_lufs: -16
@@ -24,20 +28,20 @@ assets:
   - {id: necromancer, kind: sprite, source: claude, status: draft, file: art/necromancer.png, size: [12, 16], frames: {idle: 1, walk: 2}, notes: 'upgraded from the old text sprite but not final (owner, 2026-10-12)'}
 
   # --- Enemies (champions are the same sprite, scaled and tinted) ---
-  - {id: shambler, kind: sprite, source: claude, status: todo, file: art/shambler.png, size: [12, 12], frames: {idle: 1, walk: 2}}
-  - {id: bat, kind: sprite, source: claude, status: todo, file: art/bat.png, size: [14, 8], frames: {idle: 2}}
-  - {id: ghoul, kind: sprite, source: claude, status: todo, file: art/ghoul.png, size: [20, 20], frames: {idle: 1, walk: 2}}
-  - {id: cultist, kind: sprite, source: claude, status: todo, file: art/cultist.png, size: [12, 14], frames: {idle: 1, walk: 2, attack: 1}}
-  - {id: mire_crawler, kind: sprite, source: claude, status: todo, file: art/mire_crawler.png, size: [10, 8], frames: {idle: 1, walk: 2}}
-  - {id: plague_spitter, kind: sprite, source: claude, status: todo, file: art/plague_spitter.png, size: [12, 12], frames: {idle: 1, attack: 1}}
-  - {id: flame_imp, kind: sprite, source: claude, status: todo, file: art/flame_imp.png, size: [10, 10], frames: {idle: 2}}
-  - {id: fallen_paladin, kind: sprite, source: claude, status: todo, file: art/fallen_paladin.png, size: [18, 18], frames: {idle: 1, walk: 2, attack: 1}}
-  - {id: grave_robber, kind: sprite, source: claude, status: todo, file: art/grave_robber.png, size: [9, 11], frames: {idle: 1, walk: 2}}
+  - {id: shambler, kind: sprite, source: claude, status: todo, file: art/shambler.png, size: [12, 12], frames: {idle: 1, walk: 2}, notes: 'a slow basic zombie, sickly pale green skin, red eyes, ragged rust-brown rags, arms reaching forward'}
+  - {id: bat, kind: sprite, source: claude, status: todo, file: art/bat.png, size: [14, 8], frames: {idle: 2}, notes: 'a bat with wide spread wings, purple fur and wings, small red eyes, seen from the front'}
+  - {id: ghoul, kind: sprite, source: claude, status: todo, file: art/ghoul.png, size: [20, 20], frames: {idle: 1, walk: 2}, notes: 'a big hunched brute, blood-red flesh, yellow eyes, white jagged teeth, huge shoulders and long arms'}
+  - {id: cultist, kind: sprite, source: claude, status: todo, file: art/cultist.png, size: [12, 14], frames: {idle: 1, walk: 2, attack: 1}, notes: 'a hooded caster in a plum-purple robe with gold trim, a black face inside the hood with glowing yellow eyes'}
+  - {id: mire_crawler, kind: sprite, source: claude, status: todo, file: art/mire_crawler.png, size: [10, 8], frames: {idle: 1, walk: 2}, notes: 'a low flat wide swamp creature, moss green, yellow eyes, small legs'}
+  - {id: plague_spitter, kind: sprite, source: claude, status: todo, file: art/plague_spitter.png, size: [12, 12], frames: {idle: 1, attack: 1}, notes: 'a bloated poison spitter, bile yellow-green skin, yellow eyes, wide open mouth'}
+  - {id: flame_imp, kind: sprite, source: claude, status: todo, file: art/flame_imp.png, size: [10, 10], frames: {idle: 2}, notes: 'a small fire demon, orange body with a yellow glowing hot core, little horns'}
+  - {id: fallen_paladin, kind: sprite, source: claude, status: todo, file: art/fallen_paladin.png, size: [18, 18], frames: {idle: 1, walk: 2, attack: 1}, notes: 'a corrupted knight in steel-blue armor, glowing orange visor slit, gold emblem on the chest'}
+  - {id: grave_robber, kind: sprite, source: claude, status: todo, file: art/grave_robber.png, size: [9, 11], frames: {idle: 1, walk: 2}, notes: 'a sneaky thief in a grey hood and brown clothes, carrying a sack of loot over the shoulder'}
 
   # --- Bosses (drawn at 2x) ---
-  - {id: bone_warden, kind: sprite, source: claude, status: todo, file: art/bone_warden.png, size: [24, 24], frames: {idle: 1, attack: 1}}
-  - {id: mire_hag, kind: sprite, source: claude, status: todo, file: art/mire_hag.png, size: [24, 24], frames: {idle: 1, attack: 1}}
-  - {id: ashen_bishop, kind: sprite, source: claude, status: todo, file: art/ashen_bishop.png, size: [24, 24], frames: {idle: 1, attack: 1}}
+  - {id: bone_warden, kind: sprite, source: claude, status: todo, file: art/bone_warden.png, size: [24, 24], frames: {idle: 1, attack: 1}, notes: 'a boss: armored skeleton lord, bone skull with horns, red eye sockets, dark armored body'}
+  - {id: mire_hag, kind: sprite, source: claude, status: todo, file: art/mire_hag.png, size: [24, 24], frames: {idle: 1, attack: 1}, notes: 'a boss: swamp witch, tall black pointed hat, pale green face, mossy hair and mossy cloak'}
+  - {id: ashen_bishop, kind: sprite, source: claude, status: todo, file: art/ashen_bishop.png, size: [24, 24], frames: {idle: 1, attack: 1}, notes: 'a boss: burnt priest, tall red mitre with a gold cross, ashen bone face, white robe with gold trim'}
 
   # --- Pickups and world objects ---
   - {id: gem, kind: sprite, source: claude, status: todo, file: art/gem.png, size: [7, 8]}
