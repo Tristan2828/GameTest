@@ -24,3 +24,5 @@ Start Gamekit.bat
 
 # AI pictures from gamekit's picture engine (pictures/<name>.png + .json); finished art goes to assets/
 pictures/
+# AI music takes from gamekit's music engine; finished tracks go to assets/audio/music
+music-takes/
