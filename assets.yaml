@@ -13,6 +13,8 @@ sprites:                # the game's sprite rules (docs/ART_BRIEF.md), used when
   prompt: "chunky, chibi proportions, oversized head, big glowing eyes, dark fantasy, front-facing, left-right symmetrical, strong simple silhouette, few details, thick near-black outline, muted desaturated colors"
   outline: "#17121C"    # 1 px near-black outline around every creature
   reserved_colors: ["#FF00FF", "#800080"]  # player colors: the game recolors them, so never snap to them
+  game_scale: 3         # 640x360 scaled up by whole numbers: 3x on a 1080p screen
+  floors: {The Crypt: "#1C1A21", The Bone Marsh: "#171C12", The Burning Cathedral: "#261614"}  # stage stone colors (src/stages/*.tres)
 audio:                  # house levels from docs/AUDIO_BRIEF.md
   sfx_peak_db: -3
   music_lufs: -16
@@ -22,7 +24,7 @@ music:                  # `gamekit music render` runs this Godot script to turn 
 
 assets:
   # --- Heroes (P/p areas = player color, recolored per player) ---
-  - {id: wanderer, kind: sprite, source: claude, status: draft, file: art/wanderer.png, size: [12, 14], frames: {idle: 1, walk: 2}, notes: 'upgraded from the old text sprite but not final (owner, 2026-10-12)'}
+  - {id: wanderer, kind: sprite, source: claude, status: todo, file: art/wanderer.png, size: [12, 14], frames: {idle: 1, walk: 2}, notes: 'upgraded from the old text sprite but not final (owner, 2026-10-12)'}
   - {id: gravekeeper, kind: sprite, source: claude, status: draft, file: art/gravekeeper.png, size: [14, 16], frames: {idle: 1, walk: 2}, notes: 'upgraded from the old text sprite but not final (owner, 2026-10-12)'}
   - {id: hexblade_witch, kind: sprite, source: claude, status: draft, file: art/hexblade_witch.png, size: [12, 16], frames: {idle: 1, walk: 2}, notes: 'upgraded from the old text sprite but not final (owner, 2026-10-12)'}
   - {id: necromancer, kind: sprite, source: claude, status: draft, file: art/necromancer.png, size: [12, 16], frames: {idle: 1, walk: 2}, notes: 'upgraded from the old text sprite but not final (owner, 2026-10-12)'}
