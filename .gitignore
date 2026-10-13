@@ -21,3 +21,6 @@ feedback_webhook.txt
 
 # gamekit's asset page launcher (made by `gamekit.py ui --launcher`; points at a path on this PC)
 Start Gamekit.bat
+
+# AI pictures from gamekit's picture engine (pictures/<name>.png + .json); finished art goes to assets/
+pictures/
