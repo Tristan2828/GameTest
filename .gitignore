@@ -26,3 +26,6 @@ Start Gamekit.bat
 pictures/
 # AI music takes from gamekit's music engine; finished tracks go to assets/audio/music
 music-takes/
+# AI sound and voice takes from gamekit's engines; finished sounds go to assets/audio
+sound-takes/
+voice-takes/
