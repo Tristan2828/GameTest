@@ -42,7 +42,7 @@ to GitHub, and the version's tag doesn't exist yet.
 |---|---|
 | INFO | `#welcome`, `#announcements` (read-only) |
 | BUILDS | `#builds` (read-only; release announcements via webhook) |
-| DEV | `#dev-log` (read-only; GitHub commit/release feed via webhook) |
+| DEV | `#dev-log` (read-only; GitHub release feed via webhook; commits stopped 2026-10-15) |
 | PLAYTEST | `#feedback`, `#bug-reports` (forum), `#clips-and-screenshots` |
 | SOCIAL | `#general`, `#lfg`, Play Session (voice) |
 
@@ -57,7 +57,8 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
 - **`#dev-log` feed:** GitHub repo -> Settings -> Webhooks -> Add webhook:
   - Payload URL: the `#dev-log` webhook URL with `/github` added on the end
   - Content type: `application/json`
-  - Events: "Let me select individual events" -> **Pushes** and **Releases** only
+  - Events: "Let me select individual events" -> **Releases** only (Pushes was on until
+    2026-10-15; the owner doesn't want commits in Discord)
   
   Discord understands GitHub's format at that `/github` address, so no code is needed.
 - **In-game feedback webhook (v0.16.0, done: `feedback_webhook.txt` is on the dev PC):** the game's "Send feedback" screen posts to a Discord channel.
