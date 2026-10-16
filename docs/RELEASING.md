@@ -42,7 +42,7 @@ to GitHub, and the version's tag doesn't exist yet.
 |---|---|
 | INFO | `#welcome`, `#announcements` (read-only) |
 | BUILDS | `#builds` (read-only; release announcements via webhook) |
-| DEV | `#dev-log` (read-only; GitHub release feed via webhook; commits stopped 2026-10-15) |
+| DEV | `#dev-log` (no feed since 2026-10-15: the GitHub webhook was deleted; releases go to `#builds` only) |
 | PLAYTEST | `#feedback`, `#bug-reports` (forum), `#clips-and-screenshots` |
 | SOCIAL | `#general`, `#lfg`, Play Session (voice) |
 
@@ -54,13 +54,9 @@ Set it on a category to apply to all its synced channels. Webhooks ignore these 
 - **`#builds` webhook secret:** in Discord, `#builds` gear -> Integrations -> Webhooks -> New Webhook -> Copy URL, then
   `gh secret set DISCORD_BUILDS_WEBHOOK --repo Tristan2828/medieval-survival` and paste it.
   To replace a leaked or deleted webhook, make a new one and run the same command.
-- **`#dev-log` feed:** GitHub repo -> Settings -> Webhooks -> Add webhook:
-  - Payload URL: the `#dev-log` webhook URL with `/github` added on the end
-  - Content type: `application/json`
-  - Events: "Let me select individual events" -> **Releases** only (Pushes was on until
-    2026-10-15; the owner doesn't want commits in Discord)
-  
-  Discord understands GitHub's format at that `/github` address, so no code is needed.
+- **No `#dev-log` feed (removed 2026-10-15):** the owner wants only release announcements in Discord, so the
+  GitHub repo webhook that posted commits and releases to `#dev-log` was deleted. Releases are announced once,
+  in `#builds`, by the workflow above.
 - **In-game feedback webhook (v0.16.0, done: `feedback_webhook.txt` is on the dev PC):** the game's "Send feedback" screen posts to a Discord channel.
   In Discord, `#feedback` gear -> Integrations -> Webhooks -> New Webhook (name it "Medieval Survival feedback") -> Copy URL.
   Paste the link alone into `feedback_webhook.txt` in the repo folder (git-ignored: it is **never** committed).
@@ -81,8 +77,6 @@ on a version tag) are in `DESIGN.md` §9, "Release automation".
 - **No post in `#builds`:** open the repo's **Actions** tab -> "Announce release in Discord".
   A red run shows the error (usually the secret is missing or the webhook was deleted). After fixing,
   re-send with **Run workflow** and the tag (e.g. `v0.12.0`); no new release needed.
-- **`#dev-log` silent:** repo Settings -> Webhooks -> the webhook -> **Recent Deliveries** shows each
-  attempt and Discord's reply; **Redeliver** retries one.
 - **Wrong release:** delete it on GitHub (Releases -> the release -> Delete) and delete its tag
   (`git push origin :refs/tags/v<version>` then `git tag -d v<version>`), fix, and run the script again.
   The Discord post has to be deleted by hand.
